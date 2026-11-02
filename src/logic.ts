@@ -1,0 +1,132 @@
+// Pure rules of the app (no React, no Supabase), so they can be tested in logic.test.ts.
+import type { Effort, FpTest, Priority, Shift, ShiftKind, Task } from './types'
+
+const TZ = 'Europe/Madrid'
+
+/** 'YYYY-MM-DD' in Madrid time, whatever the device's time zone. */
+export function madridDay(d = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
+}
+
+/** Minutes since midnight in Madrid. */
+export function madridMinutes(d = new Date()) {
+  const [h, m] = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d).split(':').map(Number)
+  return h * 60 + m
+}
+
+// Dates as plain calendar days: noon UTC avoids any daylight-saving surprise when adding days.
+const asDate = (day: string) => new Date(`${day}T12:00:00Z`)
+export const addDays = (day: string, n: number) => {
+  const d = asDate(day)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+export const daysBetween = (from: string, to: string) => Math.round((asDate(to).getTime() - asDate(from).getTime()) / 86_400_000)
+/** 0 = Monday … 6 = Sunday */
+export const weekday = (day: string) => (asDate(day).getUTCDay() + 6) % 7
+export const mondayOf = (day: string) => addDays(day, -weekday(day))
+export const weekOf = (day: string) => Array.from({ length: 7 }, (_, i) => addDays(mondayOf(day), i))
+
+const DAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+export const dayName = (day: string) => DAY_NAMES[weekday(day)]
+export const shortDate = (day: string) => `${Number(day.slice(8))} ${MONTHS[Number(day.slice(5, 7)) - 1]}`
+export const longDate = (day: string) => `${dayName(day)} ${shortDate(day)}`
+
+/** "Hoy", "Mañana", "Ayer", "viernes", "hace 3 días", "12 nov". */
+export function relDay(day: string, today: string) {
+  const n = daysBetween(today, day)
+  if (n === 0) return 'Hoy'
+  if (n === 1) return 'Mañana'
+  if (n === -1) return 'Ayer'
+  if (n < 0) return `Hace ${-n} días`
+  if (n < 7) return dayName(day)
+  return shortDate(day)
+}
+
+export const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '')
+const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
+const fromMin = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+
+/** Usual hours of each shift at the restaurant. Night ends at closing: 23:00, Saturday 24:00. */
+export function shiftHours(kind: ShiftKind, day: string): { starts_at: string | null; ends_at: string | null } {
+  switch (kind) {
+    case 'opening': return { starts_at: '10:00', ends_at: '17:30' }
+    case 'dia': return { starts_at: '11:40', ends_at: '17:30' }
+    case 'noche': return { starts_at: '17:00', ends_at: weekday(day) === 5 ? '24:00' : '23:00' }
+    case 'libre': return { starts_at: null, ends_at: null }
+  }
+}
+
+// The day counts from the 9:30 summary until 23:30.
+const DAY_START = toMin('09:30')
+const DAY_END = toMin('23:30')
+const GET_READY = 30 // minutes before a shift to get there
+
+/** What today looks like: the headline for Hoy and whether it's a work day. */
+export function dayPlan(shift: Shift | undefined) {
+  if (!shift || shift.kind === 'libre' || !shift.starts_at || !shift.ends_at) {
+    return { work: false, title: 'Libre', free: 'Todo el día libre' }
+  }
+  const start = toMin(shift.starts_at)
+  const end = toMin(shift.ends_at)
+  const title = `Turno ${shiftLabel(shift.kind)} · ${hhmm(shift.starts_at)}–${hhmm(shift.ends_at)}`
+  const before = start - GET_READY - DAY_START
+  const after = DAY_END - end
+  // Whichever gap is bigger is the one worth planning around.
+  const free = before >= after
+    ? before >= 60 ? `Libre hasta las ${fromMin(start - GET_READY)}` : 'Sin hueco libre'
+    : after >= 60 ? `Libre desde las ${hhmm(shift.ends_at)}` : 'Sin hueco libre'
+  return { work: true, title, free }
+}
+const shiftLabel = (k: ShiftKind) => ({ opening: 'de opening', dia: 'de día', noche: 'de noche', libre: 'libre' })[k]
+
+const PRIORITY_RANK: Record<Priority, number> = { alta: 0, media: 1, baja: 2 }
+const EFFORT_RANK: Record<Effort, number> = { rapido: 0, medio: 1, grande: 2 }
+
+/** Nearest deadline first (no deadline last), then high priority, then quick effort, then oldest. */
+export function byPriority(a: Task, b: Task) {
+  if (a.due_date !== b.due_date) {
+    if (!a.due_date) return 1
+    if (!b.due_date) return -1
+    return a.due_date < b.due_date ? -1 : 1
+  }
+  return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]
+    || EFFORT_RANK[a.effort] - EFFORT_RANK[b.effort]
+    || (a.due_time ?? '99').localeCompare(b.due_time ?? '99')
+    || a.created_at.localeCompare(b.created_at)
+}
+
+export const FOCUS_SIZE = 3
+
+/** Foco = the 3 first open tasks; everything else open (and anything waiting) can wait. */
+export function splitToday(tasks: Task[]) {
+  const active = tasks.filter((t) => t.status === 'abierto' || t.status === 'en_curso').sort(byPriority)
+  const focus = active.slice(0, FOCUS_SIZE)
+  return { focus, later: active.slice(FOCUS_SIZE), waiting: tasks.filter((t) => t.status === 'esperando') }
+}
+
+/** The next block of FP tests to open: the nearest future opening date and its unread units. */
+export function nextFpBlock(tests: FpTest[], today: string) {
+  const next = tests.map((t) => t.opens_on).filter((d): d is string => !!d && d > today).sort()[0]
+  if (!next) return null
+  const block = tests.filter((t) => t.opens_on === next)
+  return {
+    opensOn: next,
+    days: daysBetween(today, next),
+    unread: block.filter((t) => !t.read).length,
+    units: block.length,
+    subjects: [...new Set(block.map((t) => t.subject))],
+  }
+}
+
+// icon = SVG path data (24×24, strokes), drawn like the tab icons.
+export interface Idea { icon: string; text: string }
+const IDEAS: Idea[] = [
+  { icon: 'M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12', text: 'Ir al gimnasio' },
+  { icon: 'M4 5h16v11H9l-5 4zM8 9h8M8 12h5', text: 'Una lección de Busuu' },
+  { icon: 'M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4', text: 'Una película pendiente' },
+  { icon: 'M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16', text: 'Algo de programación' },
+]
+/** On a work day only the light ones (Busuu, programming). */
+export const ideasFor = (work: boolean) => (work ? [IDEAS[1], IDEAS[3]] : IDEAS)
