@@ -1,5 +1,5 @@
 // Pure rules of the app (no React, no Supabase), so they can be tested in logic.test.ts.
-import type { Effort, FpTest, Priority, Shift, ShiftKind, Task } from './types'
+import type { ChecklistItem, DailyTask, Effort, FpTest, Note, Priority, Shift, ShiftKind, Task } from './types'
 
 const TZ = 'Europe/Madrid'
 
@@ -120,13 +120,51 @@ export function nextFpBlock(tests: FpTest[], today: string) {
   }
 }
 
-// icon = SVG path data (24×24, strokes), drawn like the tab icons.
-export interface Idea { icon: string; text: string }
-const IDEAS: Idea[] = [
-  { icon: 'M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12', text: 'Ir al gimnasio' },
-  { icon: 'M4 5h16v11H9l-5 4zM8 9h8M8 12h5', text: 'Una lección de Busuu' },
-  { icon: 'M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4', text: 'Una película pendiente' },
-  { icon: 'M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16', text: 'Algo de programación' },
-]
-/** On a work day only the light ones (Busuu, programming). */
-export const ideasFor = (work: boolean) => (work ? [IDEAS[1], IDEAS[3]] : IDEAS)
+/** Horacio's hello on Hoy, by the hour in Madrid. */
+export function greeting(minutes = madridMinutes()) {
+  const h = Math.floor(minutes / 60)
+  return h >= 6 && h < 13 ? 'Buenos días' : h >= 13 && h < 21 ? 'Buenas tardes' : 'Buenas noches'
+}
+
+// ---------- daily tasks ----------
+
+/** What the list starts with the first time (the old «Si te sobra tiempo»). */
+export const DEFAULT_DAILY = ['Ir al gimnasio', 'Una lección de Busuu', 'Una película pendiente', 'Algo de programación']
+
+/** Ticked only on the day it was ticked: the next day it comes back unticked, with no job resetting anything. */
+export const doneToday = (d: DailyTask, today: string) => d.done_on === today
+export const byPosition = (a: DailyTask, b: DailyTask) => a.position - b.position || a.created_at.localeCompare(b.created_at)
+
+// ---------- notes ----------
+
+/** Text → checklist (one item per non-empty line) and back, as Keep's "Mostrar casillas". */
+export const toChecklist = (body: string): ChecklistItem[] =>
+  body.split('\n').map((l) => l.trim()).filter(Boolean).map((text) => ({ text, done: false }))
+export const fromChecklist = (items: ChecklistItem[]) => items.map((i) => i.text).filter(Boolean).join('\n')
+
+const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+/** Search in title, text and checklist, ignoring accents and case ("cancion" finds "Canción"). */
+export function noteMatches(n: Note, query: string) {
+  const q = fold(query.trim())
+  if (!q) return true
+  return fold([n.title, n.body, ...(n.items ?? []).map((i) => i.text)].join('\n')).includes(q)
+}
+
+/** The second line of a row in the list: the first line of text that isn't the title. */
+export function notePreview(n: Note) {
+  const lines = n.items ? n.items.map((i) => i.text) : n.body.split('\n')
+  return lines.map((l) => l.trim()).find(Boolean) ?? ''
+}
+
+/** Like iOS Notes: "10:42" today, "Ayer", the day name this week, "3 nov" before. */
+export function noteTime(iso: string, now = new Date()) {
+  const d = new Date(iso)
+  const n = daysBetween(madridDay(d), madridDay(now))
+  if (n === 0) return new Intl.DateTimeFormat('es-ES', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(d)
+  if (n === 1) return 'Ayer'
+  if (n < 7) return dayName(madridDay(d))
+  return shortDate(madridDay(d))
+}
+
+/** Most recently edited first. */
+export const byEdited = (a: Note, b: Note) => b.updated_at.localeCompare(a.updated_at)

@@ -22,6 +22,8 @@ Abre http://localhost:5173 (o el puerto que diga). Sin `.env.local` arranca en *
 5. Copia `.env.example` como `.env.local` y pon esas dos en `VITE_SUPABASE_URL` y `VITE_SUPABASE_KEY`. Reinicia `npm run dev`.
 6. En la app pulsa **Crear cuenta** con tu email y una contraseña.
 
+¿Ya tenías Supabase montado antes de las notas? Vuelve a ejecutar [supabase/setup.sql](supabase/setup.sql) entero: crea las tablas nuevas (`notes`, `daily_tasks`) y añade las columnas nuevas sin tocar lo que ya hay.
+
 ## Conectar la IA (Gemini)
 
 1. Entra en [aistudio.google.com](https://aistudio.google.com) con tu cuenta de Google → **Get API key → Create API key**. Es gratis (con límite de usos al día). Ojo: en el nivel gratis Google puede usar lo que le mandas para mejorar sus productos.
@@ -33,7 +35,8 @@ La clave **nunca** va en git ni en el navegador: solo la lee `api/capture.ts`, q
 
 ## Cómo está hecha
 
-- `src/screens/`: Hoy, Tareas, Agenda, Capture (＋) y Login.
+- `src/screens/`: Hoy, Tareas (y Proyectos), Notas, Agenda, Capture (＋) y Login. `src/DailyTasks.tsx`: las tareas diarias de Hoy.
+- `src/NoteEditor.tsx`: el editor de notas a pantalla completa (lista de casillas, color, fijar, archivar, compartir y crear un recordatorio desde la nota).
 - `src/logic.ts`: las reglas (orden de prioridad, Foco, hueco libre, turnos, bloque del FP).
 - `src/capture.ts`: lo que la IA debe devolver, el prompt y la limpieza de su respuesta (compartido con el servidor).
 - `src/store.ts`: lee y escribe en Supabase (o en el navegador en modo demo).

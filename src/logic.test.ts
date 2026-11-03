@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { cleanCapture, mockCapture } from './capture'
-import { addDays, byPriority, dayPlan, madridDay, nextFpBlock, relDay, shiftHours, splitToday, weekOf } from './logic'
-import type { FpTest, Shift, Task } from './types'
+import { addDays, byPriority, dayPlan, doneToday, fromChecklist, greeting, madridDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
+import type { FpTest, Note, Shift, Task } from './types'
 
 const task = (p: Partial<Task>): Task => ({
   id: Math.random().toString(), title: 't', notes: null, status: 'abierto', priority: 'media', effort: 'medio',
-  due_date: null, due_time: null, area: null, project_id: null, created_at: '2026-11-01T10:00:00Z', done_at: null, ...p,
+  due_date: null, due_time: null, area: null, project_id: null, note_id: null, created_at: '2026-11-01T10:00:00Z', done_at: null, ...p,
 })
 const shift = (p: Partial<Shift>): Shift => ({ id: '1', day: '2026-11-02', kind: 'libre', starts_at: null, ends_at: null, ...p })
 
@@ -79,5 +79,49 @@ describe('capture', () => {
   it('mock understands "mañana" and "urgente"', () => {
     const r = mockCapture({ text: 'mañana sacar el alquiler, urgente' }, '2026-11-02')
     expect(r.tasks[0]).toMatchObject({ title: 'Sacar el alquiler', priority: 'alta', due_date: '2026-11-03' })
+  })
+})
+
+const note = (p: Partial<Note>): Note => ({
+  id: '1', title: '', body: '', items: null, color: 'none', project_id: null, pinned: false, archived: false,
+  created_at: '2026-11-01T10:00:00Z', updated_at: '2026-11-01T10:00:00Z', ...p,
+})
+
+describe('notes', () => {
+  it('text becomes a checklist and back, skipping empty lines', () => {
+    const items = toChecklist('leche\n\n  pan \nhuevos')
+    expect(items).toEqual([{ text: 'leche', done: false }, { text: 'pan', done: false }, { text: 'huevos', done: false }])
+    expect(fromChecklist(items)).toBe('leche\npan\nhuevos')
+  })
+  it('search ignores accents and case, and looks inside checklists', () => {
+    expect(noteMatches(note({ title: 'Canción para el viernes' }), 'cancion')).toBe(true)
+    expect(noteMatches(note({ items: [{ text: 'Comprar PAN', done: false }] }), 'pan')).toBe(true)
+    expect(noteMatches(note({ body: 'nada' }), 'pan')).toBe(false)
+    expect(noteMatches(note({}), '  ')).toBe(true)
+  })
+  it('preview is the first line with text', () => {
+    expect(notePreview(note({ body: '\n  \nhola\nadiós' }))).toBe('hola')
+    expect(notePreview(note({ items: [{ text: 'pan', done: true }] }))).toBe('pan')
+  })
+  it('time reads like iOS Notes', () => {
+    const now = new Date('2026-11-04T12:00:00Z')
+    expect(noteTime('2026-11-04T09:42:00Z', now)).toBe('10:42') // Madrid is UTC+1 in November
+    expect(noteTime('2026-11-03T09:00:00Z', now)).toBe('Ayer')
+    expect(noteTime('2026-11-02T09:00:00Z', now)).toBe('lunes')
+    expect(noteTime('2026-10-20T09:00:00Z', now)).toBe('20 oct')
+  })
+})
+
+describe('Hoy', () => {
+  it('greets by the hour', () => {
+    expect(greeting(8 * 60)).toBe('Buenos días')
+    expect(greeting(13 * 60)).toBe('Buenas tardes')
+    expect(greeting(22 * 60 + 30)).toBe('Buenas noches')
+    expect(greeting(2 * 60)).toBe('Buenas noches')
+  })
+  it('a daily task is ticked only on the day it was ticked', () => {
+    const d = { id: '1', title: 'Gimnasio', position: 0, done_on: '2026-11-03', created_at: '' }
+    expect(doneToday(d, '2026-11-03')).toBe(true)
+    expect(doneToday(d, '2026-11-04')).toBe(false)
   })
 })

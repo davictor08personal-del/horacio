@@ -4,13 +4,16 @@ import { demo, load, supa, useData } from './store'
 import Login from './screens/Login'
 import Today from './screens/Today'
 import Tasks from './screens/Tasks'
+import Notes from './screens/Notes'
 import Agenda from './screens/Agenda'
+import NoteEditor, { ICON, useOpenNote } from './NoteEditor'
 import Capture from './screens/Capture'
 
 // SVG path data for each tab icon (24×24, drawn with strokes).
 const TABS = [
   { id: 'today', label: 'Hoy', icon: 'M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
   { id: 'tasks', label: 'Tareas', icon: 'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01' },
+  { id: 'notes', label: 'Notas', icon: ICON.note },
   { id: 'agenda', label: 'Agenda', icon: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' },
 ] as const
 export type Tab = (typeof TABS)[number]['id']
@@ -22,6 +25,7 @@ export default function App() {
   const [capturing, setCapturing] = useState(false)
   const [error, setError] = useState('')
   const { loaded } = useData()
+  const noteId = useOpenNote()
 
   useEffect(() => {
     if (!supa) return
@@ -49,7 +53,7 @@ export default function App() {
       <main className="screen">
         {demo && <p className="banner">Modo demo: los datos se guardan solo en este navegador.</p>}
         {error && <p className="banner danger-banner">{error}</p>}
-        {!loaded ? null : tab === 'today' ? <Today onGo={setTab} /> : tab === 'tasks' ? <Tasks /> : <Agenda />}
+        {!loaded ? null : tab === 'today' ? <Today onGo={setTab} /> : tab === 'tasks' ? <Tasks /> : tab === 'notes' ? <Notes /> : <Agenda />}
       </main>
       <nav className="dock">
         <div className="tabs">
@@ -67,6 +71,7 @@ export default function App() {
         </button>
       </nav>
       {capturing && <Capture onClose={() => setCapturing(false)} />}
+      {noteId && <NoteEditor key={noteId} id={noteId} />}
     </>
   )
 }

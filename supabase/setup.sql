@@ -1,4 +1,4 @@
--- Run once in Supabase → SQL Editor → New query → Run.
+-- Run once in Supabase → SQL Editor → New query → Run. Safe to run again (e.g. after adding notes).
 -- Every table has user_id and Row Level Security: each row is only visible to its owner.
 -- The publishable key travels in the app, so these rules are what actually protect the data.
 
@@ -28,6 +28,35 @@ create table if not exists public.tasks (
   done_at timestamptz
 );
 
+-- Notes (Keep-style: colour, pinned, archived, optional checklist in `items`).
+create table if not exists public.notes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users on delete cascade,
+  title text not null default '',
+  body text not null default '',
+  items jsonb, -- [{ "text": "...", "done": false }] when the note is a checklist
+  color text not null default 'none' check (color in ('none', 'rojo', 'naranja', 'amarillo', 'verde', 'azul', 'morado')),
+  pinned boolean not null default false,
+  archived boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.notes add column if not exists project_id uuid references public.projects on delete set null;
+
+-- Things to do every day. Ticked = done_on is today, so tomorrow they come back unticked by themselves.
+create table if not exists public.daily_tasks (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users on delete cascade,
+  title text not null,
+  position int not null default 0,
+  done_on date,
+  created_at timestamptz not null default now()
+);
+
+-- A reminder (task) can point to one note; a note can have several reminders. Deleting the note keeps the reminders.
+alter table public.tasks add column if not exists note_id uuid references public.notes on delete set null;
+
 -- One row per day; a new shift for the same day replaces the old one (upsert on user_id + day).
 create table if not exists public.shifts (
   id uuid primary key default gen_random_uuid(),
@@ -54,7 +83,7 @@ create table if not exists public.fp_tests (
 do $$
 declare t text;
 begin
-  foreach t in array array['projects', 'tasks', 'shifts', 'fp_tests'] loop
+  foreach t in array array['projects', 'tasks', 'shifts', 'fp_tests', 'notes', 'daily_tasks'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "%1$s: own" on public.%1$I', t);
     execute format('create policy "%1$s: own" on public.%1$I for all to authenticated

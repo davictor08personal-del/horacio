@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { hhmm, madridDay, relDay } from './logic'
-import { remove, setTaskStatus, update, useData } from './store'
+import { noteFromTask, remove, setTaskStatus, update, useData } from './store'
+import { openNote } from './NoteEditor'
 import Sheet, { Choice } from './Sheet'
 import { EFFORT, PRIORITY, STATUS, type Status, type Task } from './types'
 
 /** One task: round check to finish it, tap the text to edit it. */
 export function TaskRow({ task }: { task: Task }) {
   const [open, setOpen] = useState(false)
-  const { projects } = useData()
+  const { projects, notes } = useData()
   const today = madridDay()
   const project = projects.find((p) => p.id === task.project_id)
+  const note = notes.find((n) => n.id === task.note_id)
   const late = task.due_date && task.due_date < today
   const sub = [
     task.due_date && relDay(task.due_date, today),
@@ -17,6 +19,7 @@ export function TaskRow({ task }: { task: Task }) {
     task.status === 'en_curso' && 'En curso',
     task.status === 'esperando' && 'Esperando',
     project?.name,
+    note && 'Con nota',
   ].filter(Boolean).join(' · ')
 
   return (
@@ -35,7 +38,8 @@ const EDITABLE: Record<Exclude<Status, 'hecho' | 'descartado'>, string> = { abie
 
 /** Every field of a task. Each change is saved at once (no "Save" button to forget). */
 function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }) {
-  const { projects } = useData()
+  const { projects, notes } = useData()
+  const note = notes.find((n) => n.id === task.note_id)
   const set = (patch: Partial<Task>) => update('tasks', task.id, patch)
   const finish = (s: Status) => setTaskStatus(task, s).then(onClose)
 
@@ -70,9 +74,18 @@ function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }) {
           </select>
         </label>
       </div>
-      <label className="field">Notas
+      <label className="field">Detalles
         <textarea rows={2} defaultValue={task.notes ?? ''} onBlur={(e) => e.target.value !== (task.notes ?? '') && set({ notes: e.target.value.trim() || null })} />
       </label>
+      <div className="field">Nota
+        {note ? (
+          <button className="linked-note" onClick={() => openNote(note.id)}>
+            <span>{note.title.trim() || 'Nota sin título'}</span><span className="chev" aria-hidden>›</span>
+          </button>
+        ) : (
+          <button className="secondary" onClick={() => noteFromTask(task).then((n) => openNote(n.id))}>Crear nota de esta tarea</button>
+        )}
+      </div>
       <button className="primary" onClick={() => finish('hecho')}>Hecha</button>
       <div className="row-actions">
         <button className="ghost" onClick={() => finish('descartado')}>Descartar</button>

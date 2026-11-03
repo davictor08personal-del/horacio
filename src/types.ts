@@ -17,8 +17,35 @@ export interface Task {
   due_time: string | null
   area: string | null
   project_id: string | null
+  note_id: string | null
   created_at: string
   done_at: string | null
+}
+
+export type NoteColor = 'none' | 'rojo' | 'naranja' | 'amarillo' | 'verde' | 'azul' | 'morado'
+export interface ChecklistItem { text: string; done: boolean }
+
+/** A note. With `items` it's a checklist (as in Google Keep); without, `body` is plain text. */
+export interface Note {
+  id: string
+  title: string
+  body: string
+  items: ChecklistItem[] | null
+  color: NoteColor
+  project_id: string | null
+  pinned: boolean
+  archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** Something to do every day (gym, Busuu…). `done_on` is the day it was last ticked. */
+export interface DailyTask {
+  id: string
+  title: string
+  position: number
+  done_on: string | null
+  created_at: string
 }
 
 export interface Project {
@@ -55,3 +82,7 @@ export const PRIORITY: Record<Priority, string> = { alta: 'Alta', media: 'Media'
 export const EFFORT: Record<Effort, string> = { rapido: 'Rápido', medio: 'Medio', grande: 'Grande' }
 export const SHIFT: Record<ShiftKind, string> = { opening: 'Opening', dia: 'Día', noche: 'Noche', libre: 'Libre' }
 export const PROJECT_STATUS: Record<ProjectStatus, string> = { activo: 'Activo', pausado: 'Pausado', hecho: 'Hecho' }
+export const NOTE_COLOR: Record<NoteColor, string> = {
+  none: 'Sin color', rojo: 'Rojo', naranja: 'Naranja', amarillo: 'Amarillo', verde: 'Verde', azul: 'Azul', morado: 'Morado',
+}
+export const NOTE_COLORS = Object.keys(NOTE_COLOR) as NoteColor[]

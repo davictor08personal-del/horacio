@@ -16,17 +16,19 @@ La app de prioridades de Victor. Le dice **qué hacer hoy**, **qué puede espera
 
 ## Pantallas
 
-Barra inferior flotante (como Músculo): **Hoy · Tareas · Agenda**, y un botón **＋** grande para capturar.
+Barra inferior flotante (como Músculo): **Hoy · Tareas · Notas · Agenda**, y un botón **＋** grande para capturar.
 
 1. **Hoy**
-   - **Cabecera**: fecha y el día: «Turno de noche 17:00–23:00 · libre hasta las 16:30» o «Libre todo el día».
+   - **Cabecera**: el saludo de Horacio según la hora («Buenos días / Buenas tardes / Buenas noches, Victor») y debajo la fecha y el día: «Turno de noche 17:00–23:00 · Libre hasta las 16:30» o «Todo el día libre».
    - **Foco** (máx. 3): las tareas abiertas más importantes. Orden: fecha límite más cercana → prioridad alta → esfuerzo rápido. Tocar el círculo la marca hecha.
-   - **Si te sobra tiempo**: menú fijo de una línea por opción: 🏋️ Gimnasio, 🇫🇷 Una lección de Busuu, 🎬 Una película pendiente, 💻 Algo de programación. En día de turno solo 2 ligeras (Busuu y programación).
+   - **Tareas diarias**: lo que haces cada día (gimnasio, Busuu…). Se tachan y al día siguiente vuelven solas: se guarda el día en que se marcó (`done_on`) y, si no es hoy, sale sin tachar. Lista editable (añadir, renombrar, ordenar, quitar); la primera vez ofrece las de ejemplo.
    - **⏳ FP**: «Faltan 6 días para que abra el bloque 2 · 3 unidades sin leer». Solo informativo, sin veredictos.
    - **Puede esperar**: una línea con el resto («7 tareas más · 2 esperando»), que lleva a Tareas.
-2. **Tareas**: lista agrupada (En curso, Abiertas, Esperando) y **Proyectos** con su siguiente paso. Tocar una tarea abre su ficha para editar estado, prioridad, esfuerzo, fecha, hora, área y proyecto.
-3. **Agenda**: los turnos de esta semana (lunes a domingo) y los tests del FP por materia y bloque (fechas de apertura y cierre, casilla «leída»).
-4. **Capturar (＋)**: una hoja con un cuadro de texto, botón 🎙️ (graba y la IA lo escucha) y 📷 (foto o captura, p. ej. el horario). La IA devuelve lo que entendió (tareas, turnos, tests, proyectos) y lo muestra en tarjetas editables: corriges o quitas lo que sobre y pulsas **Guardar**. Nada se guarda sin tu confirmación.
+2. **Tareas**: lista agrupada (En curso, Abiertas, Esperando) y, arriba, la entrada a **Proyectos**: todos los proyectos por estado, con un campo para añadir. La ficha de un proyecto muestra sus tareas y recordatorios (con campo para añadir una), sus notas («Nueva nota» ya nace en el proyecto) y se edita con «Editar». Tocar una tarea abre su ficha para editar estado, prioridad, esfuerzo, fecha, hora, área, proyecto y su nota.
+3. **Notas**: aspecto de Notas de iOS (título grande, buscador, lista agrupada con hora y primera línea; editor a pantalla completa con «‹ Notas» y barra de herramientas de cristal) y funciones de Google Keep: fijar, 7 colores, lista de casillas (lo marcado baja al final), vista en cuadrícula, archivo, compartir y búsqueda sin acentos. Una nota vacía se descarta al salir.
+   - **Nota ↔ recordatorio**: un recordatorio es una tarea con fecha (sale en Tareas y en Hoy). Desde una nota, la campana crea uno enlazado; desde la ficha de una tarea, «Crear nota de esta tarea» crea la nota con su título y detalles. La nota lista sus recordatorios y la tarea enlaza a su nota.
+4. **Agenda**: los turnos de esta semana (lunes a domingo) y los tests del FP por materia y bloque (fechas de apertura y cierre, casilla «leída»).
+5. **Capturar (＋)**: una hoja con un cuadro de texto, botón 🎙️ (graba y la IA lo escucha) y 📷 (foto o captura, p. ej. el horario). La IA devuelve lo que entendió (tareas, turnos, tests, proyectos) y lo muestra en tarjetas editables: corriges o quitas lo que sobre y pulsas **Guardar**. Nada se guarda sin tu confirmación.
 
 ## Reglas
 
@@ -39,17 +41,46 @@ Barra inferior flotante (como Músculo): **Hoy · Tareas · Agenda**, y un botó
 ## Modelo de datos (Supabase, `supabase/setup.sql`)
 
 Todas las tablas llevan `user_id` y RLS «solo el dueño».
-- `tasks`: id, title, notes, status (`abierto`/`en_curso`/`esperando`/`hecho`/`descartado`), priority (`alta`/`media`/`baja`), effort (`rapido`/`medio`/`grande`), due_date, due_time, area, project_id, created_at, done_at.
+- `tasks`: id, title, notes, status (`abierto`/`en_curso`/`esperando`/`hecho`/`descartado`), priority (`alta`/`media`/`baja`), effort (`rapido`/`medio`/`grande`), due_date, due_time, area, project_id, note_id, created_at, done_at.
 - `projects`: id, name, status (`activo`/`pausado`/`hecho`), next_step, area.
 - `shifts`: id, day (único por usuario), kind (`opening`/`dia`/`noche`/`libre`), starts_at, ends_at.
 - `fp_tests`: id, subject, block, unit, opens_on, closes_on, read.
+- `notes`: id, title, body, items (jsonb: lista de casillas, o null), color, project_id, pinned, archived, created_at, updated_at.
+- `daily_tasks`: id, title, position, done_on, created_at.
+- `tasks.note_id` → `notes`: una nota puede tener varios recordatorios; un recordatorio, una nota. Si se borra la nota, el recordatorio se queda.
 - `ai_usage` + función `ai_hit()`: límite de llamadas a la IA por día (copiado de Músculo).
 
-## Fases
+## La idea de fondo
 
-- **v1 (ahora)**: Supabase + login, Hoy, Tareas/Proyectos, Agenda, captura por texto/voz/foto con confirmación. Funcionando en local.
-- **v2**: publicar en Vercel, instalar en el iPhone y **avisos**: resumen a las **9:30 (Madrid)** con el foco del día y un aviso por tarea a su hora (pg_cron + `api/tick` + Web Push).
-- **v3 / ideas**: que el asistente de Obsidian lea Horacio, reenviar correos, el menú «Si te sobra tiempo» editable, repetir tareas.
+Horacio es un **mayordomo**: como Claude Code organiza un proyecto en el ordenador, Horacio organiza la vida de una persona normal. Le hablas o le escribes, él entiende qué es cada cosa (tarea, recordatorio, nota, tarea diaria, de qué proyecto) y te dice qué hacer hoy y qué puede esperar. Cada paso de la hoja de ruta acerca la app a eso.
+
+## Hoja de ruta
+
+Hecho: **v1** (Hoy, Tareas/Proyectos, Agenda, captura con IA, en local), **Notas** enlazadas con recordatorios y el **bloque 1** (✅ abajo).
+
+El orden sigue las dependencias: primero lo pequeño y lo que cambia los datos, después la IA que usa esos datos, luego la imagen y por último lo que necesita la app publicada.
+
+**Bloque 1 · Hoy y los datos (cosas pequeñas, base de todo lo demás)**
+1. ✅ **Bienvenida en Hoy**: «Buenos días, Victor» según la hora. Pequeño, y es la primera frase del futuro mayordomo.
+2. ✅ **Tareas diarias** en lugar de «Si te sobra tiempo»: se tachan y vuelven a aparecer cada día (no hace falta un cron: se guarda el día en que se marcó y, si no es hoy, sale sin tachar). Lista editable: añadir, quitar y ordenar.
+3. ✅ **Proyectos como eje**: una sección donde anotar todos los proyectos. Cada proyecto tiene su ficha con sus tareas, recordatorios y notas. Las notas también tendrán `project_id`.
+
+**Bloque 2 · Que Horacio entienda (la IA, con los datos ya listos)**
+4. **Captura que distingue** nota / recordatorio / tarea / tarea diaria (además de turnos, tests y proyectos), y **asigna el proyecto**: si está claro lo pone, y si duda **pregunta** en la tarjeta de revisión («¿De qué proyecto es?»).
+
+**Bloque 3 · Identidad (antes de instalarla en el móvil, porque el icono es el logo)**
+5. **Estudio de estilos visuales**: 3 o 4 direcciones con la pantalla Hoy real en cada una, para elegir.
+6. **Logo y mascota a la vez**: el logo *es* Horacio, el mayordomo. Un personaje que funcione como icono pequeño y como compañero en la app.
+7. **Modo claro y oscuro** con la paleta elegida (sigue al sistema, con opción de forzarlo). Va después del estilo para no diseñar dos veces cada paleta.
+
+**Bloque 4 · Publicar (lo que pide un servidor siempre encendido)**
+8. **Vercel + avisos push** (era la v2): instalar en el iPhone, resumen a las 9:30 y aviso de cada recordatorio a su hora. Sin esto un recordatorio no avisa.
+9. **Agenda con Google Calendar**: primero leer los eventos (salen en Agenda y cuentan para el hueco libre de Hoy), después crear eventos desde Horacio. Necesita login con Google (OAuth) y una URL publicada.
+
+**Bloque 5 · El mayordomo**
+10. **Hablar con Horacio**: un chat (texto o voz) con la mascota. Lee tus tareas, proyectos, notas y calendario, propone el plan del día y qué dejar para luego, y pide permiso antes de cambiar nada, igual que Claude Code. Va al final porque usa todo lo anterior.
+
+Ideas aparcadas: que el asistente de Obsidian lea Horacio, reenviar correos, repetir tareas.
 
 ## Estilo
 

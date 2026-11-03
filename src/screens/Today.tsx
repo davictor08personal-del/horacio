@@ -1,9 +1,13 @@
 import type { Tab } from '../App'
-import { dayPlan, ideasFor, longDate, madridDay, nextFpBlock, shortDate, splitToday } from '../logic'
+import DailyTasks from '../DailyTasks'
+import { dayPlan, greeting, longDate, madridDay, nextFpBlock, shortDate, splitToday } from '../logic'
 import { useData } from '../store'
 import { TaskRow } from '../TaskRow'
 
-/** «Hoy»: the day (shift or free), Foco, Si te sobra tiempo, FP and the one line of what can wait. */
+// Single user for now. When Horacio is for anyone, the name comes from their profile.
+const OWNER = 'Victor'
+
+/** «Hoy»: Horacio's hello and the day (shift or free), Foco, Tareas diarias, FP and the one line of what can wait. */
 export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
   const { tasks, shifts, fp_tests } = useData()
   const today = madridDay()
@@ -15,8 +19,8 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
   return (
     <>
       <header className="today-head">
-        <h1>{plan.title}</h1>
-        <p className="day-line"><span className="day-date">{longDate(today)}</span> · {plan.free}</p>
+        <h1>{greeting()}, {OWNER}</h1>
+        <p className="day-line"><span className="day-date">{longDate(today)}</span> · {plan.work ? `${plan.title} · ${plan.free}` : plan.free}</p>
         {!hasShifts && <button className="link" onClick={() => onGo('agenda')}>Aún no hay turnos de esta semana · Añadir</button>}
       </header>
 
@@ -29,12 +33,7 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
         )}
       </section>
 
-      <section className="group">
-        <h2 className="group-title">Si te sobra tiempo</h2>
-        <ul className="list card-list ideas">
-          {ideasFor(plan.work).map((i) => <li key={i.text}><svg viewBox="0 0 24 24" aria-hidden><path d={i.icon} /></svg>{i.text}</li>)}
-        </ul>
-      </section>
+      <DailyTasks />
 
       {fp && (
         <section className="group">

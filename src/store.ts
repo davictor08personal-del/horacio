@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from 'react'
 import { createClient, type Session } from '@supabase/supabase-js'
 import { addDays, madridDay } from './logic'
-import type { FpTest, Project, Shift, Task } from './types'
+import type { DailyTask, FpTest, Note, Project, Shift, Task } from './types'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const key = import.meta.env.VITE_SUPABASE_KEY as string | undefined
@@ -11,11 +11,12 @@ export const demo = !(url && key)
 // The publishable key is meant to be public: Row Level Security decides what each user can see.
 export const supa = demo ? null : createClient(url!, key!)
 
-type Table = 'tasks' | 'projects' | 'shifts' | 'fp_tests'
-type RowOf = { tasks: Task; projects: Project; shifts: Shift; fp_tests: FpTest }
-export interface Data { tasks: Task[]; projects: Project[]; shifts: Shift[]; fp_tests: FpTest[]; loaded: boolean }
+type Table = 'tasks' | 'projects' | 'shifts' | 'fp_tests' | 'notes' | 'daily_tasks'
+type RowOf = { tasks: Task; projects: Project; shifts: Shift; fp_tests: FpTest; notes: Note; daily_tasks: DailyTask }
+export interface Data { tasks: Task[]; projects: Project[]; shifts: Shift[]; fp_tests: FpTest[]; notes: Note[]; daily_tasks: DailyTask[]; loaded: boolean }
 
-let data: Data = { tasks: [], projects: [], shifts: [], fp_tests: [], loaded: false }
+const EMPTY: Omit<Data, 'loaded'> = { tasks: [], projects: [], shifts: [], fp_tests: [], notes: [], daily_tasks: [] }
+let data: Data = { ...EMPTY, loaded: false }
 const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((l) => l())
 const subscribe = (l: () => void) => (listeners.add(l), () => listeners.delete(l))
@@ -27,14 +28,14 @@ export const useData = () => useSyncExternalStore(subscribe, () => data)
 const DEMO_KEY = 'horacio-demo'
 const demoAll = (): Omit<Data, 'loaded'> => {
   try {
-    return { tasks: [], projects: [], shifts: [], fp_tests: [], ...JSON.parse(localStorage.getItem(DEMO_KEY) ?? '{}') }
+    return { ...EMPTY, ...JSON.parse(localStorage.getItem(DEMO_KEY) ?? '{}') }
   } catch {
-    return { tasks: [], projects: [], shifts: [], fp_tests: [] }
+    return { ...EMPTY }
   }
 }
 const demoSave = (d: Omit<Data, 'loaded'>) => localStorage.setItem(DEMO_KEY, JSON.stringify(d))
 
-// Only what the screens need: unfinished tasks and shifts from last week on. Small enough to load all at once.
+// Only what the screens need: unfinished tasks, shifts from last week on, every note and daily task. Small enough to load all at once.
 const OPEN = ['abierto', 'en_curso', 'esperando']
 
 export async function load() {
@@ -44,15 +45,17 @@ export async function load() {
     data = { ...d, tasks: d.tasks.filter((t) => OPEN.includes(t.status)), shifts: d.shifts.filter((s) => s.day >= since), loaded: true }
     return emit()
   }
-  const [tasks, projects, shifts, tests] = await Promise.all([
+  const [tasks, projects, shifts, tests, notes, daily] = await Promise.all([
     supa.from('tasks').select('*').in('status', OPEN),
     supa.from('projects').select('*').order('created_at'),
     supa.from('shifts').select('*').gte('day', since).order('day'),
     supa.from('fp_tests').select('*').order('opens_on').order('unit'),
+    supa.from('notes').select('*'),
+    supa.from('daily_tasks').select('*').order('position'),
   ])
-  const error = tasks.error ?? projects.error ?? shifts.error ?? tests.error
+  const error = tasks.error ?? projects.error ?? shifts.error ?? tests.error ?? notes.error ?? daily.error
   if (error) throw new Error(error.message.includes('does not exist') ? 'Faltan las tablas: ejecuta supabase/setup.sql' : error.message)
-  data = { tasks: tasks.data ?? [], projects: projects.data ?? [], shifts: shifts.data ?? [], fp_tests: tests.data ?? [], loaded: true }
+  data = { tasks: tasks.data ?? [], projects: projects.data ?? [], shifts: shifts.data ?? [], fp_tests: tests.data ?? [], notes: notes.data ?? [], daily_tasks: daily.data ?? [], loaded: true }
   emit()
 }
 
@@ -105,7 +108,25 @@ export async function remove(table: Table, id: string) {
   await load()
 }
 
-export const setTaskStatus = (t: Task, status: Task['status']) =>
+/** A new note (with every field, so demo mode stores the same shape as Supabase). */
+export async function createNote(patch: Partial<Note> = {}) {
+  const now = new Date().toISOString()
+  const [n] = await insert('notes', [{ title: '', body: '', items: null, color: 'none', project_id: null, pinned: false, archived: false, updated_at: now, ...patch }])
+  return n
+}
+
+/** A new task (a reminder is a task with a date). `note_id` links it to the note it came from. */
+export const createTask = (t: Pick<Task, 'title'> & Partial<Task>) =>
+  insert('tasks', [{ status: 'abierto', priority: 'media', effort: 'medio', notes: null, due_date: null, due_time: null, area: null, project_id: null, note_id: null, done_at: null, ...t }])
+
+/** Reminder → note: the note starts with the reminder's title, notes and project, and they stay linked. */
+export async function noteFromTask(t: Task) {
+  const n = await createNote({ title: t.title, body: t.notes ?? '', project_id: t.project_id })
+  await update('tasks', t.id, { note_id: n.id })
+  return n
+}
+
+export const setTaskStatus =(t: Task, status: Task['status']) =>
   update('tasks', t.id, { status, done_at: status === 'hecho' ? new Date().toISOString() : null })
 
 // ---------- session ----------
