@@ -332,3 +332,12 @@ input, textarea { caret-color: var(--accent); }
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
   background-position: right 14px center, right 9px center; background-size: 5px 5px; background-repeat: no-repeat;
 }
+.review-card .review-head .choice { gap: 4px; flex-wrap: nowrap; }
+.review-head .remove { padding: 0; min-width: 32px; display: grid; place-items: center; }
+.review-head .remove svg { width: 18px; height: 18px; }
+.review-card .review-head .choice button { min-height: 32px; padding: 0 10px; font-size: 0.85rem; }
+.review-card textarea { background: var(--surface-3); }
+.check-line { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--muted); }
+.check-line input { width: 20px; height: 20px; min-height: 0; accent-color: var(--accent); }
+.field.asking { color: var(--accent); font-weight: 600; }
+.field.asking select { border-color: var(--accent); }

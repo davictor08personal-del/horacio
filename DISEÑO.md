@@ -28,7 +28,7 @@ Barra inferior flotante (como Músculo): **Hoy · Tareas · Notas · Agenda**, y
 3. **Notas**: aspecto de Notas de iOS (título grande, buscador, lista agrupada con hora y primera línea; editor a pantalla completa con «‹ Notas» y barra de herramientas de cristal) y funciones de Google Keep: fijar, 7 colores, lista de casillas (lo marcado baja al final), vista en cuadrícula, archivo, compartir y búsqueda sin acentos. Una nota vacía se descarta al salir.
    - **Nota ↔ recordatorio**: un recordatorio es una tarea con fecha (sale en Tareas y en Hoy). Desde una nota, la campana crea uno enlazado; desde la ficha de una tarea, «Crear nota de esta tarea» crea la nota con su título y detalles. La nota lista sus recordatorios y la tarea enlaza a su nota.
 4. **Agenda**: los turnos de esta semana (lunes a domingo) y los tests del FP por materia y bloque (fechas de apertura y cierre, casilla «leída»).
-5. **Capturar (＋)**: una hoja con un cuadro de texto, botón 🎙️ (graba y la IA lo escucha) y 📷 (foto o captura, p. ej. el horario). La IA devuelve lo que entendió (tareas, turnos, tests, proyectos) y lo muestra en tarjetas editables: corriges o quitas lo que sobre y pulsas **Guardar**. Nada se guarda sin tu confirmación.
+5. **Capturar (＋)**: una hoja con un cuadro de texto, botón 🎙️ (graba y la IA lo escucha) y 📷 (foto o captura, p. ej. el horario). La IA devuelve lo que entendió (tareas, recordatorios, notas, tareas diarias, turnos, tests, proyectos) y lo muestra en tarjetas editables: corriges o quitas lo que sobre y pulsas **Guardar**. Cada tarjeta lleva arriba su tipo (Tarea · Recordatorio · Nota · Diaria) y se cambia con un toque si la IA se equivocó, sin perder lo escrito. Tareas, recordatorios y notas llevan un selector de proyecto: la IA lo rellena si está claro y, si duda, la tarjeta pregunta «¿De qué proyecto es?». Nada se guarda sin tu confirmación.
 
 ## Reglas
 
@@ -37,6 +37,7 @@ Barra inferior flotante (como Músculo): **Hoy · Tareas · Notas · Agenda**, y
 - **Foco**: tareas `abierto` o `en_curso`, ordenadas como arriba; las 3 primeras. El resto, y las `esperando`, van a «Puede esperar».
 - **FP**: el siguiente bloque = la fecha de apertura futura más cercana; se cuentan sus unidades sin leer.
 - **Captura**: la fecha se calcula en hora de Madrid («mañana», «el viernes»). «Urgente» = prioridad alta. Si no se dice, prioridad media y esfuerzo medio.
+- **Tipos**: **recordatorio** = «recuérdame / avísame» o una hora concreta (tarea con día y hora); **tarea** = algo que hacer sin hora fija; **nota** = algo para guardar o consultar (ideas, datos, listas → lista de casillas); **tarea diaria** = «todos los días / a diario». Recordatorios y tareas van en la misma tabla: lo que los distingue es la hora.
 
 ## Modelo de datos (Supabase, `supabase/setup.sql`)
 
@@ -66,7 +67,7 @@ El orden sigue las dependencias: primero lo pequeño y lo que cambia los datos, 
 3. ✅ **Proyectos como eje**: una sección donde anotar todos los proyectos. Cada proyecto tiene su ficha con sus tareas, recordatorios y notas. Las notas también tendrán `project_id`.
 
 **Bloque 2 · Que Horacio entienda (la IA, con los datos ya listos)**
-4. **Captura que distingue** nota / recordatorio / tarea / tarea diaria (además de turnos, tests y proyectos), y **asigna el proyecto**: si está claro lo pone, y si duda **pregunta** en la tarjeta de revisión («¿De qué proyecto es?»).
+4. ✅ **Captura que distingue** nota / recordatorio / tarea / tarea diaria (además de turnos, tests y proyectos), y **asigna el proyecto**: si está claro lo pone, y si duda **pregunta** en la tarjeta de revisión («¿De qué proyecto es?»).
 
 **Bloque 3 · Identidad (antes de instalarla en el móvil, porque el icono es el logo)**
 5. **Estudio de estilos visuales**: 3 o 4 direcciones con la pantalla Hoy real en cada una, para elegir.

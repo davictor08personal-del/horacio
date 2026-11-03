@@ -10,14 +10,24 @@ export interface CapturedTask {
   due_date: string | null
   due_time: string | null
   area: string | null
+  /** Extra detail said with it (goes to the task's «Detalles»). */
+  details: string | null
   project: string | null
+  /** It looks like part of a project but the AI isn't sure which: the review asks. */
+  ask_project: boolean
 }
+/** Something to keep, not to do: an idea, a list, a fact. `items` makes it a checklist. */
+export interface CapturedNote { title: string; body: string; items: string[] | null; project: string | null; ask_project: boolean }
+/** Something done every day («todos los días», «a diario»). */
+export interface CapturedDaily { title: string }
 export interface CapturedShift { day: string; kind: ShiftKind; starts_at: string | null; ends_at: string | null }
 export interface CapturedTest { subject: string; block: number | null; unit: string; opens_on: string | null; closes_on: string | null }
 export interface CapturedProject { name: string; next_step: string | null; area: string | null }
 
 export interface Capture {
   tasks: CapturedTask[]
+  notes: CapturedNote[]
+  daily_tasks: CapturedDaily[]
   shifts: CapturedShift[]
   fp_tests: CapturedTest[]
   projects: CapturedProject[]
@@ -42,7 +52,17 @@ Semana actual (lunes a domingo): ${thisWeek[0]} a ${thisWeek[6]}.
 Proyectos que ya tiene: ${projects.length ? projects.join('; ') : 'ninguno'}.
 
 Qué puede ser:
-- Tareas (tasks): title breve en infinitivo («Sacar el dinero del alquiler»). priority: alta si dice urgente/importante/ya, baja si dice cuando pueda/sin prisa, si no media. effort: rapido (<15 min), medio, grande (varias horas). due_date YYYY-MM-DD si dice un día («mañana», «el viernes» = el próximo viernes); due_time HH:MM si dice una hora. status: abierto salvo que diga que ya lo está haciendo (en_curso) o que espera a alguien (esperando). project: nombre exacto de un proyecto existente si encaja.
+Primero decide qué es cada cosa:
+- Recordatorio: «recuérdame», «avísame», «que no se me olvide» o algo a una hora concreta. Va en tasks con due_date y due_time (si no dice hora pero sí día, due_time null).
+- Tarea: algo que hacer, sin hora fija. Va en tasks.
+- Nota (notes): algo para guardar, no para hacer: una idea, un dato, apuntes, una lista (de la compra, de pelis…). title corto; body el texto; si es una lista, items con un elemento por línea y body vacío. «Apunta que…», «nota:», «idea:» son notas.
+- Tarea diaria (daily_tasks): algo que quiere hacer cada día («todos los días», «a diario», «cada mañana»). Solo title.
+- Ante la duda entre tarea y nota: si hay que hacer algo, tarea; si es para recordar o consultar, nota.
+
+Proyecto de tareas, recordatorios y notas: project = nombre exacto de un proyecto existente si encaja claramente (por tema o porque lo nombra). Si parece de algún proyecto pero no sabes de cuál, o podría ser un proyecto nuevo, project null y ask_project true. Si no tiene que ver con ningún proyecto (la compra, una llamada), project null y ask_project false.
+
+Campos:
+- Tareas y recordatorios (tasks): title breve en infinitivo («Sacar el dinero del alquiler»). priority: alta si dice urgente/importante/ya, baja si dice cuando pueda/sin prisa, si no media. effort: rapido (<15 min), medio, grande (varias horas). due_date YYYY-MM-DD si dice un día («mañana», «el viernes» = el próximo viernes); due_time HH:MM si dice una hora. status: abierto salvo que diga que ya lo está haciendo (en_curso) o que espera a alguien (esperando). details: detalles extra que diga, si los hay.
 - Turnos del restaurante (shifts), normalmente de una foto del horario semanal: una fila por día de la semana que se ve, solo los de Victor. kind: opening (10:00-17:30), dia (11:40-17:30), noche (17:00 o 17:30 hasta cierre 23:00; sábado 24:00) o libre (día vacío o libre). Pon starts_at/ends_at HH:MM según lo que ponga; si pone «cierre» usa 23:00 (sábado 24:00).
 - Tests del FP (fp_tests): subject (materia), block (número de bloque), unit (la unidad, p. ej. «U3 - Nóminas»), opens_on y closes_on YYYY-MM-DD. Una fila por unidad.
 - Proyectos nuevos (projects): solo si dice claramente que empieza un proyecto. name, next_step (siguiente paso concreto).
@@ -62,14 +82,16 @@ export const CAPTURE_SCHEMA = {
       priority: { type: 'STRING', enum: ['alta', 'media', 'baja'] },
       effort: { type: 'STRING', enum: ['rapido', 'medio', 'grande'] },
       status: { type: 'STRING', enum: ['abierto', 'en_curso', 'esperando'] },
-      due_date: nstr, due_time: nstr, area: nstr, project: nstr,
+      due_date: nstr, due_time: nstr, area: nstr, details: nstr, project: nstr, ask_project: { type: 'BOOLEAN' },
     }, ['title', 'priority', 'effort', 'status']),
+    notes: list({ title: str, body: str, items: { type: 'ARRAY', items: str, nullable: true }, project: nstr, ask_project: { type: 'BOOLEAN' } }, ['title', 'body']),
+    daily_tasks: list({ title: str }, ['title']),
     shifts: list({ day: str, kind: { type: 'STRING', enum: ['opening', 'dia', 'noche', 'libre'] }, starts_at: nstr, ends_at: nstr }, ['day', 'kind']),
     fp_tests: list({ subject: str, block: { type: 'INTEGER', nullable: true }, unit: str, opens_on: nstr, closes_on: nstr }, ['subject', 'unit']),
     projects: list({ name: str, next_step: nstr, area: nstr }, ['name']),
     note: nstr,
   },
-  required: ['tasks', 'shifts', 'fp_tests', 'projects'],
+  required: ['tasks', 'notes', 'daily_tasks', 'shifts', 'fp_tests', 'projects'],
 }
 
 const DATE = /^\d{4}-\d\d-\d\d$/
@@ -94,8 +116,20 @@ export function cleanCapture(raw: unknown): Capture {
         due_date: date(t.due_date),
         due_time: time(t.due_time),
         area: text(t.area, 40),
+        details: text(t.details, 1000),
         project: text(t.project, 80),
+        ask_project: t.ask_project === true,
       }] : []
+    }),
+    notes: arr(r.notes).flatMap((n) => {
+      const items = Array.isArray(n.items) ? n.items.map((i) => text(i)).filter((i): i is string => !!i).slice(0, 60) : []
+      const body = text(n.body, 5000) ?? ''
+      const title = text(n.title, 120) ?? ''
+      return title || body || items.length ? [{ title, body, items: items.length ? items : null, project: text(n.project, 80), ask_project: n.ask_project === true }] : []
+    }),
+    daily_tasks: arr(r.daily_tasks).flatMap((d) => {
+      const title = text(d.title, 120)
+      return title ? [{ title }] : []
     }),
     shifts: arr(r.shifts).flatMap((s) => {
       const day = date(s.day)
@@ -119,30 +153,47 @@ export function cleanCapture(raw: unknown): Capture {
 
 /**
  * Canned answer for AI_PROVIDER=mock (no key, no cost): enough to try the whole flow.
- * Text → one task ("mañana", "urgente", "a las 18:00" understood); a photo → this week's shifts.
+ * Text → one item, by its first words: «nota/idea/lista…» a note, «todos los días/a diario» a daily task,
+ * otherwise a task («mañana», «urgente», «a las 18:00» understood; «recuérdame» or a time makes it a reminder).
+ * A project's name in the text picks that project; the word «proyecto» without one makes the review ask.
+ * A photo → this week's shifts.
  */
 export function mockCapture(req: CaptureRequest, today: string): Capture {
-  const empty: Capture = { tasks: [], shifts: [], fp_tests: [], projects: [], note: null }
+  const empty: Capture = { tasks: [], notes: [], daily_tasks: [], shifts: [], fp_tests: [], projects: [], note: null }
   if (req.media?.mime.startsWith('image/')) {
     const kinds: ShiftKind[] = ['libre', 'noche', 'noche', 'opening', 'dia', 'noche', 'libre']
     return { ...empty, note: '(Simulado) Así leería la IA una foto del horario.', shifts: weekOf(today).map((day) => ({ day, kind: kinds[weekday(day)], ...shiftHours(kinds[weekday(day)], day) })) }
   }
   const t = (req.text ?? '').trim() || '(audio) Llamar al casero'
   const lower = t.toLowerCase()
+  const project = (req.projects ?? []).find((p) => lower.includes(p.toLowerCase())) ?? null
+  const ask_project = !project && lower.includes('proyecto')
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+  if (/^(nota|idea|apunta|lista)\b/.test(lower)) {
+    const [head, ...rest] = t.replace(/^(nota|idea|apunta( que)?|lista( de)?)[:,]?\s*/i, '').split(/[:\n]/)
+    const items = lower.startsWith('lista') ? rest.join(',').split(',').map((s) => s.trim()).filter(Boolean) : []
+    return { ...empty, notes: [{ title: cap(head.trim()), body: items.length ? '' : rest.join(':').trim(), items: items.length ? items : null, project, ask_project }] }
+  }
+  if (/todos los días|a diario|cada día/.test(lower)) {
+    return { ...empty, daily_tasks: [{ title: cap(t.replace(/,?\s*(todos los días|a diario|cada día)/gi, '').trim()) }] }
+  }
   const due_date = lower.includes('pasado mañana') ? addDays(today, 2) : lower.includes('mañana') ? addDays(today, 1) : lower.includes('hoy') ? today : null
   const hour = lower.match(/a las (\d{1,2})(?::(\d\d))?/)
-  const title = t.replace(/,?\s*(pasado mañana|mañana|hoy|urgente|a las \d{1,2}(:\d\d)?)\b/gi, '').trim()
+  const title = t.replace(/^recuérdame( que)?\s*/i, '').replace(/,?\s*(pasado mañana|mañana|hoy|urgente|a las \d{1,2}(:\d\d)?)\b/gi, '').trim()
   return {
     ...empty,
     tasks: [{
-      title: title.charAt(0).toUpperCase() + title.slice(1),
+      title: cap(title),
       priority: lower.includes('urgente') ? 'alta' : 'media',
       effort: 'medio',
       status: 'abierto',
-      due_date,
+      due_date: due_date ?? (lower.startsWith('recuérdame') ? today : null),
       due_time: hour ? `${hour[1].padStart(2, '0')}:${hour[2] ?? '00'}` : null,
       area: null,
-      project: null,
+      details: null,
+      project,
+      ask_project,
     }],
   }
 }
