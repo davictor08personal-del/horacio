@@ -84,4 +84,4 @@ Ideas aparcadas: que el asistente de Obsidian lea Horacio, reenviar correos, rep
 
 ## Estilo
 
-Familia de Músculo: fondo casi negro, DM Sans, tarjetas redondeadas sin bordes, barra inferior de cristal, sin animaciones (salvo la barra). Color propio de Horacio: **ámbar** (`#ffb547`, la luz de la mañana) para distinguirla de Músculo (azul). Se cambia en una línea si no te gusta.
+Familia de Músculo: fondo casi negro, DM Sans, tarjetas redondeadas sin bordes, barra inferior de cristal, sin animaciones (salvo la barra). Color de resaltado: **azul** (`#0a84ff`, el azul del sistema de iOS en modo oscuro), elegido por Victor. Músculo también es azul: lo que distinga a Horacio saldrá del estudio de estilo y del logo (bloque 3). Se cambia en una línea (`--accent` en `src/styles.css`). El icono actual sigue en ámbar hasta que hagamos el logo.
