@@ -10,6 +10,7 @@ const ERRORS: Record<string, string> = {
   'not signed in': 'La sesión ha caducado: sal y vuelve a entrar.',
   'not allowed': 'Tu usuario no está en AI_ALLOWED_USERS (ver README).',
   'daily limit': 'Has llegado al límite de hoy de la IA.',
+  'text only': 'Con DeepSeek solo funciona el texto: escríbelo en vez de foto o voz.',
   'too big': 'Es demasiado grande. Prueba con una foto más pequeña o un audio más corto.',
   'unsupported media': 'Ese tipo de archivo no lo entiende la IA.',
 }

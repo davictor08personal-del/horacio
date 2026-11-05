@@ -31,6 +31,8 @@ Abre http://localhost:5173 (o el puerto que diga). Sin `.env.local` arranca en *
 3. Tu id de usuario: Supabase → **Authentication → Users** → copia el **UID** y ponlo en `AI_ALLOWED_USERS`. Solo ese usuario puede gastar la IA.
 4. Reinicia `npm run dev` y prueba ＋ → «mañana sacar el alquiler, urgente».
 
+**Alternativa: DeepSeek** (si Gemini está saturado). En [platform.deepseek.com](https://platform.deepseek.com) → **Top up** (unos euros duran mucho) → **API keys → Create new API key**. En `.env.local`: `DEEPSEEK_API_KEY=<tu clave>` y `AI_PROVIDER=deepseek`. DeepSeek solo lee texto: fotos y voz siguen yendo a Gemini si hay `GEMINI_API_KEY`.
+
 La clave **nunca** va en git ni en el navegador: solo la lee `api/capture.ts`, que corre en el servidor (en local, a través de Vite).
 
 ## Cómo está hecha
@@ -41,7 +43,7 @@ La clave **nunca** va en git ni en el navegador: solo la lee `api/capture.ts`, q
 - `src/capture.ts`: lo que la IA debe devolver, el prompt y la limpieza de su respuesta (compartido con el servidor).
 - `src/store.ts`: lee y escribe en Supabase (o en el navegador en modo demo).
 - `src/media.ts`: reduce las fotos y convierte la voz en WAV antes de enviarlas.
-- `api/capture.ts`: la llamada a Gemini en el servidor.
+- `api/capture.ts`: la llamada a la IA (Gemini o DeepSeek) en el servidor.
 - `api/tick.ts`, `api/ping.ts`, `api/_push.ts`, `src/push.ts` y `public/push-sw.js`: los avisos push.
 - `public/icon.png`: el icono (Horacio sobre el azul); `npm run icons` genera todos los tamaños. El dibujo original está en `docs/horacio-mascota.webp`.
 
@@ -53,7 +55,7 @@ Antes: Supabase y Gemini conectados en local (arriba) y tu cuenta creada en la a
 2. **Secretos del servidor.** Supabase → **Project Settings → API Keys → Secret keys** → copia una (`sb_secret_…`) para `SUPABASE_SECRET_KEY`. Para `CRON_SECRET` genera una contraseña larga: `node -e "console.log(crypto.randomBytes(32).toString('hex'))"`. Estas dos solo van en Vercel: no las pongas en la app.
 3. **Tablas nuevas.** Vuelve a ejecutar [supabase/setup.sql](supabase/setup.sql) entero (añade las de los avisos sin tocar lo que hay).
 4. **GitHub.** Crea un repo privado y sube el código: `gh repo create horacio --private --source . --push`.
-5. **Vercel.** [vercel.com/new](https://vercel.com/new) → importa el repo `horacio` (detecta Vite solo). En **Environment Variables** pon: `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`, `AI_PROVIDER`, `GEMINI_API_KEY`, `AI_ALLOWED_USERS`, `VITE_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `SUPABASE_SECRET_KEY` y `CRON_SECRET`. Pulsa **Deploy**. Desde entonces cada `git push` publica.
+5. **Vercel.** [vercel.com/new](https://vercel.com/new) → importa el repo `horacio` (detecta Vite solo). En **Environment Variables** pon: `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`, `AI_PROVIDER`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY` (si usas DeepSeek), `AI_ALLOWED_USERS`, `VITE_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `SUPABASE_SECRET_KEY` y `CRON_SECRET`. Pulsa **Deploy**. Desde entonces cada `git push` publica.
 6. **El reloj.** Abre [supabase/cron.sql](supabase/cron.sql), cambia la dirección por la de Vercel y `YOUR_CRON_SECRET` por tu `CRON_SECRET`, y ejecútalo en el SQL Editor. Desde ese momento Supabase llama a `/api/tick` cada minuto.
 7. **En el iPhone.** Abre la dirección en Safari → **Compartir → Añadir a pantalla de inicio**. Abre Horacio desde el icono, entra, toca la cara de Horacio (Ajustes) → **Activar avisos** → **Probar aviso**.
 
