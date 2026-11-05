@@ -1,5 +1,5 @@
 // Shared by the app and api/capture.ts: what the AI must return, the prompt, and the clean-up of its answer.
-import { addDays, dayName, shiftHours, weekOf, weekday } from './logic'
+import { addDays, dayName, shiftHours, weekOf, weekday } from './logic.js' // .js: Node on Vercel needs the extension (Vite maps it to logic.ts)
 import type { Effort, Priority, ShiftKind, Status } from './types'
 
 export interface CapturedTask {
