@@ -1,15 +1,18 @@
+import { useState } from 'react'
 import type { Tab } from '../App'
 import DailyTasks from '../DailyTasks'
-import { dayPlan, greeting, longDate, madridDay, nextFpBlock, shortDate, splitToday } from '../logic'
+import { dayPlan, fullDate, greeting, madridDay, nextFpBlock, shortDate, splitToday } from '../logic'
+import Settings from '../Settings'
 import { useData } from '../store'
 import { TaskRow } from '../TaskRow'
 
 // Single user for now. When Horacio is for anyone, the name comes from their profile.
 const OWNER = 'Victor'
 
-/** «Hoy»: Horacio's hello and the day (shift or free), Foco, Tareas diarias, FP and the one line of what can wait. */
+/** «Hoy»: Horacio greets you and says the day, then his proposal (Foco), Cada día, FP and what can wait. */
 export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
   const { tasks, shifts, fp_tests } = useData()
+  const [settings, setSettings] = useState(false)
   const today = madridDay()
   const plan = dayPlan(shifts.find((s) => s.day === today))
   const { focus, later, waiting } = splitToday(tasks)
@@ -19,31 +22,31 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
   return (
     <>
       <header className="today-head">
-        <h1>{greeting()}, {OWNER}</h1>
-        <p className="day-line"><span className="day-date">{longDate(today)}</span> · {plan.work ? `${plan.title} · ${plan.free}` : plan.free}</p>
+        <div className="head-top">
+          <span className="eyebrow">{fullDate(today)}</span>
+          <button className="monogram" onClick={() => setSettings(true)} aria-label="Ajustes">H</button>
+        </div>
+        <h1>{greeting()}, {OWNER}.</h1>
+        <p className="butler">{plan.line}</p>
         {!hasShifts && <button className="link" onClick={() => onGo('agenda')}>Aún no hay turnos de esta semana · Añadir</button>}
       </header>
 
       <section className="group">
-        <h2 className="group-title">Foco</h2>
+        <h2 className="group-title">{focus.length ? 'Le propongo, por orden' : 'Nada urgente'}</h2>
         {focus.length ? (
-          <ul className="list card-list">{focus.map((t) => <TaskRow key={t.id} task={t} />)}</ul>
+          <ul className="list card-list">{focus.map((t, i) => <TaskRow key={t.id} task={t} n={i + 1} />)}</ul>
         ) : (
-          <p className="empty">Nada urgente. Pulsa ＋ para apuntar algo.</p>
+          <p className="empty">Cuando apunte algo con ＋, aquí le diré por dónde empezar.</p>
         )}
       </section>
 
       <DailyTasks />
 
       {fp && (
-        <section className="group">
-          <h2 className="group-title">FP</h2>
-          <div className="fp-card">
-            <strong>{fp.days === 1 ? 'Mañana' : `En ${fp.days} días`}</strong>
-            <span>abre el siguiente bloque de tests ({shortDate(fp.opensOn)}{fp.subjects.length === 1 ? ` · ${fp.subjects[0]}` : ''})</span>
-            <span className="muted">{fp.unread ? `${fp.unread} de ${fp.units} ${fp.units === 1 ? 'unidad' : 'unidades'} sin leer` : 'Todas las unidades leídas'}</span>
-          </div>
-        </section>
+        <p className="fp-card">
+          <em>Una nota sobre el FP:</em> el siguiente bloque abre {fp.days === 1 ? 'mañana' : `en ${fp.days} días`} ({shortDate(fp.opensOn)}{fp.subjects.length === 1 ? ` · ${fp.subjects[0]}` : ''}){' '}
+          {fp.unread ? `y quedan ${fp.unread} de ${fp.units} ${fp.units === 1 ? 'unidad' : 'unidades'} por leer.` : 'y ya lo ha leído todo.'}
+        </p>
       )}
 
       {(later.length > 0 || waiting.length > 0) && (
@@ -52,6 +55,7 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
           <span className="chev" aria-hidden>›</span>
         </button>
       )}
+      {settings && <Settings onClose={() => setSettings(false)} />}
     </>
   )
 }

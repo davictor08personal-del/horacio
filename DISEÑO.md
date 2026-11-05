@@ -70,9 +70,14 @@ El orden sigue las dependencias: primero lo pequeño y lo que cambia los datos, 
 4. ✅ **Captura que distingue** nota / recordatorio / tarea / tarea diaria (además de turnos, tests y proyectos), y **asigna el proyecto**: si está claro lo pone, y si duda **pregunta** en la tarjeta de revisión («¿De qué proyecto es?»).
 
 **Bloque 3 · Identidad (antes de instalarla en el móvil, porque el icono es el logo)**
-5. **Estudio de estilos visuales**: 3 o 4 direcciones con la pantalla Hoy real en cada una, para elegir.
+5. ✅ **Estudio de estilos visuales**: 4 direcciones con la pantalla Hoy real ([lienzo](https://claude.ai/artifact/8GksoTG5hHiwbev1CMBDJi), capturas en `docs/estilos/`). **Elegida: B · Mayordomo**, con el oscuro **Grafito** (1 de 4 variantes de oscuro):
+   - **A · Nativo iOS**: lo de ahora llevado a iOS de verdad (grises del sistema, Inter). Lo más seguro y lo que menos se nota.
+   - **B · Mayordomo**: serif (Fraunces) y Horacio que habla de usted («Le propongo, por orden»). Muy propio, menos «app de tareas».
+   - **C · Bento (Android)**: mosaicos redondeados, anillo de progreso y barra de Android (Material You). Lo más «funcional».
+   - **D · Amable**: Horacio en primer plano con un bocadillo, formas redondas (Nunito), el ＋ pasa a ser «hablar con Horacio». La más cercana a la persona media y a la idea del mayordomo.
+   Se puede mezclar (p. ej. la estructura de A con el bocadillo de D).
 6. **Logo y mascota a la vez**: el logo *es* Horacio, el mayordomo. Un personaje que funcione como icono pequeño y como compañero en la app.
-7. **Modo claro y oscuro** con la paleta elegida (sigue al sistema, con opción de forzarlo). Va después del estilo para no diseñar dos veces cada paleta.
+7. ✅ **Modo claro y oscuro** con la paleta elegida (sigue al sistema, con opción de forzarlo). Va después del estilo para no diseñar dos veces cada paleta.
 
 **Bloque 4 · Publicar (lo que pide un servidor siempre encendido)**
 8. **Vercel + avisos push** (era la v2): instalar en el iPhone, resumen a las 9:30 y aviso de cada recordatorio a su hora. Sin esto un recordatorio no avisa.
@@ -85,4 +90,10 @@ Ideas aparcadas: que el asistente de Obsidian lea Horacio, reenviar correos, rep
 
 ## Estilo
 
-Familia de Músculo: fondo casi negro, DM Sans, tarjetas redondeadas sin bordes, barra inferior de cristal, sin animaciones (salvo la barra). Color de resaltado: **azul** (`#0a84ff`, el azul del sistema de iOS en modo oscuro), elegido por Victor. Músculo también es azul: lo que distinga a Horacio saldrá del estudio de estilo y del logo (bloque 3). Se cambia en una línea (`--accent` en `src/styles.css`). El icono actual sigue en ámbar hasta que hagamos el logo.
+**Mayordomo** (elegido el 2026-11-05). Fraunces (serif, con cursiva) para los títulos y la voz de Horacio; Inter para el resto. Tarjetas con borde fino, botón ＋ cuadrado-redondeado en color tinta, resaltado **azul**. Horacio habla de **usted** en Hoy («Le propongo, por orden», «Hasta las 16:30, el día es suyo»); el resto de la app usa etiquetas neutras.
+
+- **Claro**: fondo `#f3f5f9`, tarjetas blancas, tinta `#0e1a2b`, azul `#1f5fd6`.
+- **Oscuro «Grafito»**: fondo `#121212`, tarjetas `#1c1c1e`, texto `#ededed`, azul `#5e9eff`.
+- **Automático** (por defecto) sigue al móvil; en Ajustes (la «H» de Hoy) se puede forzar claro u oscuro. Se guarda por dispositivo.
+- Todos los colores son variables en `src/styles.css` (dos bloques: `:root` y `:root[data-theme='dark']`); `index.html` aplica el tema antes de pintar para que no parpadee.
+- La «H» en cursiva es provisional hasta el logo (paso 6). El icono de la app sigue en ámbar hasta entonces.

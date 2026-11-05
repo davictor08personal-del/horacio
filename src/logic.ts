@@ -32,6 +32,9 @@ const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', '
 export const dayName = (day: string) => DAY_NAMES[weekday(day)]
 export const shortDate = (day: string) => `${Number(day.slice(8))} ${MONTHS[Number(day.slice(5, 7)) - 1]}`
 export const longDate = (day: string) => `${dayName(day)} ${shortDate(day)}`
+const MONTHS_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+/** "martes, 3 de noviembre" */
+export const fullDate = (day: string) => `${dayName(day)}, ${Number(day.slice(8))} de ${MONTHS_LONG[Number(day.slice(5, 7)) - 1]}`
 
 /** "Hoy", "Mañana", "Ayer", "viernes", "hace 3 días", "12 nov". */
 export function relDay(day: string, today: string) {
@@ -63,21 +66,29 @@ const DAY_START = toMin('09:30')
 const DAY_END = toMin('23:30')
 const GET_READY = 30 // minutes before a shift to get there
 
-/** What today looks like: the headline for Hoy and whether it's a work day. */
+/**
+ * What today looks like: the headline, whether it's a work day, and `line`, the same said by Horacio
+ * (formal «usted», like a butler) under the greeting on Hoy.
+ */
 export function dayPlan(shift: Shift | undefined) {
   if (!shift || shift.kind === 'libre' || !shift.starts_at || !shift.ends_at) {
-    return { work: false, title: 'Libre', free: 'Todo el día libre' }
+    return { work: false, title: 'Libre', free: 'Todo el día libre', line: 'Hoy no trabaja: el día entero es suyo.' }
   }
   const start = toMin(shift.starts_at)
   const end = toMin(shift.ends_at)
-  const title = `Turno ${shiftLabel(shift.kind)} · ${hhmm(shift.starts_at)}–${hhmm(shift.ends_at)}`
+  const label = shiftLabel(shift.kind)
+  const title = `Turno ${label} · ${hhmm(shift.starts_at)}–${hhmm(shift.ends_at)}`
   const before = start - GET_READY - DAY_START
   const after = DAY_END - end
   // Whichever gap is bigger is the one worth planning around.
-  const free = before >= after
-    ? before >= 60 ? `Libre hasta las ${fromMin(start - GET_READY)}` : 'Sin hueco libre'
-    : after >= 60 ? `Libre desde las ${hhmm(shift.ends_at)}` : 'Sin hueco libre'
-  return { work: true, title, free }
+  if (before >= after && before >= 60) {
+    const until = fromMin(start - GET_READY)
+    return { work: true, title, free: `Libre hasta las ${until}`, line: `Tiene turno ${label} a las ${hhmm(shift.starts_at)}. Hasta las ${until}, el día es suyo.` }
+  }
+  if (after > before && after >= 60) {
+    return { work: true, title, free: `Libre desde las ${hhmm(shift.ends_at)}`, line: `Tiene turno ${label} hasta las ${hhmm(shift.ends_at)}. Después, el día es suyo.` }
+  }
+  return { work: true, title, free: 'Sin hueco libre', line: `Tiene turno ${label} de ${hhmm(shift.starts_at)} a ${hhmm(shift.ends_at)}. Hoy queda poco hueco.` }
 }
 const shiftLabel = (k: ShiftKind) => ({ opening: 'de opening', dia: 'de día', noche: 'de noche', libre: 'libre' })[k]
 

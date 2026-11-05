@@ -36,6 +36,11 @@ describe('shifts', () => {
     expect(dayPlan(shift({ kind: 'opening', starts_at: '10:00:00', ends_at: '17:30:00' })).free).toBe('Libre desde las 17:30')
     expect(dayPlan(undefined)).toMatchObject({ work: false, free: 'Todo el día libre' })
   })
+  it('Horacio says the day like a butler', () => {
+    expect(dayPlan(shift({ kind: 'noche', starts_at: '17:00', ends_at: '23:00' })).line).toBe('Tiene turno de noche a las 17:00. Hasta las 16:30, el día es suyo.')
+    expect(dayPlan(shift({ kind: 'opening', starts_at: '10:00', ends_at: '17:30' })).line).toBe('Tiene turno de opening hasta las 17:30. Después, el día es suyo.')
+    expect(dayPlan(undefined).line).toBe('Hoy no trabaja: el día entero es suyo.')
+  })
 })
 
 describe('priorities', () => {

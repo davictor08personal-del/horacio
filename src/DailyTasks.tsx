@@ -16,21 +16,20 @@ export default function DailyTasks() {
   return (
     <section className="group">
       <div className="group-head">
-        <h2 className="group-title">Tareas diarias{list.length > 0 && ` · ${done} de ${list.length}`}</h2>
-        {list.length > 0 && <button className="link" onClick={() => setEditing(true)}>Editar</button>}
+        <h2 className="group-title">Tareas diarias</h2>
+        {list.length > 0 && <span className="count">{done} de {list.length} · <button className="link" onClick={() => setEditing(true)}>Editar</button></span>}
       </div>
       {list.length ? (
-        <ul className="list card-list">
+        <div className="daily-grid">
           {list.map((d) => {
             const on = doneToday(d, today)
             return (
-              <li key={d.id} className={`task daily ${on ? 'is-done' : ''}`}>
-                <button className={`tick ${on ? 'done' : ''}`} onClick={() => update('daily_tasks', d.id, { done_on: on ? null : today })} aria-label={on ? `Desmarcar «${d.title}»` : `Tachar «${d.title}»`} aria-pressed={on} />
-                <span className="task-title">{d.title}</span>
-              </li>
+              <button key={d.id} className={`daily-btn ${on ? 'done' : ''}`} onClick={() => update('daily_tasks', d.id, { done_on: on ? null : today })} aria-pressed={on}>
+                {d.title}
+              </button>
             )
           })}
-        </ul>
+        </div>
       ) : (
         <div className="empty-card">
           <p className="muted">Cosas que haces cada día: se tachan y mañana vuelven.</p>

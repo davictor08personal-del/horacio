@@ -5,8 +5,8 @@ import { openNote } from './NoteEditor'
 import Sheet, { Choice } from './Sheet'
 import { EFFORT, PRIORITY, STATUS, type Status, type Task } from './types'
 
-/** One task: round check to finish it, tap the text to edit it. */
-export function TaskRow({ task }: { task: Task }) {
+/** One task: round check to finish it, tap the text to edit it. `n` numbers it (Horacio's order on Hoy). */
+export function TaskRow({ task, n }: { task: Task; n?: number }) {
   const [open, setOpen] = useState(false)
   const { projects, notes } = useData()
   const today = madridDay()
@@ -24,6 +24,7 @@ export function TaskRow({ task }: { task: Task }) {
 
   return (
     <li className="task">
+      {n && <span className="num" aria-hidden>{n}</span>}
       <button className={`tick prio-${task.priority}`} onClick={() => setTaskStatus(task, 'hecho')} aria-label={`Marcar «${task.title}» como hecha`} />
       <button className="task-text" onClick={() => setOpen(true)}>
         <span className="task-title">{task.title}</span>
