@@ -6,6 +6,3 @@ dev-dist
 !.env.example
 *.log
 .vercel
-
-.vercel
-.env*
