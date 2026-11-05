@@ -42,7 +42,30 @@ La clave **nunca** va en git ni en el navegador: solo la lee `api/capture.ts`, q
 - `src/store.ts`: lee y escribe en Supabase (o en el navegador en modo demo).
 - `src/media.ts`: reduce las fotos y convierte la voz en WAV antes de enviarlas.
 - `api/capture.ts`: la llamada a Gemini en el servidor.
+- `api/tick.ts`, `api/ping.ts`, `api/_push.ts`, `src/push.ts` y `public/push-sw.js`: los avisos push.
+- `public/icon.png`: el icono (Horacio sobre el azul); `npm run icons` genera todos los tamaños. El dibujo original está en `docs/horacio-mascota.webp`.
+
+## Publicar (Vercel + avisos al iPhone)
+
+Antes: Supabase y Gemini conectados en local (arriba) y tu cuenta creada en la app.
+
+1. **Claves de los avisos.** En esta carpeta: `npx web-push generate-vapid-keys`. Pon la *Public Key* en `VITE_VAPID_PUBLIC_KEY` y la *Private Key* en `VAPID_PRIVATE_KEY` de `.env.local`.
+2. **Secretos del servidor.** Supabase → **Project Settings → API Keys → Secret keys** → copia una (`sb_secret_…`) para `SUPABASE_SECRET_KEY`. Para `CRON_SECRET` genera una contraseña larga: `node -e "console.log(crypto.randomBytes(32).toString('hex'))"`. Estas dos solo van en Vercel: no las pongas en la app.
+3. **Tablas nuevas.** Vuelve a ejecutar [supabase/setup.sql](supabase/setup.sql) entero (añade las de los avisos sin tocar lo que hay).
+4. **GitHub.** Crea un repo privado y sube el código: `gh repo create horacio --private --source . --push`.
+5. **Vercel.** [vercel.com/new](https://vercel.com/new) → importa el repo `horacio` (detecta Vite solo). En **Environment Variables** pon: `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`, `AI_PROVIDER`, `GEMINI_API_KEY`, `AI_ALLOWED_USERS`, `VITE_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `SUPABASE_SECRET_KEY` y `CRON_SECRET`. Pulsa **Deploy**. Desde entonces cada `git push` publica.
+6. **El reloj.** Abre [supabase/cron.sql](supabase/cron.sql), cambia la dirección por la de Vercel y `YOUR_CRON_SECRET` por tu `CRON_SECRET`, y ejecútalo en el SQL Editor. Desde ese momento Supabase llama a `/api/tick` cada minuto.
+7. **En el iPhone.** Abre la dirección en Safari → **Compartir → Añadir a pantalla de inicio**. Abre Horacio desde el icono, entra, toca la cara de Horacio (Ajustes) → **Activar avisos** → **Probar aviso**.
+
+Si un aviso no llega: Vercel → proyecto → **Logs** (busca `tick` o `ping`) y, en Supabase, `select * from cron.job_run_details order by start_time desc limit 5;`.
+
+## Cómo funcionan los avisos
+
+- El iPhone, al activar los avisos, da una «dirección» (suscripción) que se guarda en `push_subscriptions`.
+- Cada minuto `pg_cron` llama a `api/tick.ts`. Este busca los recordatorios (tareas con día y hora) que ya tocan y no se han avisado, los marca (`notified_at`) y los envía. Entre las 9:30 y las 12:00 manda una vez al día el resumen («Buenos días, Victor…»); `push_daily` evita repetirlo.
+- Si cambias el día o la hora de un recordatorio, vuelve a avisar a la nueva hora (lo hace un trigger en la base).
+- Las reglas (qué toca y el texto del resumen) están en `src/logic.ts`, con tests.
 
 ## Siguiente fase
 
-Publicar en Vercel (las mismas variables de `.env.local` van en Settings → Environment Variables) y los avisos push: resumen a las 9:30 y aviso por tarea. Ver DISEÑO.md.
+Agenda con Google Calendar y «Hablar con Horacio». Ver DISEÑO.md.

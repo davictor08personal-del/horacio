@@ -80,10 +80,33 @@ create table if not exists public.fp_tests (
   read boolean not null default false
 );
 
+-- Notifications (api/tick.ts). One row per phone or browser that allowed them.
+create table if not exists public.push_subscriptions (
+  endpoint text primary key,
+  user_id uuid not null default auth.uid() references auth.users on delete cascade,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+
+-- When a reminder's notification went out. Changing its day or time clears it, so it rings again at the new time.
+alter table public.tasks add column if not exists notified_at timestamptz;
+create or replace function public.tasks_reset_notified() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.due_date is distinct from old.due_date or new.due_time is distinct from old.due_time then
+    new.notified_at := null;
+  end if;
+  return new;
+end $$;
+drop trigger if exists tasks_reset_notified on public.tasks;
+create trigger tasks_reset_notified before update on public.tasks
+  for each row execute function public.tasks_reset_notified();
+
 do $$
 declare t text;
 begin
-  foreach t in array array['projects', 'tasks', 'shifts', 'fp_tests', 'notes', 'daily_tasks'] loop
+  foreach t in array array['projects', 'tasks', 'shifts', 'fp_tests', 'notes', 'daily_tasks', 'push_subscriptions'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "%1$s: own" on public.%1$I', t);
     execute format('create policy "%1$s: own" on public.%1$I for all to authenticated
@@ -110,3 +133,11 @@ language sql security definer set search_path = '' as $$
 $$;
 revoke execute on function public.ai_hit() from public, anon;
 grant execute on function public.ai_hit() to authenticated;
+
+-- Which day's 9:30 summary each user already got (api/tick.ts). No policies: only the server (secret key) touches it.
+create table if not exists public.push_daily (
+  user_id uuid not null references auth.users on delete cascade,
+  day date not null,
+  primary key (user_id, day)
+);
+alter table public.push_daily enable row level security;

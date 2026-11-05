@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanCapture, mockCapture } from './capture'
-import { addDays, byPriority, dayPlan, doneToday, fromChecklist, greeting, madridDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
+import { addDays, byPriority, dayPlan, doneToday, dueReminders, morningSummary, fromChecklist, greeting, madridDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
 import type { FpTest, Note, Shift, Task } from './types'
 
 const task = (p: Partial<Task>): Task => ({
@@ -149,5 +149,32 @@ describe('capture kinds', () => {
     expect(mockCapture({ text: 'recuérdame llamar a mamá a las 20' }, today).tasks[0]).toMatchObject({ title: 'Llamar a mamá', due_date: today, due_time: '20:00' })
     expect(mockCapture({ text: 'comprar cajas para la mudanza', projects: ['Mudanza'] }, today).tasks[0]).toMatchObject({ project: 'Mudanza', ask_project: false })
     expect(mockCapture({ text: 'idea para el proyecto: modo claro' }, today).notes[0]).toMatchObject({ ask_project: true })
+  })
+})
+
+describe('notifications', () => {
+  // 2026-11-05 10:00 in Madrid (UTC+1 in November)
+  const now = new Date('2026-11-05T09:00:00Z')
+  it('a reminder rings once its Madrid day and time arrive', () => {
+    const due = [
+      task({ title: 'now', due_date: '2026-11-05', due_time: '10:00:00' }),
+      task({ title: 'earlier today', due_date: '2026-11-05', due_time: '08:15' }),
+      task({ title: 'late last night', due_date: '2026-11-04', due_time: '23:50' }),
+    ]
+    const notYet = [
+      task({ title: 'later', due_date: '2026-11-05', due_time: '10:01' }),
+      task({ title: 'no time', due_date: '2026-11-05' }),
+      task({ title: 'too old', due_date: '2026-11-03', due_time: '09:00' }),
+      task({ title: 'done', due_date: '2026-11-05', due_time: '09:00', status: 'hecho' }),
+      task({ title: 'waiting', due_date: '2026-11-05', due_time: '09:00', status: 'esperando' }),
+    ]
+    expect(dueReminders([...due, ...notYet], now).map((t) => t.title)).toEqual(due.map((t) => t.title))
+  })
+  it('the morning summary says the day and the first three', () => {
+    const tasks = ['a', 'b', 'c', 'd'].map((title, i) => task({ title, created_at: `2026-11-0${i + 1}T10:00:00Z` }))
+    const s = morningSummary(tasks, shift({ kind: 'noche', starts_at: '17:00', ends_at: '23:00' }), 'Victor')
+    expect(s.title).toBe('Buenos días, Victor')
+    expect(s.body).toBe('Tiene turno de noche a las 17:00. Hasta las 16:30, el día es suyo. Le propongo: 1. a · 2. b · 3. c (y 1 más que pueden esperar)')
+    expect(morningSummary([], undefined, 'Victor').body).toBe('Hoy no trabaja: el día entero es suyo. Nada urgente para hoy.')
   })
 })

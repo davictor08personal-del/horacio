@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import type { Tab } from '../App'
 import DailyTasks from '../DailyTasks'
-import { dayPlan, fullDate, greeting, madridDay, nextFpBlock, shortDate, splitToday } from '../logic'
+import { OWNER, dayPlan, fullDate, greeting, madridDay, nextFpBlock, shortDate, splitToday } from '../logic'
 import Settings from '../Settings'
 import { useData } from '../store'
 import { TaskRow } from '../TaskRow'
 
 // Single user for now. When Horacio is for anyone, the name comes from their profile.
-const OWNER = 'Victor'
 
 /** «Hoy»: Horacio greets you and says the day, then his proposal (Foco), Cada día, FP and what can wait. */
 export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
@@ -24,7 +23,7 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
       <header className="today-head">
         <div className="head-top">
           <span className="eyebrow">{fullDate(today)}</span>
-          <button className="monogram" onClick={() => setSettings(true)} aria-label="Ajustes">H</button>
+          <button className="monogram" onClick={() => setSettings(true)} aria-label="Ajustes"><img src="/horacio-face.webp" alt="" width="44" height="44" /></button>
         </div>
         <h1>{greeting()}, {OWNER}.</h1>
         <p className="butler">{plan.line}</p>

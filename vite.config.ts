@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png'],
-        workbox: { globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico}'] },
+        workbox: { globPatterns: ['**/*.{js,css,html,woff2,png,webp,svg,ico}'], globIgnores: ['icon.png'], importScripts: ['push-sw.js'] },
         manifest: {
           name: 'Horacio',
           short_name: 'Horacio',

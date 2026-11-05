@@ -12,7 +12,7 @@ La app de prioridades de Victor. Le dice **qué hacer hoy**, **qué puede espera
 | Seguridad de los datos | **RLS** (Row Level Security) en cada tabla | La clave pública de Supabase va en la app, así que lo que protege los datos son reglas en la base: cada fila solo la ve su dueño. |
 | IA | **Gemini Flash** (Google AI Studio, nivel gratis) desde `api/capture.ts` | Entiende texto, fotos y audio con una sola llamada. Se llama desde el servidor para que la clave nunca llegue al navegador. Modelo `gemini-flash-latest` (alias que Google mueve al Flash más nuevo); se cambia con `AI_MODEL` sin tocar código. Ojo: en el nivel gratis Google puede usar lo que le mandas para mejorar sus productos. |
 | Publicación | **Vercel** | Igual que Músculo: cada `git push` publica. |
-| Avisos (fase 2) | **Supabase pg_cron** cada minuto → llama a `api/tick` en Vercel → **Web Push** | El cron gratis de Vercel solo va una vez al día. `pg_cron` (incluido gratis en Supabase) puede ir cada minuto; la función de Vercel ya sabe enviar push (lo hicimos en Músculo con `web-push`), así que no hace falta aprender las Edge Functions de Supabase. |
+| Avisos | **Supabase pg_cron** cada minuto → llama a `api/tick` en Vercel → **Web Push** | El cron gratis de Vercel solo va una vez al día. `pg_cron` (incluido gratis en Supabase) puede ir cada minuto; la función de Vercel ya sabe enviar push (lo hicimos en Músculo con `web-push`), así que no hace falta aprender las Edge Functions de Supabase. |
 
 ## Pantallas
 
@@ -57,7 +57,7 @@ Horacio es un **mayordomo**: como Claude Code organiza un proyecto en el ordenad
 
 ## Hoja de ruta
 
-Hecho: **v1** (Hoy, Tareas/Proyectos, Agenda, captura con IA, en local), **Notas** enlazadas con recordatorios y el **bloque 1** (✅ abajo).
+Hecho: **v1** (Hoy, Tareas/Proyectos, Agenda, captura con IA), **Notas** enlazadas con recordatorios y los bloques 1 a 3; el 4 está programado y falta publicarlo (✅ abajo).
 
 El orden sigue las dependencias: primero lo pequeño y lo que cambia los datos, después la IA que usa esos datos, luego la imagen y por último lo que necesita la app publicada.
 
@@ -76,11 +76,11 @@ El orden sigue las dependencias: primero lo pequeño y lo que cambia los datos, 
    - **C · Bento (Android)**: mosaicos redondeados, anillo de progreso y barra de Android (Material You). Lo más «funcional».
    - **D · Amable**: Horacio en primer plano con un bocadillo, formas redondas (Nunito), el ＋ pasa a ser «hablar con Horacio». La más cercana a la persona media y a la idea del mayordomo.
    Se puede mezclar (p. ej. la estructura de A con el bocadillo de D).
-6. **Logo y mascota a la vez**: el logo *es* Horacio, el mayordomo. Un personaje que funcione como icono pequeño y como compañero en la app.
+6. ✅ **Logo y mascota a la vez** (2026-11-05, dibujo en `docs/horacio-mascota.webp`; el icono es su busto sobre el azul y su cara abre Ajustes en Hoy): el logo *es* Horacio, el mayordomo. Un personaje que funcione como icono pequeño y como compañero en la app.
 7. ✅ **Modo claro y oscuro** con la paleta elegida (sigue al sistema, con opción de forzarlo). Va después del estilo para no diseñar dos veces cada paleta.
 
 **Bloque 4 · Publicar (lo que pide un servidor siempre encendido)**
-8. **Vercel + avisos push** (era la v2): instalar en el iPhone, resumen a las 9:30 y aviso de cada recordatorio a su hora. Sin esto un recordatorio no avisa.
+8. ✅ (código) **Vercel + avisos push** (era la v2; falta publicar, pasos en el README): instalar en el iPhone, resumen a las 9:30 y aviso de cada recordatorio a su hora. Sin esto un recordatorio no avisa.
 9. **Agenda con Google Calendar**: primero leer los eventos (salen en Agenda y cuentan para el hueco libre de Hoy), después crear eventos desde Horacio. Necesita login con Google (OAuth) y una URL publicada.
 
 **Bloque 5 · El mayordomo**
@@ -96,4 +96,4 @@ Ideas aparcadas: que el asistente de Obsidian lea Horacio, reenviar correos, rep
 - **Oscuro «Grafito»**: fondo `#121212`, tarjetas `#1c1c1e`, texto `#ededed`, azul `#5e9eff`.
 - **Automático** (por defecto) sigue al móvil; en Ajustes (la «H» de Hoy) se puede forzar claro u oscuro. Se guarda por dispositivo.
 - Todos los colores son variables en `src/styles.css` (dos bloques: `:root` y `:root[data-theme='dark']`); `index.html` aplica el tema antes de pintar para que no parpadee.
-- La «H» en cursiva es provisional hasta el logo (paso 6). El icono de la app sigue en ámbar hasta entonces.
+- **Logo**: Horacio, mayordomo con esmoquin, gafas redondas y bigote. Icono = su busto sobre el azul `#1f5fd6`; en Hoy, su cara (círculo arriba a la derecha) abre Ajustes.

@@ -8,7 +8,7 @@ export class Failed extends Error {
 /**
  * The Supabase user behind the request's token, plus a client that acts as them (RLS applies).
  * The app is public, so only the ids in AI_ALLOWED_USERS get through: they're the ones whose
- * keys and quota we pay for (the AI capture).
+ * keys and quota we pay for (the AI capture, test notifications).
  */
 export async function allowedUser(request: Request) {
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')

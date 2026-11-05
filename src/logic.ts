@@ -2,6 +2,8 @@
 import type { ChecklistItem, DailyTask, Effort, FpTest, Note, Priority, Shift, ShiftKind, Task } from './types'
 
 const TZ = 'Europe/Madrid'
+/** Who Horacio serves (greeting on Hoy and the 9:30 notification). */
+export const OWNER = 'Victor'
 
 /** 'YYYY-MM-DD' in Madrid time, whatever the device's time zone. */
 export function madridDay(d = new Date()) {
@@ -179,3 +181,30 @@ export function noteTime(iso: string, now = new Date()) {
 
 /** Most recently edited first. */
 export const byEdited = (a: Note, b: Note) => b.updated_at.localeCompare(a.updated_at)
+
+// ---------- notifications (api/tick.ts) ----------
+/** When the morning summary goes out (Madrid). Until noon it still catches up if a tick was missed. */
+export const SUMMARY_FROM = 9 * 60 + 30
+export const SUMMARY_UNTIL = 12 * 60
+
+/**
+ * Reminders whose day and time (Madrid) have arrived. Only those from yesterday on: a reminder that was
+ * already old when notifications were switched on shouldn't ring now.
+ */
+export function dueReminders(tasks: Task[], now = new Date()) {
+  const today = madridDay(now)
+  const stamp = `${today} ${fromMin(madridMinutes(now))}`
+  const yesterday = addDays(today, -1)
+  return tasks.filter((t) =>
+    (t.status === 'abierto' || t.status === 'en_curso') && t.due_date && t.due_time &&
+    t.due_date >= yesterday && `${t.due_date} ${hhmm(t.due_time)}` <= stamp)
+}
+
+/** The 9:30 notification: Horacio's morning line, then what he proposes first. */
+export function morningSummary(tasks: Task[], shift: Shift | undefined, name: string) {
+  const { focus, later } = splitToday(tasks)
+  const plan = dayPlan(shift)
+  const list = focus.length ? `Le propongo: ${focus.map((t, i) => `${i + 1}. ${t.title}`).join(' · ')}` : 'Nada urgente para hoy.'
+  const more = later.length ? ` (y ${later.length} más que pueden esperar)` : ''
+  return { title: `Buenos días, ${name}`, body: `${plan.line} ${list}${more}` }
+}

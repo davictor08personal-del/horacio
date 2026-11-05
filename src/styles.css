@@ -129,8 +129,9 @@ input, textarea { caret-color: var(--accent); }
 .day-date { color: var(--accent); font-weight: 600; display: inline-block; }
 .head-top { display: flex; justify-content: space-between; align-items: center; }
 .eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-/* Horacio's monogram until the real logo exists; it opens Ajustes */
-.monogram { width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; border: 1px solid var(--line); font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 1.25rem; color: var(--accent); }
+/* Horacio himself; tapping him opens Ajustes */
+.monogram { width: 44px; height: 44px; min-height: 0; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: var(--accent-soft); overflow: hidden; }
+.monogram img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .butler { font-family: var(--serif); font-style: italic; font-size: 1.08rem; line-height: 1.45; color: var(--muted); }
 .day-date::first-letter, .shift-day::first-letter, .review-shift span:first-child::first-letter { text-transform: uppercase; }
 
