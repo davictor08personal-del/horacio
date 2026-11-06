@@ -398,8 +398,6 @@ input, textarea { caret-color: var(--accent); }
 
 /* Daily tasks: the project shows as a small label under the title (not struck through when done) */
 .daily-btn { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; position: relative; overflow: hidden; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
-.daily-btn.done { text-decoration: none; }
-.daily-btn.done .daily-title { text-decoration: line-through; }
 .daily-tag { font-size: 0.72rem; font-weight: 600; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .daily-project { flex: 0 1 120px; min-width: 0; font-size: 0.85rem; padding: 6px 8px; min-height: 0; }
 
@@ -437,18 +435,11 @@ input, textarea { caret-color: var(--accent); }
 .icon-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .emoji-input { flex: 1 1 110px; min-width: 0; }
 
-/* Daily tile: hold to fill it from right to left; full = done today */
-.daily-fill { position: absolute; inset: 0; background: var(--fill); transform: scaleX(0); transform-origin: left; transition: transform 160ms ease-out; pointer-events: none; }
-.daily-btn > :not(.daily-fill) { position: relative; }
-.daily-btn.done .daily-fill { transform: scaleX(1); }
-.daily-btn.pressing:not(.done) .daily-fill { transform: scaleX(1); transition: transform 550ms linear; }
-.daily-btn.pressing.done .daily-fill { transform: scaleX(0); transform-origin: right; transition: transform 550ms linear; }
 .daily-text { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
 .daily-meta { display: flex; gap: 6px; align-items: center; max-width: 100%; }
 .streak { font-size: 0.74rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .project-icon.small { width: 30px; height: 30px; border-radius: 9px; font-size: 1.05rem; }
 .project-icon.small.letter { font-size: 0.95rem; }
-@media (prefers-reduced-motion: reduce) { .daily-btn.pressing .daily-fill { transition-duration: 550ms; } }
 
 /* Daily task page */
 .daily-head { display: flex; align-items: center; gap: 12px; }
@@ -496,3 +487,53 @@ input, textarea { caret-color: var(--accent); }
 button.tag { padding: 5px 11px; }
 .tag.suggest { background: var(--surface-2); color: var(--muted); }
 .project-text .tags { margin-top: 3px; }
+
+/* Daily tile, hold to tick: it sinks a little, a wash sweeps left → right (clip-path keeps the rounded corners),
+   and when done a check pops in. Coloured tiles (.colored) are solid with white text; their wash darkens them. */
+.daily-btn { touch-action: manipulation; transition: transform 220ms cubic-bezier(0.2, 0.8, 0.3, 1), background-color 200ms; }
+.daily-btn.pressing { transform: scale(0.965); }
+.daily-btn > :not(.daily-fill) { position: relative; }
+.daily-fill { position: absolute; inset: 0; background: var(--fill); clip-path: inset(0 100% 0 0); transition: clip-path 240ms ease-out; pointer-events: none; }
+.daily-btn.done .daily-fill { clip-path: inset(0 0 0 0); }
+.daily-btn.pressing:not(.done) .daily-fill { clip-path: inset(0 0 0 0); transition: clip-path 600ms cubic-bezier(0.45, 0, 0.25, 1); }
+.daily-btn.pressing.done .daily-fill { clip-path: inset(0 0 0 100%); transition: clip-path 600ms cubic-bezier(0.45, 0, 0.25, 1); }
+.daily-text { flex: 1; }
+.daily-check { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; transform: scale(0); opacity: 0; transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms; }
+.daily-check svg { width: 14px; height: 14px; stroke-width: 3; }
+.daily-btn.done .daily-check { transform: scale(1); opacity: 1; }
+.daily-btn.done .daily-title { text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: 0.75; }
+.daily-btn.colored { background: var(--tile); color: #fff; border-color: transparent; }
+.daily-btn.colored .daily-fill { background: rgb(0 0 0 / 0.24); }
+.daily-btn.colored .daily-check { background: #fff; color: var(--tile); }
+.daily-btn.colored .daily-tag { background: rgb(255 255 255 / 0.22); color: #fff; }
+.daily-btn.colored .streak { color: rgb(255 255 255 / 0.9); }
+.daily-btn.colored.done .daily-title { opacity: 0.9; }
+.dc-azul { --tile: #2f6fde; } .dc-verde { --tile: #2b9a5a; } .dc-morado { --tile: #7b4fd6; } .dc-rosa { --tile: #d6457f; }
+.dc-rojo { --tile: #d64545; } .dc-naranja { --tile: #e0761f; } .dc-vinotinto { --tile: #8b1e3f; } .dc-gris { --tile: #5f6b7a; }
+.color-picker { display: flex; flex-wrap: wrap; gap: 10px; }
+.swatch { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; background: var(--tile, var(--surface-2)); border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08); }
+.swatch.dc-none { background: var(--surface); border: 2px dashed var(--ring); }
+.swatch.on { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Confetti (src/celebrate.ts) */
+.confetti-layer { position: fixed; inset: 0; pointer-events: none; z-index: 1000; overflow: hidden; }
+.confetti { position: fixed; width: 7px; height: 11px; border-radius: 2px; }
+.confetti.star { width: auto; height: auto; font-size: 15px; line-height: 1; }
+
+/* Finishing a task: the check fills, the row slides out and folds away; the next one fades in */
+.task.leaving { animation: task-leave 420ms cubic-bezier(0.4, 0, 0.2, 1) 140ms forwards; overflow: hidden; }
+.task.leaving .tick::before { background: var(--accent); border-color: var(--accent); transition: background 120ms; }
+.task.leaving .task-title { text-decoration: line-through; color: var(--muted); }
+@keyframes task-leave { from { opacity: 1; max-height: 120px; } to { opacity: 0; max-height: 0; transform: translateX(24px); padding-top: 0; padding-bottom: 0; } }
+.focus-list .task { animation: task-enter 320ms ease-out both; }
+@keyframes task-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.fade-in { animation: task-enter 380ms ease-out both; }
+.all-done { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .task.leaving, .focus-list .task, .fade-in { animation-duration: 1ms; } }
+
+/* «＋» next to a page title: add by hand, without the AI */
+.title-row { display: flex; align-items: center; justify-content: flex-start; gap: 10px; }
+.title-row .page-title { margin: 8px 0 0; }
+.add-btn { width: 38px; height: 38px; min-height: 0; padding: 0; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-ink); flex-shrink: 0; margin-top: 8px; }
+.add-btn svg { width: 20px; height: 20px; stroke-width: 2.2; }
+.title-left { display: flex; align-items: center; gap: 10px; }

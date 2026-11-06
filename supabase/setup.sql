@@ -71,6 +71,10 @@ alter table public.daily_tasks add column if not exists project_id uuid referenc
 alter table public.daily_tasks add column if not exists description text;
 alter table public.daily_tasks add column if not exists icon text;
 alter table public.daily_tasks add column if not exists note_id uuid references public.notes on delete set null;
+-- Its colour on Hoy (solid tile, white text); 'none' = the normal card. Names in DAILY_COLORS (src/types.ts).
+alter table public.daily_tasks add column if not exists color text not null default 'none';
+alter table public.daily_tasks drop constraint if exists daily_tasks_color;
+alter table public.daily_tasks add constraint daily_tasks_color check (char_length(color) <= 20) not valid;
 
 -- Every day a daily task was done: the weekly streaks are counted from here (done_on only knows today).
 create table if not exists public.daily_log (

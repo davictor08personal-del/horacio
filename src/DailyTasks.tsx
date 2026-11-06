@@ -1,10 +1,11 @@
-import { useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { celebrate } from './celebrate'
 import { byPosition, DEFAULT_DAILY, doneToday, localDay, notePreview, weekOf, weeklyStreak } from './logic'
 import { ICON, Icon, openNote } from './NoteEditor'
 import { IconPicker, ItemIcon } from './ItemIcon'
 import { insert, noteFromDaily, remove, toggleDaily, update, useData } from './store'
 import Sheet from './Sheet'
-import type { DailyTask } from './types'
+import { DAILY_COLORS, type DailyTask } from './types'
 
 /** «Tareas diarias» on Hoy: hold one to tick it for today (tomorrow it's back), tap it to open its page. */
 export default function DailyTasks() {
@@ -29,7 +30,7 @@ export default function DailyTasks() {
         <div className="empty-card">
           <p className="muted">Cosas que haces cada día: se marcan y mañana vuelven.</p>
           <div className="row-actions">
-            <button className="secondary" onClick={() => insert('daily_tasks', DEFAULT_DAILY.map((title, position) => ({ title, position, done_on: null, project_id: null, description: null, icon: null, note_id: null })))}>Usar ejemplos</button>
+            <button className="secondary" onClick={() => insert('daily_tasks', DEFAULT_DAILY.map((title, position) => ({ title, position, done_on: null, project_id: null, description: null, icon: null, note_id: null, color: 'none' })))}>Usar ejemplos</button>
             <button className="ghost" onClick={() => setEditing(true)}>Crear las mías</button>
           </div>
         </div>
@@ -59,17 +60,21 @@ export function DailyGrid({ list, showProject }: { list: DailyTask[]; showProjec
   )
 }
 
-const HOLD_MS = 550 // long enough not to fire while scrolling, short enough not to feel slow
+const HOLD_MS = 600 // long enough not to fire while scrolling, short enough not to feel slow
 
 /**
- * Tap = open its page. Hold = tick (or untick) for today: while you hold, the tile fills from left to right
- * (CSS .pressing), and when it's full it's done. Lifting the finger early, or scrolling, cancels it.
+ * Tap = open its page. Hold = tick (or untick) for today: the tile sinks a little and a wash sweeps across it from
+ * left to right; when it reaches the end it's done, a check pops in and confetti flies. Lifting early or scrolling
+ * cancels it. The new state shows at once (optimistic) instead of waiting for the server, so nothing flickers.
  */
 function DailyTile({ d, today, project, streak, onOpen }: { d: DailyTask; today: string; project?: string; streak: number; onOpen: () => void }) {
-  const on = doneToday(d, today)
+  const [optimistic, setOptimistic] = useState<boolean | null>(null)
+  useEffect(() => setOptimistic(null), [d.done_on]) // the saved state arrived
+  const on = optimistic ?? doneToday(d, today)
   const [pressing, setPressing] = useState(false)
   const timer = useRef(0)
   const held = useRef(false) // the hold already ticked it: the click that follows must not open the page
+  const tile = useRef<HTMLButtonElement>(null)
 
   const start = (e: PointerEvent) => {
     if (e.button !== 0) return
@@ -78,22 +83,27 @@ function DailyTile({ d, today, project, streak, onOpen }: { d: DailyTask; today:
     timer.current = window.setTimeout(() => {
       held.current = true
       setPressing(false)
-      navigator.vibrate?.(15)
-      toggleDaily(d, today)
+      const next = !on
+      setOptimistic(next)
+      navigator.vibrate?.(next ? [10, 40, 18] : 10)
+      if (next) celebrate(tile.current)
+      toggleDaily(d, today).catch(() => setOptimistic(null))
     }, HOLD_MS)
   }
   const cancel = () => { clearTimeout(timer.current); setPressing(false) }
+  const color = d.color && d.color !== 'none' ? d.color : null
 
   return (
     <button
-      className={`daily-btn ${on ? 'done' : ''} ${pressing ? 'pressing' : ''}`}
+      ref={tile}
+      className={`daily-btn ${color ? `colored dc-${color}` : ''} ${on ? 'done' : ''} ${pressing ? 'pressing' : ''}`}
       onPointerDown={start} onPointerUp={cancel} onPointerLeave={cancel} onPointerCancel={cancel}
       onClick={() => (held.current ? (held.current = false) : onOpen())}
       onContextMenu={(e) => e.preventDefault()}
-      aria-label={`${d.title}${on ? ', hecha hoy' : ''}. Abrir ficha`}
+      aria-label={`${d.title}${on ? ', hecha hoy' : ''}. Abrir ficha; mantén pulsado para marcarla`}
     >
       <span className="daily-fill" aria-hidden />
-      <ItemIcon icon={d.icon} name={d.title} small />
+      {d.icon && <ItemIcon icon={d.icon} name={d.title} small />}
       <span className="daily-text">
         <span className="daily-title">{d.title}</span>
         {(project || streak > 0) && (
@@ -103,6 +113,7 @@ function DailyTile({ d, today, project, streak, onOpen }: { d: DailyTask; today:
           </span>
         )}
       </span>
+      <span className="daily-check" aria-hidden><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
     </button>
   )
 }
@@ -172,7 +183,16 @@ function DailySheet({ daily, onClose }: { daily: DailyTask; onClose: () => void 
         <span className="hint">La nota sale también en Notas y en el proyecto.</span>
       </div>
 
-      <IconPicker icon={daily.icon} onChange={(icon) => set({ icon })} />
+      <div className="field">Color
+        <div className="color-picker">
+          {Object.entries(DAILY_COLORS).map(([key, label]) => (
+            <button key={key} type="button" className={`swatch dc-${key} ${(daily.color || 'none') === key ? 'on' : ''}`} onClick={() => set({ color: key })} aria-label={label} title={label} />
+          ))}
+        </div>
+        <span className="hint">Con color, en Hoy sale con ese fondo y letras blancas.</span>
+      </div>
+
+      <IconPicker icon={daily.icon} onChange={(icon) => set({ icon })} label="Imagen (opcional)" />
 
       <button className="ghost danger" onClick={() => confirm(`¿Borrar «${daily.title}»? Se pierde su racha; su nota se queda.`) && remove('daily_tasks', daily.id).then(onClose)}>Borrar tarea diaria</button>
     </Sheet>
@@ -190,7 +210,7 @@ function EditDaily({ list, onClose }: { list: DailyTask[]; onClose: () => void }
   }
   const add = () => {
     if (!text.trim()) return
-    insert('daily_tasks', [{ title: text.trim(), position: list.length, done_on: null, project_id: null, description: null, icon: null, note_id: null }])
+    insert('daily_tasks', [{ title: text.trim(), position: list.length, done_on: null, project_id: null, description: null, icon: null, note_id: null, color: 'none' }])
     setText('')
   }
 

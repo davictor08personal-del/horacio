@@ -15,6 +15,7 @@ const GROUPS: [ProjectStatus, string][] = [['activo', 'Activos'], ['pausado', 'P
 export default function Projects() {
   const { projects, tasks, notes, daily_tasks } = useData()
   const [query, setQuery] = useState('')
+  const [adding, setAdding] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
   const project = projects.find((p) => p.id === open)
   // One box to search and to create: it filters by name (ignoring accents and case); if no project is called
@@ -38,7 +39,10 @@ export default function Projects() {
 
   return (
     <>
-      <h1 className="page-title">Proyectos</h1>
+      <div className="title-row">
+        <h1 className="page-title">Proyectos</h1>
+        <button className="add-btn" onClick={() => setAdding(true)} aria-label="Nuevo proyecto"><svg viewBox="0 0 24 24" aria-hidden><path d="M12 5v14M5 12h14" /></svg></button>
+      </div>
       <form onSubmit={(e) => (e.preventDefault(), submit())}>
         <label className="search">
           <Icon d={ICON.search} />
@@ -80,6 +84,7 @@ export default function Projects() {
           </section>
         )
       })}
+      {adding && <NewProject onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); setOpen(id) }} />}
       {project && <ProjectPage project={project} onBack={() => setOpen(null)} />}
     </>
   )
@@ -168,6 +173,26 @@ function ProjectPage({ project, onBack }: { project: Project; onBack: () => void
 
       {editing && <ProjectSheet project={project} onClose={() => setEditing(false)} onDeleted={onBack} />}
     </Page>
+  )
+}
+
+/** «＋» in Proyectos: the name, then the project opens to add the rest. */
+function NewProject({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const create = async () => {
+    if (!name.trim() || busy) return
+    setBusy(true)
+    const [p] = await insert('projects', [{ name: name.trim(), status: 'activo', description: null, icon: null, tags: [], next_step: null, area: null }])
+    onCreated(p.id)
+  }
+  return (
+    <Sheet title="Nuevo proyecto" onClose={onClose}>
+      <form className="form" onSubmit={(e) => (e.preventDefault(), create())}>
+        <input className="big-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre del proyecto" autoFocus maxLength={200} aria-label="Nombre" />
+        <button className="primary" disabled={!name.trim() || busy}>Crear</button>
+      </form>
+    </Sheet>
   )
 }
 

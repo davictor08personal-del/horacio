@@ -42,11 +42,13 @@ export default function Notes() {
   return (
     <>
       <header className="notes-head">
-        <h1 className="page-title">{archive ? 'Archivo' : 'Notas'}</h1>
+        <div className="title-left">
+          <h1 className="page-title">{archive ? 'Archivo' : 'Notas'}</h1>
+          {!archive && <button className="add-btn" onClick={compose} aria-label="Nueva nota"><svg viewBox="0 0 24 24" aria-hidden><path d="M12 5v14M5 12h14" /></svg></button>}
+        </div>
         <div className="note-bar-actions">
           <button className={`icon-btn ${archive ? 'on' : ''}`} onClick={() => setArchive(!archive)} aria-label={archive ? 'Ver notas' : 'Ver archivo'} aria-pressed={archive}><Icon d={ICON.archive} /></button>
           <button className="icon-btn" onClick={toggleView} aria-label={grid ? 'Ver en lista' : 'Ver en cuadrícula'}><Icon d={grid ? ICON.list : ICON.grid} /></button>
-          {!archive && <button className="icon-btn accent" onClick={compose} aria-label="Nueva nota"><Icon d={ICON.compose} /></button>}
         </div>
       </header>
 
@@ -61,7 +63,7 @@ export default function Notes() {
 
       {!shown.length && (
         <p className="empty">
-          {query ? `Nada coincide con «${query}».` : archive ? 'No hay notas archivadas.' : 'Sin notas. Pulsa el lápiz para escribir la primera.'}
+          {query ? `Nada coincide con «${query}».` : archive ? 'No hay notas archivadas.' : 'Sin notas. Pulsa ＋ junto al título para escribir la primera.'}
         </p>
       )}
       {shown.length > 0 && <p className="note-count">{shown.length} {shown.length === 1 ? 'nota' : 'notas'}</p>}

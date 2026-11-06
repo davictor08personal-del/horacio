@@ -10,7 +10,7 @@ import { TaskRow } from '../TaskRow'
 
 /** «Hoy»: the greeting (and the day, with shifts), then the priorities (Foco), daily tasks, studies and what can wait. */
 export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
-  const { tasks, shifts, fp_tests, profile } = useData()
+  const { tasks, closed, shifts, fp_tests, profile } = useData()
   const withShifts = !!profile?.shifts
   const withFp = !!profile?.fp
   const [agenda, setAgenda] = useState(false) // shifts and studies (optional modules) live here, out of the tab bar
@@ -38,9 +38,11 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
       <section className="group">
         <h2 className="group-title">{focus.length ? 'Prioridades de hoy' : 'Nada urgente'}</h2>
         {focus.length ? (
-          <ul className="list card-list">{focus.map((t, i) => <TaskRow key={t.id} task={t} n={i + 1} />)}</ul>
+          <ul className="list card-list focus-list">{focus.map((t, i) => <TaskRow key={t.id} task={t} n={i + 1} />)}</ul>
+        ) : closed.some((t) => t.status === 'hecho' && t.done_at && localDay(new Date(t.done_at)) === today) ? (
+          <p className="all-done fade-in"><span aria-hidden>🎉</span> Prioridades terminadas. Buen trabajo.</p>
         ) : (
-          <p className="empty">Cuando apuntes algo con ＋, aquí verás por dónde empezar.</p>
+          <p className="empty fade-in">Cuando apuntes algo con ＋, aquí verás por dónde empezar.</p>
         )}
       </section>
 

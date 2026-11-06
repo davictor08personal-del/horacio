@@ -50,6 +50,8 @@ export interface DailyTask {
   /** An emoji, or a small picture as a data: URL (like a project's). */
   icon: string | null
   note_id: string | null
+  /** Tile colour on Hoy (key of DAILY_COLORS); 'none' = the normal card. */
+  color: string
   created_at: string
 }
 
@@ -101,3 +103,8 @@ export interface DailyLog { daily_id: string; day: string }
 
 /** The user's profile (table profiles): name, time zone and optional modules. */
 export interface Profile { user_id: string; name: string | null; timezone: string; shifts: boolean; fp: boolean }
+
+/** Colours a daily task can have on Hoy: a solid tile with white text (CSS .dc-<name>). */
+export const DAILY_COLORS: Record<string, string> = {
+  none: 'Sin color', azul: 'Azul', verde: 'Verde', morado: 'Morado', rosa: 'Rosa', rojo: 'Rojo', naranja: 'Naranja', vinotinto: 'Vinotinto', gris: 'Gris',
+}

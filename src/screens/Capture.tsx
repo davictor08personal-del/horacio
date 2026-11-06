@@ -138,7 +138,7 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
         title: n.title.trim(), body: n.checklist ? '' : n.details.trim(), items: n.checklist ? toChecklist(n.details) : null,
         color: 'none' as const, project_id: projectId(n.project), pinned: false, archived: false, updated_at: now,
       })))
-      await insert('daily_tasks', of('diaria').map((d, i) => ({ title: d.title.trim(), position: daily_tasks.length + i, done_on: null, project_id: projectId(d.project), description: null, icon: null, note_id: null })))
+      await insert('daily_tasks', of('diaria').map((d, i) => ({ title: d.title.trim(), position: daily_tasks.length + i, done_on: null, project_id: projectId(d.project), description: null, icon: null, note_id: null, color: 'none' })))
       await insert('shifts', r.shifts)
       await insert('fp_tests', r.fp_tests.map((t) => ({ ...t, read: false })))
       const dated = of('recordatorio').filter((t) => t.due_date)

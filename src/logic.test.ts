@@ -125,7 +125,7 @@ describe('Hoy', () => {
     expect(greeting(2 * 60)).toBe('Buenas noches')
   })
   it('a daily task is ticked only on the day it was ticked', () => {
-    const d = { id: '1', title: 'Gimnasio', position: 0, done_on: '2026-11-03', created_at: '', project_id: null, description: null, icon: null, note_id: null }
+    const d = { id: '1', title: 'Gimnasio', position: 0, done_on: '2026-11-03', created_at: '', project_id: null, description: null, icon: null, note_id: null, color: 'none' }
     expect(doneToday(d, '2026-11-03')).toBe(true)
     expect(doneToday(d, '2026-11-04')).toBe(false)
   })

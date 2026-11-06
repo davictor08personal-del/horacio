@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { byPriority, parseSearch, projectsTagged, textMatches } from '../logic'
 import { ICON, Icon } from '../NoteEditor'
 import { KEEP_CLOSED_DAYS, useData } from '../store'
-import { ClosedRow, TaskRow } from '../TaskRow'
+import { ClosedRow, TaskRow, TaskSheet } from '../TaskRow'
+import Sheet from '../Sheet'
+import { createTask } from '../store'
 import type { Status, Task } from '../types'
 
 const GROUPS: [Status, string][] = [['en_curso', 'En curso'], ['abierto', 'Abiertas'], ['esperando', 'Esperando']]
@@ -11,6 +13,9 @@ export default function Tasks() {
   const { tasks: allOpen, closed: allClosed, projects } = useData()
   const [showClosed, setShowClosed] = useState(false)
   const [query, setQuery] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<string | null>(null) // the task just created, to fill in the rest
+  const editingTask = allOpen.find((t) => t.id === editing)
   // «#idiomas» = the tasks of every project tagged #idiomas; the rest of the words search title and details.
   const { tags, text } = parseSearch(query)
   const tagged = tags.length ? projectsTagged(projects, tags) : null
@@ -21,7 +26,10 @@ export default function Tasks() {
 
   return (
     <>
-      <h1 className="page-title">Tareas</h1>
+      <div className="title-row">
+        <h1 className="page-title">Tareas</h1>
+        <button className="add-btn" onClick={() => setAdding(true)} aria-label="Nueva tarea, sin IA"><svg viewBox="0 0 24 24" aria-hidden><path d="M12 5v14M5 12h14" /></svg></button>
+      </div>
       {(allOpen.length > 0 || allClosed.length > 0) && (
         <label className="search">
           <Icon d={ICON.search} />
@@ -39,6 +47,8 @@ export default function Tasks() {
           </section>
         )
       })}
+      {adding && <NewTask onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); setEditing(id) }} />}
+      {editingTask && <TaskSheet task={editingTask} onClose={() => setEditing(null)} />}
       {closed.length > 0 && (
         <section className="group">
           <button className="group-head group-toggle" onClick={() => setShowClosed(!showClosed)} aria-expanded={showClosed}>
@@ -54,5 +64,25 @@ export default function Tasks() {
         </section>
       )}
     </>
+  )
+}
+
+/** «＋» in Tareas: just the title; then the task's own sheet opens for the date, priority, project… */
+function NewTask({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+  const [title, setTitle] = useState('')
+  const [busy, setBusy] = useState(false)
+  const create = async () => {
+    if (!title.trim() || busy) return
+    setBusy(true)
+    const [t] = await createTask({ title: title.trim() })
+    onCreated(t.id)
+  }
+  return (
+    <Sheet title="Nueva tarea" onClose={onClose}>
+      <form className="form" onSubmit={(e) => (e.preventDefault(), create())}>
+        <input className="big-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="¿Qué hay que hacer?" autoFocus maxLength={500} aria-label="Título" />
+        <button className="primary" disabled={!title.trim() || busy}>Crear y completar detalles</button>
+      </form>
+    </Sheet>
   )
 }

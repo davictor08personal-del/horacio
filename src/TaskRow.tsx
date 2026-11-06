@@ -8,6 +8,14 @@ import { EFFORT, PRIORITY, STATUS, type Status, type Task } from './types'
 /** One task: round check to finish it, tap the text to edit it. `n` numbers it (the order on Hoy). */
 export function TaskRow({ task, n }: { task: Task; n?: number }) {
   const [open, setOpen] = useState(false)
+  // Ticking it: the check fills and the row slides away first, then it's saved (and leaves the list) — no jump.
+  const [leaving, setLeaving] = useState(false)
+  const finish = () => {
+    if (leaving) return
+    setLeaving(true)
+    navigator.vibrate?.(10)
+    setTimeout(() => setTaskStatus(task, 'hecho').catch(() => setLeaving(false)), 520)
+  }
   const { projects, notes } = useData()
   const today = localDay()
   const project = projects.find((p) => p.id === task.project_id)
@@ -23,9 +31,9 @@ export function TaskRow({ task, n }: { task: Task; n?: number }) {
   ].filter(Boolean).join(' · ')
 
   return (
-    <li className="task">
+    <li className={`task ${leaving ? 'leaving' : ''}`}>
       {n && <span className="num" aria-hidden>{n}</span>}
-      <button className={`tick prio-${task.priority}`} onClick={() => setTaskStatus(task, 'hecho')} aria-label={`Marcar «${task.title}» como hecha`} />
+      <button className={`tick prio-${task.priority}`} onClick={finish} aria-label={`Marcar «${task.title}» como hecha`} />
       <button className="task-text" onClick={() => setOpen(true)}>
         <span className="task-title">{task.title}</span>
         {sub && <span className={`task-sub ${late ? 'late' : ''}`}>{sub}</span>}
@@ -65,7 +73,7 @@ export function CalendarLink({ task, label = 'Añadir a Google Calendar' }: { ta
 const EDITABLE: Record<Exclude<Status, 'hecho' | 'descartado'>, string> = { abierto: STATUS.abierto, en_curso: STATUS.en_curso, esperando: STATUS.esperando }
 
 /** Every field of a task. Each change is saved at once (no "Save" button to forget). */
-function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }) {
+export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }) {
   const { projects, notes } = useData()
   const note = notes.find((n) => n.id === task.note_id)
   const set = (patch: Partial<Task>) => update('tasks', task.id, patch)

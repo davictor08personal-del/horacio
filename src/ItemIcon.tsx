@@ -14,7 +14,7 @@ const EMOJIS = ['📁', '🏠', '📚', '🎓', '💼', '💻', '🏋️', '✈�
 const firstEmoji = (s: string) => [...new Intl.Segmenter().segment(s.trim())][0]?.segment ?? ''
 
 /** Pick an emoji (or type any), or upload a picture. Each choice is saved at once through onChange. */
-export function IconPicker({ icon, onChange, emojis = EMOJIS }: { icon: string | null; onChange: (icon: string | null) => void; emojis?: string[] }) {
+export function IconPicker({ icon, onChange, emojis = EMOJIS, label = 'Icono' }: { icon: string | null; onChange: (icon: string | null) => void; emojis?: string[]; label?: string }) {
   const file = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
   const isPicture = icon?.startsWith('data:image/')
@@ -24,7 +24,7 @@ export function IconPicker({ icon, onChange, emojis = EMOJIS }: { icon: string |
     try { onChange(await photoToIcon(f)) } catch { setError('No se pudo leer esa imagen.') }
   }
   return (
-    <div className="field">Icono
+    <div className="field">{label}
       <div className="icon-picker">
         {emojis.map((e) => (
           <button key={e} type="button" className={`emoji-btn ${icon === e ? 'on' : ''}`} onClick={() => onChange(e)} aria-label={`Usar ${e}`}>{e}</button>
