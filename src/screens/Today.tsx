@@ -3,20 +3,21 @@ import type { Tab } from '../App'
 import DailyTasks from '../DailyTasks'
 import Page from '../Page'
 import Agenda from './Agenda'
-import { OWNER, dayPlan, fullDate, greeting, madridDay, nextFpBlock, shortDate, splitToday } from '../logic'
+import { dayPlan, fullDate, greeting, localDay, nextFpBlock, shortDate, splitToday } from '../logic'
 import { useData } from '../store'
 import { TaskRow } from '../TaskRow'
 
-// Single user for now. When Cuadre is for anyone, the name comes from their profile.
 
-/** «Hoy»: the greeting and the day, then the priorities (Foco), daily tasks, FP and what can wait. */
+/** «Hoy»: the greeting (and the day, with shifts), then the priorities (Foco), daily tasks, studies and what can wait. */
 export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
-  const { tasks, shifts, fp_tests } = useData()
-  const [agenda, setAgenda] = useState(false) // out of the tab bar since Proyectos took its place; shifts still shape the day
-  const today = madridDay()
+  const { tasks, shifts, fp_tests, profile } = useData()
+  const withShifts = !!profile?.shifts
+  const withFp = !!profile?.fp
+  const [agenda, setAgenda] = useState(false) // shifts and studies (optional modules) live here, out of the tab bar
+  const today = localDay()
   const plan = dayPlan(shifts.find((s) => s.day === today))
   const { focus, later, waiting } = splitToday(tasks)
-  const fp = nextFpBlock(fp_tests, today)
+  const fp = withFp ? nextFpBlock(fp_tests, today) : null
   const hasShifts = shifts.some((s) => s.day >= today)
 
   return (
@@ -25,9 +26,13 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
         <div className="head-top">
           <span className="eyebrow">{fullDate(today)}</span>
         </div>
-        <h1>{greeting()}, {OWNER}.</h1>
-        <p className="butler">{plan.line}</p>
-        <button className="link" onClick={() => setAgenda(true)}>{hasShifts ? 'Turnos y FP' : 'Aún no hay turnos de esta semana · Añadir'}</button>
+        <h1>{greeting()}{profile?.name ? `, ${profile.name}` : ''}.</h1>
+        {withShifts && <p className="butler">{plan.line}</p>}
+        {(withShifts || withFp) && (
+          <button className="link" onClick={() => setAgenda(true)}>
+            {withShifts && !hasShifts ? 'Aún no hay turnos de esta semana · Añadir' : withShifts && withFp ? 'Turnos y estudios' : withShifts ? 'Turnos' : 'Estudios'}
+          </button>
+        )}
       </header>
 
       <section className="group">
@@ -43,7 +48,7 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
 
       {fp && (
         <p className="fp-card">
-          <em>Una nota sobre el FP:</em> el siguiente bloque abre {fp.days === 1 ? 'mañana' : `en ${fp.days} días`} ({shortDate(fp.opensOn)}{fp.subjects.length === 1 ? ` · ${fp.subjects[0]}` : ''}){' '}
+          <em>Estudios:</em> el siguiente bloque abre {fp.days === 1 ? 'mañana' : `en ${fp.days} días`} ({shortDate(fp.opensOn)}{fp.subjects.length === 1 ? ` · ${fp.subjects[0]}` : ''}){' '}
           {fp.unread ? `y quedan ${fp.unread} de ${fp.units} ${fp.units === 1 ? 'unidad' : 'unidades'} por leer.` : 'y ya lo has leído todo.'}
         </p>
       )}

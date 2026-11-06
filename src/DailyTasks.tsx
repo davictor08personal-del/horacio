@@ -1,5 +1,5 @@
 import { useRef, useState, type PointerEvent } from 'react'
-import { byPosition, DEFAULT_DAILY, doneToday, madridDay, notePreview, weekOf, weeklyStreak } from './logic'
+import { byPosition, DEFAULT_DAILY, doneToday, localDay, notePreview, weekOf, weeklyStreak } from './logic'
 import { ICON, Icon, openNote } from './NoteEditor'
 import { IconPicker, ItemIcon } from './ItemIcon'
 import { insert, noteFromDaily, remove, toggleDaily, update, useData } from './store'
@@ -10,7 +10,7 @@ import type { DailyTask } from './types'
 export default function DailyTasks() {
   const { daily_tasks } = useData()
   const [editing, setEditing] = useState(false)
-  const today = madridDay()
+  const today = localDay()
   const list = [...daily_tasks].sort(byPosition)
   const done = list.filter((d) => doneToday(d, today)).length
 
@@ -43,7 +43,7 @@ export default function DailyTasks() {
 export function DailyGrid({ list, showProject }: { list: DailyTask[]; showProject?: boolean }) {
   const { projects, daily_log } = useData()
   const [open, setOpen] = useState<string | null>(null)
-  const today = madridDay()
+  const today = localDay()
   const openDaily = list.find((d) => d.id === open)
   return (
     <>
@@ -112,7 +112,7 @@ const WEEK_LETTERS = 'LMXJVSD'
 /** A daily task's page: name, picture, streak and this week, description, project and its note. Saved at once. */
 function DailySheet({ daily, onClose }: { daily: DailyTask; onClose: () => void }) {
   const { projects, notes, daily_log } = useData()
-  const today = madridDay()
+  const today = localDay()
   const set = (patch: Partial<DailyTask>) => update('daily_tasks', daily.id, patch)
   const days = daily_log.filter((l) => l.daily_id === daily.id).map((l) => l.day)
   const streak = weeklyStreak(days, today)

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Capture as Result, CapturedTask, CaptureRequest } from '../capture'
-import { dayName, madridDay, shiftHours, shortDate, toChecklist } from '../logic'
+import { dayName, localDay, shiftHours, shortDate, toChecklist } from '../logic'
 import { accessToken, insert, useData } from '../store'
 import Sheet, { Choice } from '../Sheet'
 import { CalendarLink } from '../TaskRow'
@@ -63,7 +63,7 @@ export default function Capture({ onClose }: { onClose: () => void }) {
       />
       {error && <p className="danger small-text">{error}</p>}
       <button className="primary" disabled={busy || !text.trim()} onClick={ask}>{busy ? 'Pensando…' : 'Entender'}</button>
-      <p className="hint">Para dictar, usa el micrófono del teclado del móvil.</p>
+      <p className="hint">Para dictar, usa el micrófono del teclado. Lo que escribes aquí lo lee una IA (DeepSeek) para ordenarlo: <a href="/privacidad.html" target="_blank" rel="noopener">privacidad</a>.</p>
     </Sheet>
   )
 }
@@ -117,7 +117,7 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
   // A reminder has a day and a time; switching to it fills what's missing, switching to a task drops the time.
   function retype(i: number, kind: Kind) {
     const it = items[i]
-    if (kind === 'recordatorio') return editItem(i, { kind, due_date: it.due_date ?? madridDay(), due_time: it.due_time ?? '09:00' })
+    if (kind === 'recordatorio') return editItem(i, { kind, due_date: it.due_date ?? localDay(), due_time: it.due_time ?? '09:00' })
     editItem(i, { kind, due_time: kind === 'tarea' ? null : it.due_time })
   }
 

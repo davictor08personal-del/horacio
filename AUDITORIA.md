@@ -67,6 +67,17 @@ Falta:
 - Nombre y dirección: dominio propio (`cuadre.app` o similar, ~10–15 €/año) en vez de `horacio-nu.vercel.app`; renombrar repo y proyecto de Vercel.
 - Icono definitivo.
 
+## Hecho (Fase 1, 2026-11-06)
+
+- ✅ Perfil (`profiles`): nombre, zona horaria y módulos; pantalla de bienvenida. Fuera «Victor» y Madrid fijos: todo usa la zona del usuario (también los avisos y el resumen de las 9:30, por usuario).
+- ✅ Turnos y Estudios (FP) son módulos opcionales, apagados por defecto; la IA no los propone si están apagados.
+- ✅ IA para cualquiera con cuenta, límite de 20 al día por persona; `AI_ALLOWED_USERS` queda como beta cerrada opcional.
+- ✅ «¿Olvidaste tu contraseña?» y pantalla de contraseña nueva (falta configurar el SMTP en Supabase, ver README).
+- ✅ Borrar la cuenta desde Ajustes (`api/account.ts`).
+- ✅ Política de privacidad (`public/privacidad.html`), con el aviso de DeepSeek también en ＋.
+- ✅ `api/tick` ya solo lee las tareas candidatas a aviso, no todas.
+- Pendiente de Fase 1: volver a encender «Confirm email» cuando haya SMTP.
+
 ## Orden recomendado
 
 1. **Fase 1, abrirla a amigos (10–20 personas)**: perfil con nombre y zona horaria, quitar Madrid y «Victor», módulos opcionales (turnos/FP), IA con límite por usuario, recuperar contraseña + Resend, borrar cuenta, política de privacidad.

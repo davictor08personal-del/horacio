@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type TextareaHTMLAttributes } from 'react'
-import { addDays, fromChecklist, madridDay, toChecklist } from './logic'
+import { addDays, fromChecklist, localDay, toChecklist } from './logic'
 import { createTask, remove, update, useData } from './store'
 import Sheet from './Sheet'
 import { TaskRow } from './TaskRow'
@@ -174,7 +174,7 @@ function Checklist({ items, onChange }: { items: ChecklistItem[]; onChange: (ite
 
 /** Note → reminder: a task with a date (and time) that stays linked to this note. */
 function ReminderSheet({ note, onClose }: { note: Note; onClose: () => void }) {
-  const today = madridDay()
+  const today = localDay()
   const [title, setTitle] = useState(note.title.trim() || fromChecklist(note.items ?? []).split('\n')[0] || note.body.split('\n')[0].trim())
   const [day, setDay] = useState(today)
   const [time, setTime] = useState('')

@@ -2,8 +2,8 @@
 // Without them: "demo mode", saved in this browser's localStorage, to try the app before creating the project.
 import { useSyncExternalStore } from 'react'
 import { createClient, type Session } from '@supabase/supabase-js'
-import { addDays, madridDay } from './logic'
-import type { DailyLog, DailyTask, FpTest, Note, Project, Shift, Task } from './types'
+import { addDays, localDay, setTimeZone } from './logic'
+import type { DailyLog, DailyTask, FpTest, Note, Profile, Project, Shift, Task } from './types'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const key = import.meta.env.VITE_SUPABASE_KEY as string | undefined
@@ -13,10 +13,10 @@ export const supa = demo ? null : createClient(url!, key!)
 
 type Table = 'tasks' | 'projects' | 'shifts' | 'fp_tests' | 'notes' | 'daily_tasks'
 type RowOf = { tasks: Task; projects: Project; shifts: Shift; fp_tests: FpTest; notes: Note; daily_tasks: DailyTask }
-export interface Data { tasks: Task[]; closed: Task[]; projects: Project[]; shifts: Shift[]; fp_tests: FpTest[]; notes: Note[]; daily_tasks: DailyTask[]; daily_log: DailyLog[]; loaded: boolean }
+export interface Data { tasks: Task[]; closed: Task[]; projects: Project[]; shifts: Shift[]; fp_tests: FpTest[]; notes: Note[]; daily_tasks: DailyTask[]; daily_log: DailyLog[]; profile: Profile | null; loaded: boolean }
 
-const EMPTY: Omit<Data, 'loaded' | 'closed'> = { tasks: [], projects: [], shifts: [], fp_tests: [], notes: [], daily_tasks: [], daily_log: [] }
-let data: Data = { ...EMPTY, closed: [], loaded: false }
+const EMPTY: Omit<Data, 'loaded' | 'closed' | 'profile'> & { profile?: Profile | null } = { tasks: [], projects: [], shifts: [], fp_tests: [], notes: [], daily_tasks: [], daily_log: [] }
+let data: Data = { ...EMPTY, closed: [], profile: null, loaded: false }
 const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((l) => l())
 const subscribe = (l: () => void) => (listeners.add(l), () => listeners.delete(l))
@@ -26,14 +26,14 @@ export const useData = () => useSyncExternalStore(subscribe, () => data)
 
 // ---------- demo backend (localStorage) ----------
 const DEMO_KEY = 'horacio-demo'
-const demoAll = (): Omit<Data, 'loaded' | 'closed'> => {
+const demoAll = (): typeof EMPTY => {
   try {
     return { ...EMPTY, ...JSON.parse(localStorage.getItem(DEMO_KEY) ?? '{}') }
   } catch {
     return { ...EMPTY }
   }
 }
-const demoSave = (d: Omit<Data, 'loaded' | 'closed'>) => localStorage.setItem(DEMO_KEY, JSON.stringify(d))
+const demoSave = (d: typeof EMPTY) => localStorage.setItem(DEMO_KEY, JSON.stringify(d))
 
 // Only what the screens need: unfinished tasks, shifts from last week on, every note and daily task. Small enough to load all at once.
 const OPEN = ['abierto', 'en_curso', 'esperando']
@@ -44,14 +44,15 @@ const closedCutoff = () => new Date(Date.now() - KEEP_CLOSED_DAYS * 86_400_000).
 const byDoneDesc = (a: Task, b: Task) => (b.done_at ?? '').localeCompare(a.done_at ?? '')
 
 export async function load() {
-  const since = addDays(madridDay(), -7)
+  const since = addDays(localDay(), -7)
   if (!supa) {
     const d = demoAll()
     const cutoff = closedCutoff()
-    data = { ...d, tasks: d.tasks.filter((t) => OPEN.includes(t.status)), closed: d.tasks.filter((t) => CLOSED.includes(t.status) && (t.done_at ?? '') >= cutoff).sort(byDoneDesc), shifts: d.shifts.filter((s) => s.day >= since), loaded: true }
+    setTimeZone(d.profile?.timezone)
+    data = { ...d, profile: d.profile ?? null, tasks: d.tasks.filter((t) => OPEN.includes(t.status)), closed: d.tasks.filter((t) => CLOSED.includes(t.status) && (t.done_at ?? '') >= cutoff).sort(byDoneDesc), shifts: d.shifts.filter((s) => s.day >= since), loaded: true }
     return emit()
   }
-  const [tasks, closed, projects, shifts, tests, notes, daily, log] = await Promise.all([
+  const [tasks, closed, projects, shifts, tests, notes, daily, log, profile] = await Promise.all([
     supa.from('tasks').select('*').in('status', OPEN),
     supa.from('tasks').select('*').in('status', CLOSED).gte('done_at', closedCutoff()).order('done_at', { ascending: false }),
     supa.from('projects').select('*').order('created_at'),
@@ -60,11 +61,13 @@ export async function load() {
     supa.from('notes').select('*'),
     supa.from('daily_tasks').select('*').order('position'),
     // A year of ticks is plenty for the streaks (a few hundred tiny rows).
-    supa.from('daily_log').select('daily_id, day').gte('day', addDays(madridDay(), -371)),
+    supa.from('daily_log').select('daily_id, day').gte('day', addDays(localDay(), -371)),
+    supa.from('profiles').select('*').maybeSingle(),
   ])
-  const error = tasks.error ?? closed.error ?? projects.error ?? shifts.error ?? tests.error ?? notes.error ?? daily.error ?? log.error
+  const error = tasks.error ?? closed.error ?? projects.error ?? shifts.error ?? tests.error ?? notes.error ?? daily.error ?? log.error ?? profile.error
   if (error) throw new Error(error.message.includes('does not exist') ? 'Faltan las tablas: ejecuta supabase/setup.sql' : error.message)
-  data = { tasks: tasks.data ?? [], closed: closed.data ?? [], projects: projects.data ?? [], shifts: shifts.data ?? [], fp_tests: tests.data ?? [], notes: notes.data ?? [], daily_tasks: daily.data ?? [], daily_log: log.data ?? [], loaded: true }
+  setTimeZone(profile.data?.timezone)
+  data = { profile: profile.data ?? null, tasks: tasks.data ?? [], closed: closed.data ?? [], projects: projects.data ?? [], shifts: shifts.data ?? [], fp_tests: tests.data ?? [], notes: notes.data ?? [], daily_tasks: daily.data ?? [], daily_log: log.data ?? [], loaded: true }
   emit()
 }
 
@@ -122,6 +125,19 @@ export async function createNote(patch: Partial<Note> = {}) {
   const now = new Date().toISOString()
   const [n] = await insert('notes', [{ title: '', body: '', items: null, color: 'none', project_id: null, pinned: false, archived: false, updated_at: now, ...patch }])
   return n
+}
+
+/** Creates or changes the profile (welcome screen, Ajustes). */
+export async function saveProfile(patch: Partial<Profile>) {
+  if (!supa) {
+    const d = demoAll()
+    d.profile = { user_id: 'demo', name: null, timezone: 'Europe/Madrid', shifts: false, fp: false, ...d.profile, ...patch }
+    demoSave(d)
+  } else {
+    const { error } = await supa.from('profiles').upsert(patch)
+    if (error) throw new Error(error.message.includes('profiles') ? 'Falta la tabla profiles: ejecuta supabase/setup.sql' : error.message)
+  }
+  await load()
 }
 
 /** Tick or untick a daily task for today: done_on for Hoy, plus a row in daily_log for the streaks. */
@@ -200,6 +216,32 @@ export async function signUp(email: string, password: string) {
 }
 
 export const signOut = () => supa?.auth.signOut()
+
+/**
+ * «¿Olvidaste tu contraseña?»: Supabase emails a link back to the app; opening it signs the user in in
+ * «recovery» mode and App shows NewPassword. Needs the app's address in Supabase → Authentication →
+ * URL Configuration, and an email sender (SMTP) for anyone who isn't on the Supabase team (README).
+ */
+export async function resetPassword(email: string) {
+  const { error } = await supa!.auth.resetPasswordForEmail(email, { redirectTo: location.origin })
+  if (error) throw new Error(error.message.includes('rate limit') ? 'Demasiados intentos: espera un rato y vuelve a probar.' : error.message)
+}
+
+export async function updatePassword(password: string) {
+  const { error } = await supa!.auth.updateUser({ password })
+  if (error) throw new Error(error.message.includes('different from the old') ? 'Tiene que ser distinta de la anterior.' : error.message)
+}
+
+/** Deletes the account and all its data (api/account.ts), then signs out on this device. */
+export async function deleteAccount() {
+  const r = await fetch('/api/account', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await accessToken()}` },
+    body: JSON.stringify({ action: 'delete' }),
+  })
+  if (!r.ok) throw new Error('No se pudo borrar la cuenta. Inténtalo más tarde.')
+  await supa?.auth.signOut()
+}
 
 /** Proves to our own server (api/capture.ts) who is signed in. */
 export async function accessToken() {

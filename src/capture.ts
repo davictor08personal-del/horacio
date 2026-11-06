@@ -42,10 +42,15 @@ export interface CaptureRequest {
   projects?: string[]
 }
 
-export function buildCapturePrompt(today: string, projects: string[]) {
+/** Who the AI is talking to (from their profile). Without a module, it never proposes those kinds of items. */
+export interface PromptUser { name: string | null; timezone: string; shifts: boolean; fp: boolean }
+const ANYONE: PromptUser = { name: null, timezone: 'Europe/Madrid', shifts: false, fp: false }
+
+export function buildCapturePrompt(today: string, projects: string[], user: PromptUser = ANYONE) {
   const days = Array.from({ length: 14 }, (_, i) => addDays(today, i)).map((d) => `${dayName(d)} ${d}`).join(', ')
   const thisWeek = weekOf(today)
-  return `Eres el asistente de Cuadre, la app de organización de Victor (español, Madrid). Convierte lo que te manda (texto, audio o foto) en datos.
+  const who = user.name ? `de ${user.name}` : 'del usuario'
+  return `Eres el asistente de Cuadre, una app de organización personal. Hablas con la persona usuaria (${who}; español; zona horaria ${user.timezone}). Convierte lo que te manda (texto, audio o foto) en datos.
 
 Hoy es ${dayName(today)} ${today}. Próximos días: ${days}.
 Semana actual (lunes a domingo): ${thisWeek[0]} a ${thisWeek[6]}.
@@ -63,8 +68,12 @@ Proyecto de tareas, recordatorios, notas y tareas diarias: project = nombre exac
 
 Campos:
 - Tareas y recordatorios (tasks): title breve en infinitivo («Sacar el dinero del alquiler»). priority: alta si dice urgente/importante/ya, baja si dice cuando pueda/sin prisa, si no media. effort: rapido (<15 min), medio, grande (varias horas). due_date YYYY-MM-DD si dice un día («mañana», «el viernes» = el próximo viernes); due_time HH:MM si dice una hora. status: abierto salvo que diga que ya lo está haciendo (en_curso) o que espera a alguien (esperando). details: detalles extra que diga, si los hay.
-- Turnos del restaurante (shifts), normalmente de una foto del horario semanal: una fila por día de la semana que se ve, solo los de Victor. kind: opening (10:00-17:30), dia (11:40-17:30), noche (17:00 o 17:30 hasta cierre 23:00; sábado 24:00) o libre (día vacío o libre). Pon starts_at/ends_at HH:MM según lo que ponga; si pone «cierre» usa 23:00 (sábado 24:00).
-- Tests del FP (fp_tests): subject (materia), block (número de bloque), unit (la unidad, p. ej. «U3 - Nóminas»), opens_on y closes_on YYYY-MM-DD. Una fila por unidad.
+${user.shifts
+    ? '- Turnos de trabajo (shifts): una fila por día que diga. kind: opening (10:00-17:30), dia (11:40-17:30), noche (17:00 o 17:30 hasta cierre 23:00; sábado 24:00) o libre. Pon starts_at/ends_at HH:MM según lo que diga; si dice «cierre» usa 23:00 (sábado 24:00).'
+    : '- Turnos (shifts): esta persona no usa turnos; deja la lista vacía.'}
+${user.fp
+    ? '- Tests de estudios (fp_tests): subject (materia), block (número de bloque), unit (la unidad, p. ej. «U3 - Nóminas»), opens_on y closes_on YYYY-MM-DD. Una fila por unidad.'
+    : '- Tests de estudios (fp_tests): esta persona no usa este módulo; deja la lista vacía.'}
 - Proyectos nuevos (projects): solo si dice claramente que empieza un proyecto. name, next_step (siguiente paso concreto).
 
 Si algo no encaja o no se entiende, explícalo en note (una frase). Sin inventar: si no hay nada, listas vacías.`

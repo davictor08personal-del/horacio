@@ -470,3 +470,13 @@ input, textarea { caret-color: var(--accent); }
 /* «Añadir a Google Calendar»: a link styled as a soft button */
 .calendar-link { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; font-size: 0.95rem; text-decoration: none; }
 .calendar-link svg { width: 20px; height: 20px; }
+
+/* Ajustes: inputs inside rows, and iOS-style switches */
+.settings-input { max-width: 58%; min-height: 36px; padding: 6px 10px; text-align: right; background: var(--surface-2); border-radius: 10px; font-size: 0.95rem; }
+.toggle-row { cursor: pointer; }
+.toggle-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.switch { appearance: none; -webkit-appearance: none; flex-shrink: 0; width: 51px; height: 31px; border-radius: 999px; background: var(--surface-3); position: relative; transition: background 160ms; cursor: pointer; margin: 0; min-height: 0; padding: 0; border: 0; }
+.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.3); transition: transform 160ms; }
+.switch:checked { background: var(--accent); }
+.switch:checked::after { transform: translateX(20px); }
+.legal a, .hint a { color: var(--accent); }

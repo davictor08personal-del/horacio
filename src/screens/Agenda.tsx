@@ -1,21 +1,21 @@
 import { useState } from 'react'
-import { dayName, hhmm, madridDay, shiftHours, shortDate, weekOf } from '../logic'
+import { dayName, hhmm, localDay, shiftHours, shortDate, weekOf } from '../logic'
 import { insert, remove, update, useData } from '../store'
 import Sheet, { Choice } from '../Sheet'
 import { SHIFT, type FpTest, type ShiftKind } from '../types'
 
-/** This week's shifts (Monday to Sunday) and the FP tests by subject. */
+/** The optional modules: this week's shifts (Monday to Sunday) and the course tests by subject. */
 export default function Agenda() {
-  const { shifts, fp_tests } = useData()
-  const today = madridDay()
+  const { shifts, fp_tests, profile } = useData()
+  const today = localDay()
   const [day, setDay] = useState<string | null>(null)
   const [test, setTest] = useState<FpTest | null>(null)
   const subjects = [...new Set(fp_tests.map((t) => t.subject))].sort()
 
   return (
     <>
-      <h1 className="page-title">Agenda</h1>
-      <section className="group">
+      <h1 className="page-title">{profile?.shifts && profile?.fp ? 'Turnos y estudios' : profile?.shifts ? 'Turnos' : 'Estudios'}</h1>
+      {profile?.shifts && <section className="group">
         <h2 className="group-title">Turnos de esta semana</h2>
         <ul className="list card-list">
           {weekOf(today).map((d) => {
@@ -32,11 +32,10 @@ export default function Agenda() {
             )
           })}
         </ul>
-        <p className="hint">Para la semana entera: ＋ y una foto del horario.</p>
-      </section>
-
-      <section className="group">
-        <h2 className="group-title">Tests del FP</h2>
+        <p className="hint">Toca un día para poner su turno, o escribe la semana con ＋ («lunes opening, martes libre…»).</p>
+      </section>}
+      {profile?.fp && <section className="group">
+        <h2 className="group-title">Tests de estudios</h2>
         {!subjects.length && <p className="empty">Sin tests. Pulsa ＋ y escribe, por ejemplo, «Test de Nóminas U3, bloque 2, abre el 10 de noviembre y cierra el 20».</p>}
         {subjects.map((subject) => (
           <div key={subject} className="subject">
@@ -56,7 +55,7 @@ export default function Agenda() {
             </ul>
           </div>
         ))}
-      </section>
+      </section>}
       {day && <ShiftSheet day={day} onClose={() => setDay(null)} />}
       {test && <TestSheet test={test} onClose={() => setTest(null)} />}
     </>

@@ -51,6 +51,7 @@ Todas las tablas llevan `user_id` y RLS «solo el dueño».
 - `daily_tasks`: id, title, position, done_on, project_id, description, icon, note_id, created_at.
 - `daily_log`: daily_id, day (un registro por día hecho; de aquí salen las rachas semanales).
 - `tasks.note_id` → `notes`: una nota puede tener varios recordatorios; un recordatorio, una nota. Si se borra la nota, el recordatorio se queda.
+- `profiles`: user_id, name, timezone, shifts, fp (módulos opcionales). Lo crea la bienvenida.
 - `ai_usage` + función `ai_hit()`: límite de llamadas a la IA por día (copiado de Músculo).
 
 ## La idea de fondo

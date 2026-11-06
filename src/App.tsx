@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { demo, load, purgeClosed, supa, useData } from './store'
 import Login from './screens/Login'
+import Welcome from './screens/Welcome'
+import NewPassword from './screens/NewPassword'
 import Today from './screens/Today'
 import Tasks from './screens/Tasks'
 import Notes from './screens/Notes'
@@ -26,14 +28,18 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [capturing, setCapturing] = useState(false)
   const [settings, setSettings] = useState(false)
+  const [recovering, setRecovering] = useState(false) // opened from the «new password» email
   const [error, setError] = useState('')
-  const { loaded } = useData()
+  const { loaded, profile } = useData()
   const noteId = useOpenNote()
 
   useEffect(() => {
     if (!supa) return
     supa.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data } = supa.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data } = supa.auth.onAuthStateChange((event, s) => {
+      setSession(s)
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
@@ -50,7 +56,9 @@ export default function App() {
   }, [signedIn])
 
   if (session === undefined) return null
+  if (recovering) return <NewPassword onDone={() => setRecovering(false)} />
   if (!signedIn) return <Login />
+  if (loaded && !profile) return <Welcome />
 
   return (
     <>

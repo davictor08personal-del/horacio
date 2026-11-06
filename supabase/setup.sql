@@ -82,6 +82,17 @@ insert into public.daily_log (user_id, daily_id, day)
 -- A reminder (task) can point to one note; a note can have several reminders. Deleting the note keeps the reminders.
 alter table public.tasks add column if not exists note_id uuid references public.notes on delete set null;
 
+-- Who the user is: their name (greeting), time zone (every «today» and notification time) and which optional
+-- modules they use. Created by the welcome screen the first time they sign in.
+create table if not exists public.profiles (
+  user_id uuid primary key default auth.uid() references auth.users on delete cascade,
+  name text check (char_length(name) <= 60),
+  timezone text not null default 'Europe/Madrid',
+  shifts boolean not null default false, -- «Turnos»: work shifts and the free time around them
+  fp boolean not null default false,     -- «Estudios»: course tests by block
+  created_at timestamptz not null default now()
+);
+
 -- One row per day; a new shift for the same day replaces the old one (upsert on user_id + day).
 create table if not exists public.shifts (
   id uuid primary key default gen_random_uuid(),
@@ -131,7 +142,7 @@ create trigger tasks_reset_notified before update on public.tasks
 do $$
 declare t text;
 begin
-  foreach t in array array['projects', 'tasks', 'shifts', 'fp_tests', 'notes', 'daily_tasks', 'push_subscriptions', 'daily_log'] loop
+  foreach t in array array['projects', 'tasks', 'shifts', 'fp_tests', 'notes', 'daily_tasks', 'push_subscriptions', 'daily_log', 'profiles'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "%1$s: own" on public.%1$I', t);
     execute format('create policy "%1$s: own" on public.%1$I for all to authenticated

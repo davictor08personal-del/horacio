@@ -96,3 +96,6 @@ export const NOTE_COLORS = Object.keys(NOTE_COLOR) as NoteColor[]
 
 /** One day a daily task was done (table daily_log): the streaks are counted from these. */
 export interface DailyLog { daily_id: string; day: string }
+
+/** The user's profile (table profiles): name, time zone and optional modules. */
+export interface Profile { user_id: string; name: string | null; timezone: string; shifts: boolean; fp: boolean }

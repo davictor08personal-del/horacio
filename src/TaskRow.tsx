@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { googleCalendarUrl, hhmm, madridDay, relDay } from './logic'
+import { googleCalendarUrl, hhmm, localDay, relDay } from './logic'
 import { noteFromTask, remove, setTaskStatus, update, useData } from './store'
 import { openNote } from './NoteEditor'
 import Sheet, { Choice } from './Sheet'
@@ -9,7 +9,7 @@ import { EFFORT, PRIORITY, STATUS, type Status, type Task } from './types'
 export function TaskRow({ task, n }: { task: Task; n?: number }) {
   const [open, setOpen] = useState(false)
   const { projects, notes } = useData()
-  const today = madridDay()
+  const today = localDay()
   const project = projects.find((p) => p.id === task.project_id)
   const note = notes.find((n) => n.id === task.note_id)
   const late = task.due_date && task.due_date < today
@@ -39,7 +39,7 @@ export function TaskRow({ task, n }: { task: Task; n?: number }) {
 export function ClosedRow({ task }: { task: Task }) {
   const { projects } = useData()
   const project = projects.find((p) => p.id === task.project_id)
-  const when = task.done_at ? relDay(madridDay(new Date(task.done_at)), madridDay()).toLowerCase() : ''
+  const when = task.done_at ? relDay(localDay(new Date(task.done_at)), localDay()).toLowerCase() : ''
   return (
     <li className="task closed">
       <button className={`tick ${task.status === 'hecho' ? 'done' : 'dropped'}`} onClick={() => setTaskStatus(task, 'abierto')} aria-label={`Reabrir «${task.title}»`} />

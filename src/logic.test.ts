@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanCapture, mockCapture } from './capture'
-import { addDays, byPriority, dayPlan, doneToday, googleCalendarUrl, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, madridDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
+import { addDays, byPriority, dayPlan, doneToday, googleCalendarUrl, localMinutes, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
 import type { FpTest, Note, Shift, Task } from './types'
 
 const task = (p: Partial<Task>): Task => ({
@@ -21,7 +21,7 @@ describe('dates', () => {
     expect(relDay('2026-11-20', '2026-11-02')).toBe('20 nov')
   })
   it('Madrid day crosses midnight in Madrid, not in UTC', () => {
-    expect(madridDay(new Date('2026-11-02T23:30:00Z'))).toBe('2026-11-03') // 00:30 in Madrid
+    expect(localDay(new Date('2026-11-02T23:30:00Z'))).toBe('2026-11-03') // 00:30 in Madrid
     expect(addDays('2026-10-25', 1)).toBe('2026-10-26') // daylight saving change
   })
 })
@@ -209,5 +209,22 @@ describe('Google Calendar link', () => {
   })
   it('no day, no link', () => {
     expect(googleCalendarUrl({ title: 'x', notes: null, due_date: null, due_time: null })).toBeNull()
+  })
+})
+
+describe('time zones', () => {
+  const t = new Date('2026-11-06T01:30:00Z') // 02:30 in Madrid, 21:30 the day before in Caracas
+  it('«today» is the user\'s, not Madrid\'s', () => {
+    expect(localDay(t, 'Europe/Madrid')).toBe('2026-11-06')
+    expect(localDay(t, 'America/Caracas')).toBe('2026-11-05')
+    expect(localMinutes(t, 'America/Caracas')).toBe(21 * 60 + 30)
+  })
+  it('reminders ring at the user\'s time', () => {
+    const r = task({ title: 'r', due_date: '2026-11-05', due_time: '21:00' })
+    expect(dueReminders([r], t, 'America/Caracas')).toHaveLength(1)
+    expect(dueReminders([task({ title: 'r', due_date: '2026-11-05', due_time: '22:00' })], t, 'America/Caracas')).toHaveLength(0)
+  })
+  it('the summary without the shifts module only lists priorities', () => {
+    expect(morningSummary([], undefined, null, false)).toEqual({ title: 'Buenos días', body: 'Nada urgente para hoy.' })
   })
 })

@@ -1,10 +1,10 @@
 // POST /api/ping: a test notification to the signed-in user's phones (button in Ajustes).
-import { allowedUser, errorResponse } from './_auth.js'
+import { errorResponse, signedInUser } from './_auth.js'
 import { sendPush, type PushSub } from './_push.js'
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const { supa } = await allowedUser(request)
+    const { supa } = await signedInUser(request)
     // RLS: this client only sees the user's own subscriptions.
     const { data: subs } = await supa.from('push_subscriptions').select('endpoint, p256dh, auth')
     if (!subs?.length) return Response.json({ sent: 0 })

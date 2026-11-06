@@ -1,18 +1,29 @@
 // Pure rules of the app (no React, no Supabase), so they can be tested in logic.test.ts.
 import type { ChecklistItem, DailyTask, Effort, FpTest, Note, Priority, Shift, ShiftKind, Task } from './types'
 
-const TZ = 'Europe/Madrid'
-/** Whose app it is (greeting on Hoy and the 9:30 notification). */
-export const OWNER = 'Victor'
+// ---------- time zone ----------
+// Every «today», «tomorrow» and time below is in the user's time zone (saved in their profile), not the device's
+// and not the server's. Until the profile loads (and in tests) it's Madrid.
+const DEFAULT_TZ = 'Europe/Madrid'
+let tz = DEFAULT_TZ
 
-/** 'YYYY-MM-DD' in Madrid time, whatever the device's time zone. */
-export function madridDay(d = new Date()) {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
+export function validTimeZone(zone: unknown): zone is string {
+  if (typeof zone !== 'string' || !zone) return false
+  try { new Intl.DateTimeFormat('en', { timeZone: zone }); return true } catch { return false }
+}
+/** The phone's own time zone, saved in the profile when the account is created. */
+export const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TZ
+export const setTimeZone = (zone: string | null | undefined) => { tz = validTimeZone(zone) ? zone : DEFAULT_TZ }
+export const timeZone = () => tz
+
+/** 'YYYY-MM-DD' in the user's time zone. */
+export function localDay(d = new Date(), zone = tz) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
 }
 
-/** Minutes since midnight in Madrid. */
-export function madridMinutes(d = new Date()) {
-  const [h, m] = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d).split(':').map(Number)
+/** Minutes since midnight in the user's time zone. */
+export function localMinutes(d = new Date(), zone = tz) {
+  const [h, m] = new Intl.DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d).split(':').map(Number)
   return h * 60 + m
 }
 
@@ -132,8 +143,8 @@ export function nextFpBlock(tests: FpTest[], today: string) {
   }
 }
 
-/** The hello on Hoy, by the hour in Madrid. */
-export function greeting(minutes = madridMinutes()) {
+/** The hello on Hoy, by the user's hour. */
+export function greeting(minutes = localMinutes()) {
   const h = Math.floor(minutes / 60)
   return h >= 6 && h < 13 ? 'Buenos días' : h >= 13 && h < 21 ? 'Buenas tardes' : 'Buenas noches'
 }
@@ -186,48 +197,48 @@ export function notePreview(n: Note) {
 /** Like iOS Notes: "10:42" today, "Ayer", the day name this week, "3 nov" before. */
 export function noteTime(iso: string, now = new Date()) {
   const d = new Date(iso)
-  const n = daysBetween(madridDay(d), madridDay(now))
-  if (n === 0) return new Intl.DateTimeFormat('es-ES', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(d)
+  const n = daysBetween(localDay(d), localDay(now))
+  if (n === 0) return new Intl.DateTimeFormat('es-ES', { timeZone: tz, hour: '2-digit', minute: '2-digit' }).format(d)
   if (n === 1) return 'Ayer'
-  if (n < 7) return dayName(madridDay(d))
-  return shortDate(madridDay(d))
+  if (n < 7) return dayName(localDay(d))
+  return shortDate(localDay(d))
 }
 
 /** Most recently edited first. */
 export const byEdited = (a: Note, b: Note) => b.updated_at.localeCompare(a.updated_at)
 
 // ---------- notifications (api/tick.ts) ----------
-/** When the morning summary goes out (Madrid). Until noon it still catches up if a tick was missed. */
+/** When the morning summary goes out (user's time). Until noon it still catches up if a tick was missed. */
 export const SUMMARY_FROM = 9 * 60 + 30
 export const SUMMARY_UNTIL = 12 * 60
 
 /**
- * Reminders whose day and time (Madrid) have arrived. Only those from yesterday on: a reminder that was
+ * Reminders whose day and time (in `zone`, the user's) have arrived. Only those from yesterday on: a reminder that was
  * already old when notifications were switched on shouldn't ring now.
  */
-export function dueReminders(tasks: Task[], now = new Date()) {
-  const today = madridDay(now)
-  const stamp = `${today} ${fromMin(madridMinutes(now))}`
+export function dueReminders(tasks: Task[], now = new Date(), zone = tz) {
+  const today = localDay(now, zone)
+  const stamp = `${today} ${fromMin(localMinutes(now, zone))}`
   const yesterday = addDays(today, -1)
   return tasks.filter((t) =>
     (t.status === 'abierto' || t.status === 'en_curso') && t.due_date && t.due_time &&
     t.due_date >= yesterday && `${t.due_date} ${hhmm(t.due_time)}` <= stamp)
 }
 
-/** The 9:30 notification: how the day looks, then the first priorities. */
-export function morningSummary(tasks: Task[], shift: Shift | undefined, name: string) {
+/** The 9:30 notification: how the day looks (only with the shifts module), then the first priorities. */
+export function morningSummary(tasks: Task[], shift: Shift | undefined, name: string | null, withShifts = true) {
   const { focus, later } = splitToday(tasks)
-  const plan = dayPlan(shift)
+  const plan = withShifts ? dayPlan(shift) : { line: '' }
   const list = focus.length ? `Prioridades: ${focus.map((t, i) => `${i + 1}. ${t.title}`).join(' · ')}` : 'Nada urgente para hoy.'
   const more = later.length ? ` (y ${later.length} más que pueden esperar)` : ''
-  return { title: `Buenos días, ${name}`, body: `${plan.line} ${list}${more}` }
+  return { title: name ? `Buenos días, ${name}` : 'Buenos días', body: `${plan.line} ${list}${more}`.trim() }
 }
 
 // ---------- Google Calendar ----------
 /**
  * Google's own «new event» link, filled in: it opens the user's Google Calendar (web or app) and one tap on
  * Guardar adds it. No sign-in with Google, no permissions, nothing for Google to review. With a time it's a
- * 30-minute event in Madrid time; with only a day, an all-day event.
+ * 30-minute event in the user's time zone; with only a day, an all-day event.
  */
 export function googleCalendarUrl(t: Pick<Task, 'title' | 'notes' | 'due_date' | 'due_time'>) {
   if (!t.due_date) return null
@@ -241,6 +252,6 @@ export function googleCalendarUrl(t: Pick<Task, 'title' | 'notes' | 'due_date' |
   } else {
     dates = `${day}/${addDays(t.due_date, 1).replace(/-/g, '')}`
   }
-  const q = new URLSearchParams({ action: 'TEMPLATE', text: t.title, dates, ctz: TZ, details: [t.notes, 'Apuntado en Cuadre'].filter(Boolean).join('\n\n') })
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: t.title, dates, ctz: tz, details: [t.notes, 'Apuntado en Cuadre'].filter(Boolean).join('\n\n') })
   return `https://calendar.google.com/calendar/render?${q}`
 }

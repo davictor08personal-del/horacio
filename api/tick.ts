@@ -1,56 +1,62 @@
 // POST /api/tick: called every minute by Supabase (pg_cron, see supabase/cron.sql).
-// Sends each reminder when its day and time arrive, and the morning summary at 9:30 (Madrid).
+// Sends each reminder when its day and time arrive, and the morning summary at 9:30 — both in each user's
+// own time zone (profiles.timezone).
 //
 // Why a cron outside Vercel: Vercel's free cron runs once a day; pg_cron (free in Supabase) runs every minute.
 // It reads every user's tasks, so it uses the Supabase secret key (bypasses RLS). That key and CRON_SECRET
 // only live in Vercel's environment variables, never in the app or in git.
-import { createClient } from '@supabase/supabase-js'
-import { dueReminders, madridDay, madridMinutes, morningSummary, OWNER, SUMMARY_FROM, SUMMARY_UNTIL } from '../src/logic.js'
+import { addDays, dueReminders, localDay, localMinutes, morningSummary, SUMMARY_FROM, SUMMARY_UNTIL, validTimeZone } from '../src/logic.js'
 import type { Shift, Task } from '../src/types.js'
-import { env, errorResponse, Failed } from './_auth.js'
+import { adminClient, env, errorResponse, Failed } from './_auth.js'
 import { sendPush, type Message, type PushSub } from './_push.js'
 
-type Row = Task & { user_id: string; notified_at: string | null }
+type Row = Task & { user_id: string }
+type Prof = { user_id: string; name: string | null; timezone: string; shifts: boolean }
 
 export async function POST(request: Request): Promise<Response> {
   try {
     const secret = env('CRON_SECRET')
     if (!secret) throw new Failed(503, 'missing CRON_SECRET')
     if (request.headers.get('authorization') !== `Bearer ${secret}`) throw new Failed(401, 'unauthorized')
-    const url = env('VITE_SUPABASE_URL')
-    const key = env('SUPABASE_SECRET_KEY')
-    if (!url || !key) throw new Failed(503, 'missing VITE_SUPABASE_URL/SUPABASE_SECRET_KEY')
-    const admin = createClient(url, key, { auth: { persistSession: false } })
+    const admin = await adminClient()
 
     const { data: subs, error } = await admin.from('push_subscriptions').select('user_id, endpoint, p256dh, auth')
     if (error) throw new Failed(503, `push_subscriptions: ${error.message}`)
     if (!subs?.length) return Response.json({ sent: 0 })
     const users = [...new Set(subs.map((s) => s.user_id as string))]
+    const { data: profs } = await admin.from('profiles').select('user_id, name, timezone, shifts').in('user_id', users)
+    const prof = new Map((profs ?? []).map((p: Prof) => [p.user_id, { ...p, timezone: validTimeZone(p.timezone) ? p.timezone : 'Europe/Madrid' }]))
+    const zoneOf = (id: string) => prof.get(id)?.timezone ?? 'Europe/Madrid'
     const now = new Date()
     const out: (Message & { user_id: string })[] = []
 
-    const { data: tasks } = await admin.from('tasks').select('*').in('user_id', users).in('status', ['abierto', 'en_curso', 'esperando'])
-    const rows = (tasks ?? []) as Row[]
-
-    // Reminders. Marking them first (only if still unmarked) means two overlapping ticks can't both send one.
-    const due = dueReminders(rows.filter((t) => !t.notified_at), now)
+    // Reminders: only the candidates (with a time, not yet sent, around today), then each user's clock decides.
+    const { data: candidates } = await admin.from('tasks').select('*').in('user_id', users).in('status', ['abierto', 'en_curso'])
+      .not('due_time', 'is', null).is('notified_at', null).gte('due_date', addDays(localDay(now, 'UTC'), -2))
+    const due = ((candidates ?? []) as Row[]).filter((t) => dueReminders([t], now, zoneOf(t.user_id)).length > 0)
     if (due.length) {
+      // Marking them first (only if still unmarked) means two overlapping ticks can't both send one.
       const { data: claimed } = await admin.from('tasks').update({ notified_at: now.toISOString() })
         .in('id', due.map((t) => t.id)).is('notified_at', null).select('id, user_id, title')
       for (const t of claimed ?? []) out.push({ user_id: t.user_id, title: 'Recordatorio', body: t.title, tag: t.id })
     }
 
-    // Morning summary, once a day: push_daily only accepts one row per user and day.
-    const minutes = madridMinutes(now)
-    if (minutes >= SUMMARY_FROM && minutes < SUMMARY_UNTIL) {
-      const today = madridDay(now)
+    // Morning summary: users for whom it's between 9:30 and noon now. push_daily takes one row per user and
+    // (their) day, so each gets it once.
+    const morning = users.filter((id) => { const m = localMinutes(now, zoneOf(id)); return m >= SUMMARY_FROM && m < SUMMARY_UNTIL })
+    if (morning.length) {
       const { data: fresh } = await admin.from('push_daily')
-        .upsert(users.map((user_id) => ({ user_id, day: today })), { onConflict: 'user_id,day', ignoreDuplicates: true }).select('user_id')
+        .upsert(morning.map((user_id) => ({ user_id, day: localDay(now, zoneOf(user_id)) })), { onConflict: 'user_id,day', ignoreDuplicates: true }).select('user_id, day')
       if (fresh?.length) {
-        const { data: shifts } = await admin.from('shifts').select('*').eq('day', today).in('user_id', fresh.map((f) => f.user_id))
-        for (const { user_id } of fresh) {
-          const shift = (shifts ?? []).find((s) => s.user_id === user_id) as Shift | undefined
-          out.push({ user_id, tag: 'summary', ...morningSummary(rows.filter((t) => t.user_id === user_id), shift, OWNER) })
+        const ids = fresh.map((f) => f.user_id as string)
+        const [{ data: open }, { data: shifts }] = await Promise.all([
+          admin.from('tasks').select('*').in('user_id', ids).in('status', ['abierto', 'en_curso', 'esperando']),
+          admin.from('shifts').select('*').in('user_id', ids).in('day', [...new Set(fresh.map((f) => f.day as string))]),
+        ])
+        for (const { user_id, day } of fresh) {
+          const p = prof.get(user_id)
+          const shift = (shifts ?? []).find((s) => s.user_id === user_id && s.day === day) as Shift | undefined
+          out.push({ user_id, tag: 'summary', ...morningSummary(((open ?? []) as Row[]).filter((t) => t.user_id === user_id), shift, p?.name ?? null, !!p?.shifts) })
         }
       }
     }

@@ -9,11 +9,11 @@
 //   DEEPSEEK_API_KEY   from platform.deepseek.com → API keys. DeepSeek only reads text: photos and voice
 //                      still go to Gemini when GEMINI_API_KEY is set.
 //   DEEPSEEK_MODEL     optional, default deepseek-chat
-//   AI_ALLOWED_USERS   Supabase user ids allowed to use it, comma-separated
-//   AI_DAILY_LIMIT     calls per user and day (default 40)
+//   AI_ALLOWED_USERS   optional: if set, only these Supabase user ids may use it (closed beta); unset = everyone
+//   AI_DAILY_LIMIT     calls per user and day (default 20): what really caps the cost
 //   VITE_SUPABASE_URL / VITE_SUPABASE_KEY: used to check who calls
 import { buildCapturePrompt, CAPTURE_SCHEMA, cleanCapture, mockCapture, type CaptureRequest } from '../src/capture.js'
-import { madridDay } from '../src/logic.js'
+import { localDay, validTimeZone } from '../src/logic.js'
 import { allowedUser, env, errorResponse, Failed } from './_auth.js'
 
 const MAX_BODY = 4_000_000 // characters: a 60 s recording or a phone photo, in base64, fits well under it
@@ -94,25 +94,28 @@ export async function POST(request: Request): Promise<Response> {
     }
     if (!req.text?.trim() && !req.media) throw new Failed(400, 'empty')
     if (req.media && (!MEDIA.test(req.media.mime) || typeof req.media.data !== 'string')) throw new Failed(400, 'unsupported media')
-    const today = madridDay()
-
     // Without a key (e.g. right after cloning) it answers with canned data instead of failing.
     const provider = env('AI_PROVIDER') ?? (env('GEMINI_API_KEY') ? 'gemini' : 'mock')
     // On a laptop with canned answers there's no one to check and nothing to spend.
-    if (provider === 'mock' && !process.env.VERCEL) return Response.json(mockCapture(req, today))
+    if (provider === 'mock' && !process.env.VERCEL) return Response.json(mockCapture(req, localDay()))
     if (provider !== 'gemini' && provider !== 'deepseek') throw new Failed(503, `unknown AI_PROVIDER ${provider}`)
     // DeepSeek can't see photos or hear voice: those go to Gemini if there's a key for it.
     const useDeepseek = provider === 'deepseek' && !req.media
     if (provider === 'deepseek' && req.media && !env('GEMINI_API_KEY')) throw new Failed(400, 'text only')
 
-    const { supa } = await allowedUser(request) // signed in and on the list
+    const { supa } = await allowedUser(request)
     const { data: count, error } = await supa.rpc('ai_hit') // supabase/setup.sql
     if (error) throw new Failed(503, 'daily counter missing: run supabase/setup.sql')
-    if ((count as number) > Number(env('AI_DAILY_LIMIT') ?? 40)) throw new Failed(429, 'daily limit')
+    if ((count as number) > Number(env('AI_DAILY_LIMIT') ?? 20)) throw new Failed(429, 'daily limit')
 
-    const projects = (req.projects ?? []).filter((p) => typeof p === 'string').slice(0, 50)
-    const system = buildCapturePrompt(today, projects)
-    return Response.json(cleanCapture(await (useDeepseek ? deepseek(system, req) : gemini(system, req))))
+    // Their name, time zone and modules shape the prompt («mañana» is tomorrow where they live).
+    const { data: p } = await supa.from('profiles').select('name, timezone, shifts, fp').maybeSingle()
+    const user = { name: p?.name ?? null, timezone: validTimeZone(p?.timezone) ? p.timezone : 'Europe/Madrid', shifts: !!p?.shifts, fp: !!p?.fp }
+    const projects = (req.projects ?? []).filter((x) => typeof x === 'string').slice(0, 50)
+    const system = buildCapturePrompt(localDay(new Date(), user.timezone), projects, user)
+    const out = cleanCapture(await (useDeepseek ? deepseek(system, req) : gemini(system, req)))
+    // Belt and braces: never return items for a module they don't use.
+    return Response.json({ ...out, shifts: user.shifts ? out.shifts : [], fp_tests: user.fp ? out.fp_tests : [] })
   } catch (e) {
     return errorResponse(e, 'capture')
   }

@@ -30,7 +30,7 @@ Para probar sin cuenta aunque tengas Supabase conectado: crea `.env.demo.local` 
 
 1. Entra en [aistudio.google.com](https://aistudio.google.com) con tu cuenta de Google → **Get API key → Create API key**. Es gratis (con límite de usos al día). Ojo: en el nivel gratis Google puede usar lo que le mandas para mejorar sus productos.
 2. En `.env.local`: `GEMINI_API_KEY=<tu clave>` y `AI_PROVIDER=gemini`.
-3. Tu id de usuario: Supabase → **Authentication → Users** → copia el **UID** y ponlo en `AI_ALLOWED_USERS`. Solo ese usuario puede gastar la IA.
+3. Cualquiera con cuenta puede usar la IA, con un límite diario por persona (`AI_DAILY_LIMIT`, 20 por defecto). Para una beta cerrada, pon ids de usuario en `AI_ALLOWED_USERS`.
 4. Reinicia `npm run dev` y prueba ＋ → «mañana sacar el alquiler, urgente».
 
 **Alternativa: DeepSeek** (si Gemini está saturado). En [platform.deepseek.com](https://platform.deepseek.com) → **Top up** (unos euros duran mucho) → **API keys → Create new API key**. En `.env.local`: `DEEPSEEK_API_KEY=<tu clave>` y `AI_PROVIDER=deepseek`. DeepSeek solo lee texto: fotos y voz siguen yendo a Gemini si hay `GEMINI_API_KEY`.
@@ -57,7 +57,7 @@ Antes: Supabase y Gemini conectados en local (arriba) y tu cuenta creada en la a
 2. **Secretos del servidor.** Supabase → **Project Settings → API Keys → Secret keys** → copia una (`sb_secret_…`) para `SUPABASE_SECRET_KEY`. Para `CRON_SECRET` genera una contraseña larga: `node -e "console.log(crypto.randomBytes(32).toString('hex'))"`. Estas dos solo van en Vercel: no las pongas en la app.
 3. **Tablas nuevas.** Vuelve a ejecutar [supabase/setup.sql](supabase/setup.sql) entero (añade las de los avisos sin tocar lo que hay).
 4. **GitHub.** Crea un repo privado y sube el código: `gh repo create horacio --private --source . --push`.
-5. **Vercel.** [vercel.com/new](https://vercel.com/new) → importa el repo `horacio` (detecta Vite solo). En **Environment Variables** pon: `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`, `AI_PROVIDER`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY` (si usas DeepSeek), `AI_ALLOWED_USERS`, `VITE_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `SUPABASE_SECRET_KEY` y `CRON_SECRET`. Pulsa **Deploy**. Desde entonces cada `git push` publica.
+5. **Vercel.** [vercel.com/new](https://vercel.com/new) → importa el repo `horacio` (detecta Vite solo). En **Environment Variables** pon: `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`, `AI_PROVIDER`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY` (si usas DeepSeek), `AI_ALLOWED_USERS` (opcional), `VITE_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `SUPABASE_SECRET_KEY` y `CRON_SECRET`. Pulsa **Deploy**. Desde entonces cada `git push` publica.
 6. **El reloj.** Abre [supabase/cron.sql](supabase/cron.sql), cambia la dirección por la de Vercel y `YOUR_CRON_SECRET` por tu `CRON_SECRET`, y ejecútalo en el SQL Editor. Desde ese momento Supabase llama a `/api/tick` cada minuto.
 7. **En el iPhone.** Abre la dirección en Safari → **Compartir → Añadir a pantalla de inicio**. Abre Cuadre desde el icono, entra, toca el engranaje ⚙ de arriba a la derecha (Ajustes) → **Activar avisos** → **Probar aviso**.
 
@@ -69,6 +69,14 @@ Si un aviso no llega: Vercel → proyecto → **Logs** (busca `tick` o `ping`) y
 - Cada minuto `pg_cron` llama a `api/tick.ts`. Este busca los recordatorios (tareas con día y hora) que ya tocan y no se han avisado, los marca (`notified_at`) y los envía. Entre las 9:30 y las 12:00 manda una vez al día el resumen («Buenos días, Victor»); `push_daily` evita repetirlo.
 - Si cambias el día o la hora de un recordatorio, vuelve a avisar a la nueva hora (lo hace un trigger en la base).
 - Las reglas (qué toca y el texto del resumen) están en `src/logic.ts`, con tests.
+
+## Cuentas para otras personas
+
+- **Recuperar la contraseña**: en Supabase → **Authentication → URL Configuration** pon *Site URL* = la dirección de Vercel y añade en *Redirect URLs* esa dirección y `http://localhost:5173`. Sin esto, el enlace del email no vuelve a la app.
+- **Que lleguen los emails**: el envío gratis de Supabase solo manda a los miembros del equipo del proyecto (y unos pocos por hora). Para el resto, en **Authentication → Emails → SMTP Settings** conecta un remitente: lo más fácil sin dominio es Gmail con una «contraseña de aplicación» (host `smtp.gmail.com`, puerto 465); con dominio propio, Resend (gratis hasta 3.000 al mes). Con eso ya se puede volver a encender «Confirm email».
+- **Borrar la cuenta** (Ajustes → Cuenta) llama a `api/account.ts`, que usa `SUPABASE_SECRET_KEY`. Todas las tablas borran en cascada.
+- **Perfil** (`profiles`): nombre, zona horaria y módulos. La bienvenida lo crea la primera vez; todo «hoy», «mañana» y la hora de los avisos usan esa zona.
+- **Privacidad**: `public/privacidad.html` (enlazada en la entrada, en ＋ y en Ajustes).
 
 ## Google Calendar
 
