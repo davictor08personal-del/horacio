@@ -4,7 +4,7 @@ import { allTags, byEdited, byPosition, cleanTag, dailyOfNote, byPriority, fold,
 import { ICON, Icon, openNote } from '../NoteEditor'
 import Page from '../Page'
 import Sheet, { Choice } from '../Sheet'
-import { DailyGrid } from '../DailyTasks'
+import { DailyArt, DailyGrid } from '../DailyTasks'
 import { createNote, createTask, insert, remove, update, useData } from '../store'
 import { TaskRow } from '../TaskRow'
 import { PROJECT_STATUS, type Project, type ProjectStatus } from '../types'
@@ -69,8 +69,8 @@ export default function Projects() {
                 const dailyCount = daily_tasks.filter((d) => d.project_id === p.id).length
                 return (
                   <li key={p.id}>
-                    <button className="project" onClick={() => setOpen(p.id)}>
-                      <ItemIcon icon={p.icon} name={p.name} />
+                    <button className={`project ${p.icon ? 'has-art' : ''}`} onClick={() => setOpen(p.id)}>
+                      {p.icon ? <DailyArt icon={p.icon} /> : <ItemIcon icon={null} name={p.name} />}
                       <span className="project-text">
                       <span className="task-title">{p.name}</span>
                       <span className="task-sub">{[p.description || (p.next_step ? `Siguiente: ${p.next_step}` : null), count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
@@ -113,8 +113,9 @@ function ProjectPage({ project, onBack }: { project: Project; onBack: () => void
   return (
     <Page back="Proyectos" onBack={onBack} actions={<button className="link" onClick={() => setEditing(true)}>Editar</button>}>
       <header className="today-head">
-        <ItemIcon icon={project.icon} name={project.name} big />
-        <h1>{project.name}</h1>
+        {project.icon
+          ? <div className="project-hero"><DailyArt icon={project.icon} big /><h1>{project.name}</h1></div>
+          : <><ItemIcon icon={null} name={project.name} big /><h1>{project.name}</h1></>}
         <p className="day-line">{PROJECT_STATUS[project.status]}{project.area && ` · ${project.area}`}</p>
         <TagChips tags={project.tags} />
         {project.description

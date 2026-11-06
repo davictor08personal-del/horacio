@@ -81,7 +81,7 @@ export function DailyGrid({ list, hideDone }: { list: DailyTask[]; hideDone?: bo
  * The picture (or emoji) bleeding in from the left edge and fading out to the right: solid for the first fifth
  * of the tile, gone by about a third. Behind the text, so it's decoration, not a box.
  */
-function DailyArt({ icon, big }: { icon: string | null; big?: boolean }) {
+export function DailyArt({ icon, big }: { icon: string | null; big?: boolean }) {
   if (!icon) return null
   const cls = `daily-art ${big ? 'big' : ''}`
   return icon.startsWith('data:image/')
@@ -182,7 +182,7 @@ export function DailyList() {
                 </span>
                 <span className={`today-pill ${on ? 'on' : ''}`}>{on ? 'Hecha hoy' : 'Pendiente'}</span>
               </button>
-              <MonthCalendar days={days} />
+              <WeekRow days={days} />
             </article>
           )
         })}
@@ -195,6 +195,25 @@ export function DailyList() {
 }
 
 const WEEK_LETTERS = 'LMXJVSD'
+
+/** This week as a row of days (L–D, done ones filled); tapping it unfolds the month calendar below. */
+function WeekRow({ days }: { days: string[] }) {
+  const [open, setOpen] = useState(false)
+  const today = localDay()
+  return (
+    <>
+      <button className="week-row" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? 'Ocultar calendario' : 'Ver calendario'}>
+        <span className="week-dots">
+          {weekOf(today).map((d, i) => (
+            <span key={d} className={`week-dot ${days.includes(d) ? 'on' : ''} ${d === today ? 'today' : ''} ${d > today ? 'future' : ''}`}>{WEEK_LETTERS[i]}</span>
+          ))}
+        </span>
+        <span className="chev" aria-hidden>›</span>
+      </button>
+      {open && <MonthCalendar days={days} />}
+    </>
+  )
+}
 const monthStart = (day: string, offset: number) => {
   const d = new Date(`${day.slice(0, 7)}-01T12:00:00Z`)
   d.setUTCMonth(d.getUTCMonth() + offset)
@@ -268,19 +287,10 @@ export function DailySheet({ daily, onClose, startEditing = false }: { daily: Da
 
       {!editing && (
         <>
-          <div className={`streak-card ${color ? `dc-${color}` : ''}`}>
-            <div className="streak-text">
-              <strong>🔥 {streak} {streak === 1 ? 'semana' : 'semanas'}</strong>
-              <span className="muted small-text">{streak ? 'seguidas haciéndola al menos un día' : 'Hazla un día esta semana para empezar la racha'}</span>
-            </div>
-            <MonthCalendar days={days} />
-          </div>
-          <button className={on ? 'secondary' : 'primary'} onClick={() => toggleDaily(daily, today)}>{on ? 'Hecha hoy · Desmarcar' : 'Marcar como hecha hoy'}</button>
-
           <dl className="info-list">
-            <div><dt>Descripción</dt><dd className={daily.description ? '' : 'muted'}>{daily.description || 'Sin descripción'}</dd></div>
             <div><dt>Proyecto</dt><dd className={project ? '' : 'muted'}>{project?.name ?? 'Ninguno'}</dd></div>
-            <div><dt>Color</dt><dd><span className={`swatch-dot dc-${daily.color || 'none'}`} aria-hidden /> {DAILY_COLORS[daily.color || 'none'] ?? 'Sin color'}</dd></div>
+            <div><dt>Descripción</dt><dd className={daily.description ? '' : 'muted'}>{daily.description || 'Sin descripción'}</dd></div>
+            {project?.tags?.length ? <div><dt>Etiquetas</dt><dd>{project.tags.map((t) => `#${t}`).join(' ')}</dd></div> : null}
           </dl>
           {note && (
             <button className="note-link" onClick={() => goToNote(note.id)}>
@@ -292,6 +302,15 @@ export function DailySheet({ daily, onClose, startEditing = false }: { daily: Da
               <span className="chev" aria-hidden>›</span>
             </button>
           )}
+          <button className={on ? 'secondary' : 'primary'} onClick={() => toggleDaily(daily, today)}>{on ? 'Hecha hoy · Desmarcar' : 'Marcar como hecha hoy'}</button>
+
+          <div className={`streak-card ${color ? `dc-${color}` : ''}`}>
+            <div className="streak-text">
+              <strong>🔥 {streak} {streak === 1 ? 'semana' : 'semanas'}</strong>
+              <span className="muted small-text">{streak ? 'seguidas haciéndola al menos un día' : 'Hazla un día esta semana para empezar la racha'}</span>
+            </div>
+            <MonthCalendar days={days} />
+          </div>
         </>
       )}
 

@@ -176,35 +176,38 @@ input, textarea { caret-color: var(--accent); }
 .subject { display: flex; flex-direction: column; gap: 6px; }
 .test-row { display: flex; align-items: center; padding-left: 8px; }
 
-/* ---------- tab bar + capture button ---------- */
+/* ---------- tab bar with the round ＋ in the middle ---------- */
 .dock {
   position: fixed; left: 12px; right: 12px; bottom: var(--nav-bottom); z-index: 4;
-  max-width: 536px; margin: 0 auto; display: flex; gap: 10px; height: var(--nav-h);
+  max-width: 536px; margin: 0 auto; height: var(--nav-h);
 }
 .tabs {
-  position: relative; flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px;
+  position: relative; height: 100%; display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px;
   background: var(--glass);
   backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%);
-  border: 1px solid var(--line); border-radius: 18px;
+  border: 1px solid var(--line); border-radius: 22px;
   box-shadow: 0 10px 28px var(--shadow);
 }
-.tabs button {
-  position: relative; z-index: 1; height: 100%; min-height: 0; padding: 0; border-radius: 13px;
+.tabs > button {
+  position: relative; z-index: 1; height: 100%; min-height: 0; padding: 0; border-radius: 15px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  font-size: 0.7rem; font-weight: 500; color: var(--muted);
+  font-size: 0.68rem; font-weight: 500; color: var(--muted);
 }
-.tabs button.active { color: var(--accent); font-weight: 600; }
-.tabs svg { width: 24px; height: 24px; stroke-width: 1.6; }
+.tabs > button.active { color: var(--accent); font-weight: 600; }
+.tabs svg { width: 23px; height: 23px; stroke-width: 1.6; }
 .tab-indicator {
-  position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / 4);
-  border-radius: 13px; background: var(--accent-soft);
+  position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / 5);
+  border-radius: 15px; background: var(--accent-soft);
   transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+.capture-slot { position: relative; z-index: 2; display: grid; place-items: center; }
 .capture-btn {
-  width: var(--nav-h); height: var(--nav-h); padding: 0; flex-shrink: 0; border-radius: 18px;
-  background: var(--text); color: var(--on-text); display: grid; place-items: center;
-  box-shadow: 0 10px 28px var(--shadow);
+  width: 60px; height: 60px; min-height: 0; padding: 0; border-radius: 50%; margin-top: -26px;
+  background: var(--accent); color: #fff; display: grid; place-items: center;
+  box-shadow: 0 8px 22px rgb(139 30 63 / 0.35), 0 0 0 5px var(--bg);
+  transition: transform 160ms ease;
 }
+.capture-btn:active { transform: scale(0.94); }
 .capture-btn svg { width: 28px; height: 28px; stroke-width: 2.4; }
 @media (prefers-reduced-motion: reduce) { .tab-indicator { transition: none; } }
 
@@ -508,8 +511,8 @@ button.tag { padding: 5px 11px; }
 .daily-btn.colored .daily-tag { background: rgb(255 255 255 / 0.22); color: #fff; }
 .daily-btn.colored .streak { color: rgb(255 255 255 / 0.9); }
 .daily-btn.colored.done .daily-title { opacity: 0.9; }
-.dc-azul { --tile: #56739a; } .dc-verde { --tile: #5a8270; } .dc-morado { --tile: #786c9c; } .dc-rosa { --tile: #a06c84; }
-.dc-rojo { --tile: #a25f5f; } .dc-naranja { --tile: #a87b56; } .dc-vinotinto { --tile: #7a4152; } .dc-gris { --tile: #68717d; }
+.dc-azul { --tile: #3b76d9; } .dc-verde { --tile: #2f9a63; } .dc-morado { --tile: #7c5ad6; } .dc-rosa { --tile: #d4508a; }
+.dc-rojo { --tile: #d65151; } .dc-naranja { --tile: #df7a2a; } .dc-vinotinto { --tile: #9b2a4c; } .dc-gris { --tile: #6b7685; }
 .color-picker { display: flex; flex-wrap: wrap; gap: 10px; }
 .swatch { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; background: var(--tile, var(--surface-2)); border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08); }
 .swatch.dc-none { background: var(--surface); border: 2px dashed var(--ring); }
@@ -604,3 +607,41 @@ button.tag { padding: 5px 11px; }
 .streak-card .month-day.future { background: none; }
 /* Sheets scroll; nothing inside them may shrink to fit (an overflow:hidden child would collapse to 0) */
 .sheet-body > * { flex-shrink: 0; }
+
+/* Coloured daily tasks are translucent: a tint of their colour with the page showing through (frosted), text in
+   the normal ink so it reads in light and dark. The solid colour stays for the check and the calendar days. */
+.daily-btn.colored, .daily-card-head.colored, .daily-hero.colored {
+  background: color-mix(in srgb, var(--tile) 24%, transparent); color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--tile) 35%, transparent);
+  backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
+}
+.daily-btn.colored .daily-fill { background: color-mix(in srgb, var(--tile) 30%, transparent); }
+.daily-btn.colored .daily-check { background: var(--tile); color: #fff; }
+.daily-btn.colored .streak, .daily-card-head.colored .daily-sub { color: var(--muted); }
+.daily-card-head.colored .today-pill { background: color-mix(in srgb, var(--tile) 22%, transparent); color: var(--text); }
+.daily-card-head.colored .today-pill.on { background: var(--tile); color: #fff; }
+.hero-input { background: var(--surface); }
+
+/* The picture fades towards the far corner (diagonally), so a logo or photo reads as part of the card */
+.daily-art { width: 48%; -webkit-mask-image: linear-gradient(115deg, #000 0%, rgb(0 0 0 / 0.7) 28%, transparent 78%); mask-image: linear-gradient(115deg, #000 0%, rgb(0 0 0 / 0.7) 28%, transparent 78%); }
+.daily-art.emoji { -webkit-mask-image: linear-gradient(115deg, #000 0%, rgb(0 0 0 / 0.75) 35%, transparent 85%); mask-image: linear-gradient(115deg, #000 0%, rgb(0 0 0 / 0.75) 35%, transparent 85%); }
+
+/* Projects get the same treatment: their picture or emoji bleeds in from the left and fades out */
+.project.has-art { position: relative; overflow: hidden; padding-left: 26%; }
+.project.has-art .daily-art { width: 42%; }
+.project.has-art .daily-art.emoji { font-size: 2.4rem; }
+.project.has-art > :not(.daily-art) { position: relative; }
+.project-hero { position: relative; overflow: hidden; border-radius: 18px; min-height: 96px; display: flex; align-items: center; padding: 14px 16px 14px 32%; background: var(--surface-2); margin-bottom: 4px; }
+.project-hero .daily-art { width: 55%; }
+.project-hero .daily-art.emoji { font-size: 4rem; padding-left: 6px; }
+.project-hero > :not(.daily-art) { position: relative; }
+.project-hero h1 { font-size: 1.9rem; }
+
+/* Tareas → Diarias: the week as a row; tap to open the month */
+.week-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px 12px; border-radius: 0; text-align: left; font-weight: inherit; }
+.week-row .week-dots { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.week-row .week-dot { max-width: 30px; font-size: 0.68rem; }
+.week-row .week-dot.on { background: var(--tile, var(--accent)); border-color: var(--tile, var(--accent)); }
+.week-row .chev { color: var(--muted); transition: transform 200ms; font-size: 1.2rem; }
+.week-row[aria-expanded='true'] .chev { transform: rotate(90deg); }
+.daily-card .month-cal { animation: task-enter 260ms ease-out both; border-top: 1px solid var(--line); }

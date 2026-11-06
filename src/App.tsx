@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { demo, load, purgeClosed, supa, useData } from './store'
 import Login from './screens/Login'
@@ -20,6 +20,8 @@ const TABS = [
   { id: 'projects', label: 'Proyectos', icon: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' },
 ] as const
 const GEAR = 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'
+// Column of each tab in the bar: the third column belongs to the ＋.
+const slot = (i: number) => (i < 2 ? i : i + 1)
 export type Tab = (typeof TABS)[number]['id']
 
 export default function App() {
@@ -75,18 +77,25 @@ export default function App() {
       </main>
       <nav className="dock">
         <div className="tabs">
-          {/* The highlighted pill slides to the active tab instead of jumping (the only animation, as in Músculo). */}
-          <span className="tab-indicator" style={{ transform: `translateX(${TABS.findIndex((t) => t.id === tab) * 100}%)` }} aria-hidden />
-          {TABS.map((t) => (
-            <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
-              <svg viewBox="0 0 24 24" aria-hidden><path d={t.icon} /></svg>
-              {t.label}
-            </button>
+          {/* Two tabs, the round ＋ in the middle, two tabs. The highlighted pill slides to the active tab (it skips the
+              middle column). */}
+          <span className="tab-indicator" style={{ transform: `translateX(${slot(TABS.findIndex((t) => t.id === tab)) * 100}%)` }} aria-hidden />
+          {TABS.map((t, i) => (
+            <Fragment key={t.id}>
+              {i === 2 && (
+                <span className="capture-slot">
+                  <button className="capture-btn" onClick={() => setCapturing(true)} aria-label="Apuntar algo">
+                    <svg viewBox="0 0 24 24" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
+                  </button>
+                </span>
+              )}
+              <button className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
+                <svg viewBox="0 0 24 24" aria-hidden><path d={t.icon} /></svg>
+                {t.label}
+              </button>
+            </Fragment>
           ))}
         </div>
-        <button className="capture-btn" onClick={() => setCapturing(true)} aria-label="Apuntar algo">
-          <svg viewBox="0 0 24 24" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
-        </button>
       </nav>
       {capturing && <Capture onClose={() => setCapturing(false)} />}
       {settings && <Settings back={TABS.find((t) => t.id === tab)!.label} onClose={() => setSettings(false)} />}
