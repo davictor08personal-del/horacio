@@ -62,7 +62,7 @@ export function DailyGrid({ list, showProject }: { list: DailyTask[]; showProjec
 const HOLD_MS = 550 // long enough not to fire while scrolling, short enough not to feel slow
 
 /**
- * Tap = open its page. Hold = tick (or untick) for today: while you hold, the tile fills from right to left
+ * Tap = open its page. Hold = tick (or untick) for today: while you hold, the tile fills from left to right
  * (CSS .pressing), and when it's full it's done. Lifting the finger early, or scrolling, cancels it.
  */
 function DailyTile({ d, today, project, streak, onOpen }: { d: DailyTask; today: string; project?: string; streak: number; onOpen: () => void }) {

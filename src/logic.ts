@@ -180,7 +180,7 @@ export const toChecklist = (body: string): ChecklistItem[] =>
   body.split('\n').map((l) => l.trim()).filter(Boolean).map((text) => ({ text, done: false }))
 export const fromChecklist = (items: ChecklistItem[]) => items.map((i) => i.text).filter(Boolean).join('\n')
 
-const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+export const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 /** Search in title, text and checklist, ignoring accents and case ("cancion" finds "Canción"). */
 export function noteMatches(n: Note, query: string) {
   const q = fold(query.trim())

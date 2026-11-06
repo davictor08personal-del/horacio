@@ -134,7 +134,7 @@ export default function NoteEditor({ id }: { id: string }) {
 
 /** Keep-style list: Enter adds the next item, Backspace on an empty one removes it, ticked items sink to the bottom. */
 function Checklist({ items, onChange }: { items: ChecklistItem[]; onChange: (items: ChecklistItem[]) => void }) {
-  const refs = useRef<(HTMLInputElement | null)[]>([])
+  const refs = useRef<(HTMLTextAreaElement | null)[]>([])
   const [focus, setFocus] = useState<number | null>(null)
   useEffect(() => {
     if (focus === null) return
@@ -155,10 +155,12 @@ function Checklist({ items, onChange }: { items: ChecklistItem[]; onChange: (ite
         <li key={i} className={item.done ? 'done' : ''}>
           {k === firstDone && k > 0 && <span className="checklist-sep">{doneCount} {doneCount === 1 ? 'marcado' : 'marcados'}</span>}
           <button className={`tick small ${item.done ? 'done' : ''}`} onClick={() => put(i, { done: !item.done })} aria-label={item.done ? 'Desmarcar' : 'Marcar'} />
-          <input
-            ref={(el) => { refs.current[i] = el }}
+          {/* A textarea that grows, so a long item wraps onto more lines instead of being cut off. Enter still means «next item». */}
+          <Grow
+            rows={1}
+            refCb={(el) => { refs.current[i] = el }}
             value={item.text}
-            onChange={(e) => put(i, { text: e.target.value })}
+            onChange={(e) => put(i, { text: e.target.value.replace(/\n/g, ' ') })}
             onKeyDown={(e) => {
               if (e.key === 'Enter') { e.preventDefault(); insertAfter(i) }
               if (e.key === 'Backspace' && !item.text && items.length > 1) { e.preventDefault(); drop(i) }
@@ -203,12 +205,12 @@ function ReminderSheet({ note, onClose }: { note: Note; onClose: () => void }) {
 }
 
 /** A textarea as tall as its text, so the whole note scrolls as one page (CSS field-sizing isn't in every Safari yet). */
-function Grow(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  const ref = useRef<HTMLTextAreaElement>(null)
+function Grow({ refCb, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { refCb?: (el: HTMLTextAreaElement | null) => void }) {
+  const ref = useRef<HTMLTextAreaElement | null>(null)
   useLayoutEffect(() => {
     const el = ref.current!
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
   }, [props.value])
-  return <textarea ref={ref} {...props} />
+  return <textarea ref={(el) => { ref.current = el; refCb?.(el) }} {...props} />
 }

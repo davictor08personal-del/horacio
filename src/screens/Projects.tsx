@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { IconPicker, ItemIcon } from '../ItemIcon'
-import { byEdited, byPosition, dailyOfNote, byPriority, notePreview, noteTime } from '../logic'
+import { byEdited, byPosition, dailyOfNote, byPriority, fold, notePreview, noteTime } from '../logic'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import Page from '../Page'
 import Sheet, { Choice } from '../Sheet'
@@ -14,26 +14,42 @@ const GROUPS: [ProjectStatus, string][] = [['activo', 'Activos'], ['pausado', 'P
 /** Tab «Proyectos»: every project in one place; open one to see its description, reminders, tasks and notes. */
 export default function Projects() {
   const { projects, tasks, notes, daily_tasks } = useData()
-  const [name, setName] = useState('')
+  const [query, setQuery] = useState('')
   const [open, setOpen] = useState<string | null>(null)
   const project = projects.find((p) => p.id === open)
+  // One box to search and to create: it filters by name (ignoring accents and case); if no project is called
+  // exactly that, Enter (or the «Crear» row) creates it and opens it.
+  const q = fold(query.trim())
+  const shown = q ? projects.filter((p) => fold(p.name).includes(q)) : projects
+  const exact = q ? projects.find((p) => fold(p.name.trim()) === q) : undefined
 
-  const add = () => {
-    if (!name.trim()) return
-    insert('projects', [{ name: name.trim(), status: 'activo', description: null, icon: null, next_step: null, area: null }])
-    setName('')
+  const submit = async () => {
+    if (!q) return
+    if (exact) return setOpen(exact.id)
+    const [created] = await insert('projects', [{ name: query.trim(), status: 'activo', description: null, icon: null, next_step: null, area: null }])
+    setQuery('')
+    setOpen(created.id)
   }
 
   return (
     <>
       <h1 className="page-title">Proyectos</h1>
-      <form className="add-row" onSubmit={(e) => (e.preventDefault(), add())}>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nuevo proyecto" aria-label="Nuevo proyecto" />
-        <button className="secondary" disabled={!name.trim()}>Añadir</button>
+      <form onSubmit={(e) => (e.preventDefault(), submit())}>
+        <label className="search">
+          <Icon d={ICON.search} />
+          <input type="search" enterKeyHint="go" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar o crear un proyecto" aria-label="Buscar o crear un proyecto" />
+        </label>
       </form>
-      {!projects.length && <p className="empty">Apunta aquí todo lo que tienes entre manos: el FP, la mudanza, una app…</p>}
+      {q && !exact && (
+        <button className="create-row" onClick={submit}>
+          <span className="create-plus" aria-hidden>＋</span>
+          <span>Crear el proyecto «{query.trim()}»</span>
+        </button>
+      )}
+      {!projects.length && !q && <p className="empty">Escribe arriba el nombre de lo que tienes entre manos (la mudanza, un curso, una app…) y pulsa Intro para crearlo.</p>}
+      {q && !shown.length && <p className="empty">Ningún proyecto se llama así.</p>}
       {GROUPS.map(([status, label]) => {
-        const list = projects.filter((p) => p.status === status)
+        const list = shown.filter((p) => p.status === status)
         return list.length > 0 && (
           <section className="group" key={status}>
             <h2 className="group-title">{label} · {list.length}</h2>
