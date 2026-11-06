@@ -43,31 +43,56 @@ export const KEEP_CLOSED_DAYS = 7
 const closedCutoff = () => new Date(Date.now() - KEEP_CLOSED_DAYS * 86_400_000).toISOString()
 const byDoneDesc = (a: Task, b: Task) => (b.done_at ?? '').localeCompare(a.done_at ?? '')
 
+type Part = Exclude<keyof Data, 'loaded'>
+type Result<T> = PromiseLike<{ data: T | null; error: { message: string } | null }>
+async function rows<T>(query: Result<T>, empty: T): Promise<T> {
+  const { data: out, error } = await query
+  if (error) throw new Error(error.message.includes('does not exist') ? 'Faltan tablas: ejecuta supabase/setup.sql' : error.message)
+  return out ?? empty
+}
+
+/** How to read each part of Data from Supabase (RLS: only the user's rows). */
+const FETCH: { [K in Part]: () => Promise<Data[K]> } = {
+  tasks: () => rows(supa!.from('tasks').select('*').in('status', OPEN), []),
+  closed: () => rows(supa!.from('tasks').select('*').in('status', CLOSED).gte('done_at', closedCutoff()).order('done_at', { ascending: false }), []),
+  projects: () => rows(supa!.from('projects').select('*').order('created_at'), []),
+  shifts: () => rows(supa!.from('shifts').select('*').gte('day', addDays(localDay(), -7)).order('day'), []),
+  fp_tests: () => rows(supa!.from('fp_tests').select('*').order('opens_on').order('unit'), []),
+  notes: () => rows(supa!.from('notes').select('*'), []),
+  daily_tasks: () => rows(supa!.from('daily_tasks').select('*').order('position'), []),
+  // A year of ticks is plenty for the streaks (a few hundred tiny rows).
+  daily_log: () => rows(supa!.from('daily_log').select('daily_id, day').gte('day', addDays(localDay(), -371)), []),
+  profile: () => rows(supa!.from('profiles').select('*').maybeSingle(), null),
+}
+const ALL = Object.keys(FETCH) as Part[]
+/** What to read again after writing to a table: a task can move between open and «Terminadas». */
+const PARTS_OF: Record<Table, Part[]> = { tasks: ['tasks', 'closed'], projects: ['projects'], shifts: ['shifts'], fp_tests: ['fp_tests'], notes: ['notes'], daily_tasks: ['daily_tasks'] }
+
+/**
+ * Reads only the parts that changed (1–2 queries) instead of everything (9): with many users this is what
+ * keeps Supabase's free traffic (5 GB a month) from running out. Demo mode just rereads the browser.
+ */
+async function refresh(parts: Part[]) {
+  if (!supa) return load()
+  const values = await Promise.all(parts.map((p) => FETCH[p]()))
+  const patch = Object.fromEntries(parts.map((p, i) => [p, values[i]])) as Partial<Data>
+  if ('profile' in patch) setTimeZone(patch.profile?.timezone)
+  data = { ...data, ...patch }
+  emit()
+}
+
+/** Everything: when the app opens or comes back to the front. */
 export async function load() {
-  const since = addDays(localDay(), -7)
   if (!supa) {
     const d = demoAll()
     const cutoff = closedCutoff()
+    const since = addDays(localDay(), -7)
     setTimeZone(d.profile?.timezone)
     data = { ...d, profile: d.profile ?? null, tasks: d.tasks.filter((t) => OPEN.includes(t.status)), closed: d.tasks.filter((t) => CLOSED.includes(t.status) && (t.done_at ?? '') >= cutoff).sort(byDoneDesc), shifts: d.shifts.filter((s) => s.day >= since), loaded: true }
     return emit()
   }
-  const [tasks, closed, projects, shifts, tests, notes, daily, log, profile] = await Promise.all([
-    supa.from('tasks').select('*').in('status', OPEN),
-    supa.from('tasks').select('*').in('status', CLOSED).gte('done_at', closedCutoff()).order('done_at', { ascending: false }),
-    supa.from('projects').select('*').order('created_at'),
-    supa.from('shifts').select('*').gte('day', since).order('day'),
-    supa.from('fp_tests').select('*').order('opens_on').order('unit'),
-    supa.from('notes').select('*'),
-    supa.from('daily_tasks').select('*').order('position'),
-    // A year of ticks is plenty for the streaks (a few hundred tiny rows).
-    supa.from('daily_log').select('daily_id, day').gte('day', addDays(localDay(), -371)),
-    supa.from('profiles').select('*').maybeSingle(),
-  ])
-  const error = tasks.error ?? closed.error ?? projects.error ?? shifts.error ?? tests.error ?? notes.error ?? daily.error ?? log.error ?? profile.error
-  if (error) throw new Error(error.message.includes('does not exist') ? 'Faltan las tablas: ejecuta supabase/setup.sql' : error.message)
-  setTimeZone(profile.data?.timezone)
-  data = { profile: profile.data ?? null, tasks: tasks.data ?? [], closed: closed.data ?? [], projects: projects.data ?? [], shifts: shifts.data ?? [], fp_tests: tests.data ?? [], notes: notes.data ?? [], daily_tasks: daily.data ?? [], daily_log: log.data ?? [], loaded: true }
+  await refresh(ALL)
+  data = { ...data, loaded: true }
   emit()
 }
 
@@ -92,7 +117,7 @@ export async function insert<T extends Table>(table: T, rows: Partial<RowOf[T]>[
     if (error) throw new Error(error.message)
     saved = out as RowOf[T][]
   }
-  await load()
+  await refresh(PARTS_OF[table])
   return saved
 }
 
@@ -105,7 +130,7 @@ export async function update<T extends Table>(table: T, id: string, patch: Parti
     const { error } = await supa.from(table).update(patch as never).eq('id', id)
     if (error) throw new Error(error.message)
   }
-  await load()
+  await refresh(PARTS_OF[table])
 }
 
 export async function remove(table: Table, id: string) {
@@ -117,7 +142,7 @@ export async function remove(table: Table, id: string) {
     const { error } = await supa.from(table).delete().eq('id', id)
     if (error) throw new Error(error.message)
   }
-  await load()
+  await refresh(PARTS_OF[table])
 }
 
 /** A new note (with every field, so demo mode stores the same shape as Supabase). */
@@ -137,7 +162,7 @@ export async function saveProfile(patch: Partial<Profile>) {
     const { error } = await supa.from('profiles').upsert(patch)
     if (error) throw new Error(error.message.includes('profiles') ? 'Falta la tabla profiles: ejecuta supabase/setup.sql' : error.message)
   }
-  await load()
+  await refresh(['profile', 'shifts']) // a new time zone moves «this week»
 }
 
 /** Tick or untick a daily task for today: done_on for Hoy, plus a row in daily_log for the streaks. */
@@ -158,7 +183,7 @@ export async function toggleDaily(d: DailyTask, today: string) {
     const error = a.error ?? b.error
     if (error) throw new Error(error.message.includes('daily_log') ? 'Falta la tabla daily_log: ejecuta supabase/setup.sql' : error.message)
   }
-  await load()
+  await refresh(['daily_tasks', 'daily_log'])
 }
 
 /** Daily task → its note: starts with its title and project, and they stay linked. */
@@ -203,16 +228,16 @@ export async function currentSession(): Promise<Session | null> {
   return supa ? (await supa.auth.getSession()).data.session : null
 }
 
-// Email + password, with "Confirm email" turned off in Supabase (as in Músculo): no emails, no links.
-export async function signIn(email: string, password: string) {
-  const { error } = await supa!.auth.signInWithPassword({ email, password })
+// Email + password. `captchaToken` comes from Turnstile (src/Captcha.tsx) once it's switched on.
+export async function signIn(email: string, password: string, captchaToken?: string) {
+  const { error } = await supa!.auth.signInWithPassword({ email, password, options: { captchaToken } })
   if (error) throw new Error(error.message.includes('Invalid login') ? 'Email o contraseña incorrectos' : error.message)
 }
 
-export async function signUp(email: string, password: string) {
-  const { data, error } = await supa!.auth.signUp({ email, password })
+export async function signUp(email: string, password: string, captchaToken?: string) {
+  const { data, error } = await supa!.auth.signUp({ email, password, options: { captchaToken } })
   if (error) throw new Error(error.message.includes('already registered') ? 'Ese email ya tiene cuenta: pulsa Entrar' : error.message)
-  if (!data.session) throw new Error('Cuenta creada, pero Supabase pide confirmar el email: desactiva «Confirm email»')
+  if (!data.session) throw new Error('Cuenta creada: te hemos enviado un email para confirmarla. Ábrelo y luego entra aquí.')
 }
 
 export const signOut = () => supa?.auth.signOut()
@@ -222,8 +247,8 @@ export const signOut = () => supa?.auth.signOut()
  * «recovery» mode and App shows NewPassword. Needs the app's address in Supabase → Authentication →
  * URL Configuration, and an email sender (SMTP) for anyone who isn't on the Supabase team (README).
  */
-export async function resetPassword(email: string) {
-  const { error } = await supa!.auth.resetPasswordForEmail(email, { redirectTo: location.origin })
+export async function resetPassword(email: string, captchaToken?: string) {
+  const { error } = await supa!.auth.resetPasswordForEmail(email, { redirectTo: location.origin, captchaToken })
   if (error) throw new Error(error.message.includes('rate limit') ? 'Demasiados intentos: espera un rato y vuelve a probar.' : error.message)
 }
 

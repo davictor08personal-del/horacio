@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs'
 
 // Shown in Ajustes → Acerca de.
 const version = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version as string
+// `npm run preview` sends the same security headers as Vercel (vercel.json), to catch a CSP problem before publishing.
+const prodHeaders = Object.fromEntries((JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8')).headers[0].headers as { key: string; value: string }[]).map((h) => [h.key, h.value]))
 
 // `npm run dev` only: answers /api/* with the files in api/, the way Vercel does once published.
 // With AI_PROVIDER=mock in .env.local the capture works without a key and without cost.
@@ -31,6 +33,7 @@ export default defineConfig(({ mode }) => {
   for (const [k, v] of Object.entries(loadEnv(mode, process.cwd(), ''))) process.env[k] ??= v
   return {
     define: { __APP_VERSION__: JSON.stringify(version) },
+    preview: { headers: prodHeaders },
     plugins: [
       react(),
       devApi(),

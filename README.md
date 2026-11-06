@@ -78,6 +78,17 @@ Si un aviso no llega: Vercel → proyecto → **Logs** (busca `tick` o `ping`) y
 - **Perfil** (`profiles`): nombre, zona horaria y módulos. La bienvenida lo crea la primera vez; todo «hoy», «mañana» y la hora de los avisos usan esa zona.
 - **Privacidad**: `public/privacidad.html` (enlazada en la entrada, en ＋ y en Ajustes).
 
+## Protección y comprobaciones
+
+- **Anti-bots (Cloudflare Turnstile)**, apagado hasta configurarlo. En este orden, o nadie podrá entrar:
+  1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Turnstile → Add widget**: nombre `Cuadre`, dominio `horacio-nu.vercel.app` (y `localhost`), modo *Managed*. Te da una *Site Key* y una *Secret Key*.
+  2. Vercel → Environment Variables: `VITE_TURNSTILE_SITE_KEY` = la Site Key. **Redeploy** y comprueba que en la entrada aparece la casilla de Cloudflare.
+  3. Supabase → **Authentication → Attack Protection → Captcha protection**: proveedor Turnstile y la *Secret Key*.
+- **Cabeceras de seguridad** en `vercel.json` (CSP, no incrustar en iframes, HTTPS obligatorio…). `npm run preview` sirve las mismas, para probar antes de publicar que no rompen nada.
+- **Límites de tamaño** en la base (final de `supabase/setup.sql`): nadie puede guardar megabytes en una fila.
+- **CI**: GitHub Actions (`.github/workflows/ci.yml`) pasa los tests y el build en cada push. Si sale una ✗ roja en el commit, algo se rompió.
+- **Menos tráfico**: tras cada cambio la app solo vuelve a leer lo que tocó (`refresh` en `src/store.ts`); todo entero solo al abrirla o volver a ella.
+
 ## Google Calendar
 
 Un recordatorio con día ofrece «Añadir a Google Calendar» (en su ficha y justo después de guardarlo con ＋). Usa el enlace oficial de Google para crear un evento (`googleCalendarUrl` en `src/logic.ts`): abre tu calendario con título, día y hora rellenos y solo pulsas Guardar. Sin login con Google ni permisos. Leer tus eventos o crearlos sin ese toque necesitaría login con Google (OAuth); ver DISEÑO.md.

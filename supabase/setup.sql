@@ -177,3 +177,22 @@ create table if not exists public.push_daily (
   primary key (user_id, day)
 );
 alter table public.push_daily enable row level security;
+
+-- Size limits, so nobody can store megabytes in one row (the app never gets near them). «not valid» = only new
+-- and changed rows are checked. Pictures are ~10 KB data: URLs, so 60 000 characters leaves plenty of room.
+do $$
+begin
+  alter table public.tasks drop constraint if exists tasks_sizes;
+  alter table public.tasks add constraint tasks_sizes
+    check (char_length(title) <= 500 and char_length(coalesce(notes, '')) <= 10000 and char_length(coalesce(area, '')) <= 100) not valid;
+  alter table public.notes drop constraint if exists notes_sizes;
+  alter table public.notes add constraint notes_sizes
+    check (char_length(title) <= 500 and char_length(body) <= 50000 and octet_length(coalesce(items::text, '')) <= 50000) not valid;
+  alter table public.projects drop constraint if exists projects_sizes;
+  alter table public.projects add constraint projects_sizes
+    check (char_length(name) <= 200 and char_length(coalesce(description, '')) <= 2000 and char_length(coalesce(next_step, '')) <= 1000
+      and char_length(coalesce(area, '')) <= 100 and char_length(coalesce(icon, '')) <= 60000) not valid;
+  alter table public.daily_tasks drop constraint if exists daily_tasks_sizes;
+  alter table public.daily_tasks add constraint daily_tasks_sizes
+    check (char_length(title) <= 200 and char_length(coalesce(description, '')) <= 2000 and char_length(coalesce(icon, '')) <= 60000) not valid;
+end $$;

@@ -480,3 +480,6 @@ input, textarea { caret-color: var(--accent); }
 .switch:checked { background: var(--accent); }
 .switch:checked::after { transform: translateX(20px); }
 .legal a, .hint a { color: var(--accent); }
+
+/* Turnstile (anti-bot) on the sign-in screen, when it's switched on */
+.captcha { min-height: 65px; display: flex; justify-content: center; }

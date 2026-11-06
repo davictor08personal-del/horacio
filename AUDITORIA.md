@@ -78,6 +78,15 @@ Falta:
 - ✅ `api/tick` ya solo lee las tareas candidatas a aviso, no todas.
 - Pendiente de Fase 1: volver a encender «Confirm email» cuando haya SMTP.
 
+## Hecho (Fase 2, 2026-11-06)
+
+- ✅ Tras cada cambio solo se relee lo que cambió (1–2 consultas en vez de 9).
+- ✅ Límites de tamaño en la base para tareas, notas, proyectos y tareas diarias (iconos incluidos).
+- ✅ Cabeceras de seguridad (CSP sin scripts en línea, `X-Frame-Options`, HSTS, `Referrer-Policy`, `Permissions-Policy`); `npm run preview` las imita.
+- ✅ Turnstile listo en el código (entrar, crear cuenta, recuperar contraseña); falta crear el widget en Cloudflare y activarlo (README).
+- ✅ CI con GitHub Actions: tests y build en cada push.
+- Pendiente: rotar/quitar la clave de Gemini (ya no se usa: `AI_PROVIDER=deepseek`).
+
 ## Orden recomendado
 
 1. **Fase 1, abrirla a amigos (10–20 personas)**: perfil con nombre y zona horaria, quitar Madrid y «Victor», módulos opcionales (turnos/FP), IA con límite por usuario, recuperar contraseña + Resend, borrar cuenta, política de privacidad.
