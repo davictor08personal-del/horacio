@@ -1,5 +1,5 @@
 // Pure rules of the app (no React, no Supabase), so they can be tested in logic.test.ts.
-import type { ChecklistItem, DailyTask, Effort, FpTest, Note, Priority, Shift, ShiftKind, Task } from './types'
+import type { ChecklistItem, DailyTask, Effort, FpTest, Note, Priority, Project, Shift, ShiftKind, Task } from './types'
 
 // ---------- time zone ----------
 // Every «today», «tomorrow» and time below is in the user's time zone (saved in their profile), not the device's
@@ -254,4 +254,30 @@ export function googleCalendarUrl(t: Pick<Task, 'title' | 'notes' | 'due_date' |
   }
   const q = new URLSearchParams({ action: 'TEMPLATE', text: t.title, dates, ctz: tz, details: [t.notes, 'Apuntado en Cuadre'].filter(Boolean).join('\n\n') })
   return `https://calendar.google.com/calendar/render?${q}`
+}
+
+// ---------- tags ----------
+export const MAX_TAGS = 10
+/** «#Aprendizaje de idiomas» → «aprendizaje-de-idiomas»: lowercase, no accents, no #, words joined with -. */
+export function cleanTag(s: string) {
+  return fold(s).replace(/^#+/, '').trim().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
+}
+/** A search box's text: words starting with # are tags, the rest is plain text. */
+export function parseSearch(query: string) {
+  const words = query.trim().split(/\s+/).filter(Boolean)
+  return {
+    tags: words.filter((w) => w.startsWith('#')).map(cleanTag).filter(Boolean),
+    text: words.filter((w) => !w.startsWith('#')).join(' '),
+  }
+}
+/** The ids of the projects that have every tag searched. A tag matches by its start: #idio finds #idiomas. */
+export function projectsTagged(projects: Pick<Project, 'id' | 'tags'>[], tags: string[]) {
+  return new Set(projects.filter((p) => tags.every((t) => (p.tags ?? []).some((pt) => pt.startsWith(t)))).map((p) => p.id))
+}
+/** Every tag in use, for picking an existing one instead of typing it again. */
+export const allTags = (projects: Pick<Project, 'tags'>[]) => [...new Set(projects.flatMap((p) => p.tags ?? []))].sort()
+/** Plain-text search in a few strings, ignoring accents and case. */
+export const textMatches = (query: string, ...fields: (string | null | undefined)[]) => {
+  const q = fold(query.trim())
+  return !q || fold(fields.filter(Boolean).join('\n')).includes(q)
 }

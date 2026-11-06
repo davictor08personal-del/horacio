@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { byEdited, dailyOfNote, noteMatches, notePreview, noteTime } from '../logic'
+import { byEdited, dailyOfNote, noteMatches, notePreview, noteTime, parseSearch, projectsTagged } from '../logic'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import { createNote, useData } from '../store'
 import type { Note } from '../types'
@@ -10,7 +10,7 @@ const savedView = () => { try { return localStorage.getItem(VIEW_KEY) === 'grid'
 
 /** «Notas»: iOS Notes look (big title, search, grouped list) with Keep's pin, colours, grid and archive. */
 export default function Notes() {
-  const { notes, tasks, daily_tasks } = useData()
+  const { notes, tasks, daily_tasks, projects } = useData()
   const [query, setQuery] = useState('')
   const [grid, setGrid] = useState(savedView)
   const [archive, setArchive] = useState(false)
@@ -20,7 +20,10 @@ export default function Notes() {
     try { localStorage.setItem(VIEW_KEY, grid ? 'list' : 'grid') } catch { /* only a preference */ }
   }
   const linked = new Set(tasks.map((t) => t.note_id))
-  const shown = notes.filter((n) => n.archived === archive && noteMatches(n, query)).sort(byEdited)
+  // «#idiomas» = the notes of every project tagged #idiomas; the rest of the words search the text.
+  const { tags, text } = parseSearch(query)
+  const tagged = tags.length ? projectsTagged(projects, tags) : null
+  const shown = notes.filter((n) => n.archived === archive && (!tagged || (!!n.project_id && tagged.has(n.project_id))) && noteMatches(n, text)).sort(byEdited)
   const pinned = shown.filter((n) => n.pinned)
   const rest = shown.filter((n) => !n.pinned)
   const compose = () => createNote().then((n) => openNote(n.id))
@@ -49,7 +52,7 @@ export default function Notes() {
 
       <label className="search">
         <Icon d={ICON.search} />
-        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar" aria-label="Buscar notas" />
+        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar o #etiqueta" aria-label="Buscar notas" />
         {query && <button className="ghost" onClick={() => setQuery('')} aria-label="Borrar búsqueda"><Icon d={ICON.x} /></button>}
       </label>
 

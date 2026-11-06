@@ -489,3 +489,10 @@ input, textarea { caret-color: var(--accent); }
 .create-plus { font-size: 1.2rem; line-height: 1; }
 /* Long checklist lines in the Keep-style cards wrap too */
 .card-checks li { overflow-wrap: anywhere; }
+
+/* Tags: «#idiomas» chips on projects, editable in the project sheet */
+.tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tag { font-size: 0.78rem; font-weight: 600; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 2px 9px; line-height: 1.4; min-height: 0; }
+button.tag { padding: 5px 11px; }
+.tag.suggest { background: var(--surface-2); color: var(--muted); }
+.project-text .tags { margin-top: 3px; }

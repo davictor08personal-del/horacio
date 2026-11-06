@@ -27,9 +27,13 @@ Barra inferior flotante (como Músculo): **Hoy · Tareas · Notas · Proyectos**
 2. **Tareas**: lista agrupada (En curso, Abiertas, Esperando) y, al final, **Terminadas** (plegada): las hechas y descartadas de los últimos 7 días, tachadas, con cuándo se cerraron; tocar el círculo la reabre. Pasados 7 días desde que se cerró, se borra sola (al abrir la app; `done_at` marca el momento). Tocar una tarea abre su ficha para editar estado, prioridad, esfuerzo, fecha, hora, área, proyecto y su nota.
 3. **Notas**: aspecto de Notas de iOS (título grande, buscador, lista agrupada con hora y primera línea; editor a pantalla completa con «‹ Notas» y barra de herramientas de cristal) y funciones de Google Keep: fijar, 7 colores, lista de casillas (lo marcado baja al final), vista en cuadrícula, archivo, compartir y búsqueda sin acentos. Una nota vacía se descarta al salir.
    - **Nota ↔ recordatorio**: un recordatorio es una tarea con fecha (sale en Tareas y en Hoy). Desde una nota, la campana crea uno enlazado; desde la ficha de una tarea, «Crear nota de esta tarea» crea la nota con su título y detalles. La nota lista sus recordatorios y la tarea enlaza a su nota.
-4. **Proyectos**: todos los proyectos por estado, cada uno con su **icono** (emoji o imagen; sin él, su inicial), descripción y cuántos pendientes y notas tiene, con un campo para añadir. La ficha muestra la **descripción**, sus **tareas diarias** (se tachan igual que en Hoy), los **recordatorios** (tareas con hora), las **tareas** pendientes (con campo para añadir una) y las **notas** («Nueva nota» ya nace en el proyecto); se edita con «Editar».
+4. **Proyectos**: todos los proyectos por estado, cada uno con su **icono** (emoji o imagen; sin él, su inicial), sus **etiquetas** (#idiomas: una etiqueta puede estar en varios proyectos), descripción y cuántos pendientes y notas tiene, con un campo para añadir. La ficha muestra la **descripción**, sus **tareas diarias** (se tachan igual que en Hoy), los **recordatorios** (tareas con hora), las **tareas** pendientes (con campo para añadir una) y las **notas** («Nueva nota» ya nace en el proyecto); se edita con «Editar».
 5. **Agenda** (desde Hoy): los turnos de esta semana (lunes a domingo) y los tests del FP por materia y bloque (fechas de apertura y cierre, casilla «leída»).
 6. **Capturar (＋)**: una hoja con un cuadro de texto (solo texto desde el 2026-11-06: la foto y la voz dependían de Gemini gratis, demasiado saturado; para dictar, el micrófono del teclado). La IA devuelve lo que entendió (tareas, recordatorios, notas, tareas diarias, turnos, tests, proyectos) y lo muestra en tarjetas editables: corriges o quitas lo que sobre y pulsas **Guardar**. Cada tarjeta lleva arriba su tipo (Tarea · Recordatorio · Nota · Diaria) y se cambia con un toque si la IA se equivocó, sin perder lo escrito. Tareas, recordatorios, notas y tareas diarias llevan un selector de proyecto: la IA lo rellena si está claro y, si duda, la tarjeta pregunta «¿De qué proyecto es?». Nada se guarda sin tu confirmación.
+
+## Búsqueda
+
+Los buscadores de Proyectos, Notas y Tareas entienden **#etiqueta**: `#idiomas` muestra los proyectos con esa etiqueta y las notas y tareas de esos proyectos. Vale el principio (`#idio`), se pueden combinar (`#idiomas verbos`) y no importan acentos ni mayúsculas.
 
 ## Reglas
 
@@ -44,7 +48,7 @@ Barra inferior flotante (como Músculo): **Hoy · Tareas · Notas · Proyectos**
 
 Todas las tablas llevan `user_id` y RLS «solo el dueño».
 - `tasks`: id, title, notes, status (`abierto`/`en_curso`/`esperando`/`hecho`/`descartado`), priority (`alta`/`media`/`baja`), effort (`rapido`/`medio`/`grande`), due_date, due_time, area, project_id, note_id, created_at, done_at.
-- `projects`: id, name, status (`activo`/`pausado`/`hecho`), description, icon (emoji o imagen de 160 px como `data:` URL), next_step, area.
+- `projects`: id, name, status (`activo`/`pausado`/`hecho`), description, icon (emoji o imagen de 160 px como `data:` URL), tags (text[], limpias: «aprendizaje-de-idiomas»), next_step, area.
 - `shifts`: id, day (único por usuario), kind (`opening`/`dia`/`noche`/`libre`), starts_at, ends_at.
 - `fp_tests`: id, subject, block, unit, opens_on, closes_on, read.
 - `notes`: id, title, body, items (jsonb: lista de casillas, o null), color, project_id, pinned, archived, created_at, updated_at.

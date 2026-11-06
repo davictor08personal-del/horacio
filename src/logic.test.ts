@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanCapture, mockCapture } from './capture'
-import { addDays, byPriority, dayPlan, doneToday, googleCalendarUrl, localMinutes, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
+import { addDays, byPriority, cleanTag, dayPlan, doneToday, googleCalendarUrl, localMinutes, parseSearch, projectsTagged, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
 import type { FpTest, Note, Shift, Task } from './types'
 
 const task = (p: Partial<Task>): Task => ({
@@ -226,5 +226,21 @@ describe('time zones', () => {
   })
   it('the summary without the shifts module only lists priorities', () => {
     expect(morningSummary([], undefined, null, false)).toEqual({ title: 'Buenos días', body: 'Nada urgente para hoy.' })
+  })
+})
+
+describe('tags', () => {
+  it('are stored clean', () => {
+    expect(cleanTag('#Aprendizaje de Idiomas')).toBe('aprendizaje-de-idiomas')
+    expect(cleanTag('  ##Salud!! ')).toBe('salud')
+    expect(cleanTag('#')).toBe('')
+  })
+  it('#words in a search are tags, the rest is text', () => {
+    expect(parseSearch('#Idiomas verbos #fr')).toEqual({ tags: ['idiomas', 'fr'], text: 'verbos' })
+  })
+  it('a tag finds every project that has it, also by its start', () => {
+    const ps = [{ id: 'en', tags: ['idiomas'] }, { id: 'fr', tags: ['idiomas', 'viajes'] }, { id: 'gym', tags: ['salud'] }]
+    expect([...projectsTagged(ps, ['idio'])]).toEqual(['en', 'fr'])
+    expect([...projectsTagged(ps, ['idiomas', 'viajes'])]).toEqual(['fr'])
   })
 })

@@ -59,6 +59,8 @@ export interface Project {
   status: ProjectStatus
   description: string | null
   icon: string | null
+  /** Clean tags without # (cleanTag): «aprendizaje-de-idiomas». */
+  tags: string[]
   next_step: string | null
   area: string | null
   created_at: string

@@ -46,6 +46,11 @@ create table if not exists public.notes (
 alter table public.projects add column if not exists description text;
 -- Its icon: an emoji, or a small picture as a data: URL (160 px, made in the phone; see src/media.ts).
 alter table public.projects add column if not exists icon text;
+-- Tags (#idiomas, #salud…): one tag can be on many projects, and #tag in a search box finds the projects,
+-- notes and tasks under it. Stored clean (lowercase, no accents, no #), see cleanTag in src/logic.ts.
+alter table public.projects add column if not exists tags text[] not null default '{}';
+alter table public.projects drop constraint if exists projects_tags;
+alter table public.projects add constraint projects_tags check (cardinality(tags) <= 10) not valid;
 
 alter table public.notes add column if not exists project_id uuid references public.projects on delete set null;
 
