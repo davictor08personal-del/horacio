@@ -93,7 +93,7 @@ El orden sigue las dependencias: primero lo pequeño y lo que cambia los datos, 
 **Bloque 5 · El mayordomo**
 10. **Hablar con Cuadre**: un chat (texto o voz) con la mascota. Lee tus tareas, proyectos, notas y calendario, propone el plan del día y qué dejar para luego, y pide permiso antes de cambiar nada, igual que Claude Code. Va al final porque usa todo lo anterior.
 
-Ideas aparcadas: que el asistente de Obsidian lea Horacio, reenviar correos, repetir tareas.
+Ideas aparcadas: widgets en el iPhone sin App Store (Scriptable para ver las prioridades de Hoy + Atajos de iOS con `/?capture=1` para apuntar rápido), que el asistente de Obsidian lea Cuadre, reenviar correos, repetir tareas.
 
 ## Estilo
 

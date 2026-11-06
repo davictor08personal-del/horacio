@@ -1,9 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type TextareaHTMLAttributes } from 'react'
-import { addDays, fromChecklist, localDay, toChecklist } from './logic'
-import { createTask, remove, update, useData } from './store'
-import Sheet from './Sheet'
+import { fromChecklist, timeZone, toChecklist } from './logic'
+import { remove, update, useData } from './store'
 import { TaskRow } from './TaskRow'
-import { NOTE_COLOR, NOTE_COLORS, type ChecklistItem, type Note } from './types'
+import type { ChecklistItem, Note } from './types'
 
 // SVG path data (24×24, strokes), drawn like the tab icons.
 export const ICON = {
@@ -31,7 +30,7 @@ export const openNote = (id: string | null) => ((openId = id), subs.forEach((l) 
 export const useOpenNote = () => useSyncExternalStore((l) => (subs.add(l), () => subs.delete(l)), () => openId)
 
 const fullDate = (iso: string) =>
-  new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+  new Intl.DateTimeFormat('es-ES', { timeZone: timeZone(), day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 
 interface Draft { title: string; body: string; items: ChecklistItem[] | null }
 const isEmpty = (d: Draft) => !d.title.trim() && !d.body.trim() && !(d.items ?? []).some((i) => i.text.trim())
@@ -45,8 +44,6 @@ export default function NoteEditor({ id }: { id: string }) {
   const daily = daily_tasks.find((d) => d.note_id === id)
   const note = notes.find((n) => n.id === id)
   const [draft, setDraft] = useState<Draft>(() => ({ title: note?.title ?? '', body: note?.body ?? '', items: note?.items ?? null }))
-  const [palette, setPalette] = useState(false)
-  const [reminding, setReminding] = useState(false)
   const dirty = useRef(false)
   const reminders = tasks.filter((t) => t.note_id === id)
 
@@ -63,12 +60,16 @@ export default function NoteEditor({ id }: { id: string }) {
 
   if (!note) return null
   const edit = (patch: Partial<Draft>) => ((dirty.current = true), setDraft((d) => ({ ...d, ...patch })))
-  const set = (patch: Partial<Note>) => update('notes', id, patch)
+  const set = (patch: Partial<Note>) => {
+    const full = dirty.current ? { ...draft, updated_at: new Date().toISOString(), ...patch } : patch
+    dirty.current = false
+    return update('notes', id, full)
+  }
 
   async function close() {
     openNote(null)
     // An empty note with nothing linked is discarded, as in Keep and iOS.
-    if (isEmpty(draft) && !reminders.length) return remove('notes', id)
+    if (isEmpty(draft) && !reminders.length && !daily) return remove('notes', id)
     await save()
   }
 
@@ -112,22 +113,22 @@ export default function NoteEditor({ id }: { id: string }) {
         )}
       </div>
 
-      {palette && (
-        <div className="palette" role="radiogroup" aria-label="Color">
-          {NOTE_COLORS.map((c) => (
-            <button key={c} className={`swatch c-${c} ${c === note.color ? 'on' : ''}`} onClick={() => set({ color: c })} role="radio" aria-checked={c === note.color} aria-label={NOTE_COLOR[c]} />
-          ))}
+      <nav className="dock note-dock" aria-label="Acciones de la nota">
+        <div className="tabs note-tools">
+          <button className={draft.items ? 'active' : ''} onClick={toggleChecklist} aria-pressed={!!draft.items}>
+            <Icon d={ICON.checklist} />
+            Casillas
+          </button>
+          <button className={note.archived ? 'active' : ''} onClick={() => (openNote(null), update('notes', id, { ...draft, archived: !note.archived, pinned: false, updated_at: new Date().toISOString() }))}>
+            <Icon d={ICON.archive} />
+            {note.archived ? 'Desarchivar' : 'Archivar'}
+          </button>
+          <button className="danger" onClick={() => confirm(reminders.length ? '¿Borrar esta nota? Sus recordatorios se quedan.' : '¿Borrar esta nota?') && (openNote(null), remove('notes', id))}>
+            <Icon d={ICON.trash} />
+            Borrar
+          </button>
         </div>
-      )}
-      <footer className="note-tools">
-        <button className={`icon-btn ${draft.items ? 'on' : ''}`} onClick={toggleChecklist} aria-label={draft.items ? 'Quitar casillas' : 'Mostrar casillas'}><Icon d={ICON.checklist} /></button>
-        <button className={`icon-btn ${palette ? 'on' : ''}`} onClick={() => setPalette(!palette)} aria-label="Color"><Icon d={ICON.color} /></button>
-        <button className="icon-btn" onClick={() => setReminding(true)} aria-label="Añadir recordatorio"><Icon d={ICON.bell} /></button>
-        <button className="icon-btn" onClick={() => (openNote(null), update('notes', id, { ...draft, archived: !note.archived, pinned: false, updated_at: new Date().toISOString() }))} aria-label={note.archived ? 'Desarchivar' : 'Archivar'}><Icon d={ICON.archive} /></button>
-        <button className="icon-btn danger" onClick={() => confirm(reminders.length ? '¿Borrar esta nota? Sus recordatorios se quedan.' : '¿Borrar esta nota?') && (openNote(null), remove('notes', id))} aria-label="Borrar"><Icon d={ICON.trash} /></button>
-      </footer>
-
-      {reminding && <ReminderSheet note={{ ...note, ...draft }} onClose={() => setReminding(false)} />}
+      </nav>
     </div>
   )
 }
@@ -171,36 +172,6 @@ function Checklist({ items, onChange }: { items: ChecklistItem[]; onChange: (ite
       ))}
       <li><button className="link add-item" onClick={() => insertAfter(items.length - 1)}>＋ Elemento</button></li>
     </ul>
-  )
-}
-
-/** Note → reminder: a task with a date (and time) that stays linked to this note. */
-function ReminderSheet({ note, onClose }: { note: Note; onClose: () => void }) {
-  const today = localDay()
-  const [title, setTitle] = useState(note.title.trim() || fromChecklist(note.items ?? []).split('\n')[0] || note.body.split('\n')[0].trim())
-  const [day, setDay] = useState(today)
-  const [time, setTime] = useState('')
-  const QUICK: [string, string][] = [['Hoy', today], ['Mañana', addDays(today, 1)], ['En una semana', addDays(today, 7)]]
-
-  const save = () => createTask({ title: title.trim() || 'Recordatorio', due_date: day || null, due_time: time || null, note_id: note.id, project_id: note.project_id }).then(onClose)
-
-  return (
-    <Sheet title="Recordatorio" onClose={onClose}>
-      <input className="big-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="¿Qué te recuerdo?" aria-label="Título" />
-      <div className="choice">
-        {QUICK.map(([label, d]) => <button type="button" key={label} className={day === d ? 'on' : ''} onClick={() => setDay(d)}>{label}</button>)}
-      </div>
-      <div className="two-col">
-        <label className="field">Día
-          <input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
-        </label>
-        <label className="field">Hora
-          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        </label>
-      </div>
-      <p className="hint">Aparecerá en Tareas y en Hoy, enlazado a esta nota.</p>
-      <button className="primary" onClick={save}>Guardar</button>
-    </Sheet>
   )
 }
 

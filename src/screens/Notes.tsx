@@ -5,8 +5,8 @@ import { createNote, useData } from '../store'
 import type { Note } from '../types'
 
 // The list/grid choice is a per-device preference, so it lives in localStorage (it can fail in private mode).
-const VIEW_KEY = 'horacio-notes-view'
-const savedView = () => { try { return localStorage.getItem(VIEW_KEY) === 'grid' } catch { return false } }
+const VIEW_KEY = 'cuadre-notes-view'
+const savedView = () => { try { return (localStorage.getItem(VIEW_KEY) ?? localStorage.getItem('horacio-notes-view')) === 'grid' } catch { return false } }
 
 /** «Notas»: iOS Notes look (big title, search, grouped list) with Keep's pin, colours, grid and archive. */
 export default function Notes() {

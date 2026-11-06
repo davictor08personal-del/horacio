@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { celebrate } from './celebrate'
-import { addDays, byPosition, DEFAULT_DAILY, doneToday, localDay, notePreview, weekOf, weeklyStreak } from './logic'
+import { addDays, byPosition, DEFAULT_DAILY, doneToday, localDay, notePreview, shortDate, weekOf, weeklyStreak } from './logic'
 import { ICON, Icon, openNote } from './NoteEditor'
 import { IconPicker } from './ItemIcon'
 import { insert, noteFromDaily, remove, toggleDaily, update, useData } from './store'
@@ -182,7 +182,7 @@ export function DailyList() {
                 </span>
                 <span className={`today-pill ${on ? 'on' : ''}`}>{on ? 'Hecha hoy' : 'Pendiente'}</span>
               </button>
-              <WeekRow days={days} />
+              <WeekRow daily={d} days={days} />
             </article>
           )
         })}
@@ -197,7 +197,7 @@ export function DailyList() {
 const WEEK_LETTERS = 'LMXJVSD'
 
 /** This week as a row of days (L–D, done ones filled); tapping it unfolds the month calendar below. */
-function WeekRow({ days }: { days: string[] }) {
+function WeekRow({ daily, days }: { daily: DailyTask; days: string[] }) {
   const [open, setOpen] = useState(false)
   const today = localDay()
   return (
@@ -210,7 +210,7 @@ function WeekRow({ days }: { days: string[] }) {
         </span>
         <span className="chev" aria-hidden>›</span>
       </button>
-      {open && <MonthCalendar days={days} />}
+      {open && <MonthCalendar daily={daily} days={days} />}
     </>
   )
 }
@@ -220,8 +220,8 @@ const monthStart = (day: string, offset: number) => {
   return d.toISOString().slice(0, 10)
 }
 
-/** A month of the days a daily task was done (filled), with ‹ › to look back a year. Colour = the task's (--tile). */
-export function MonthCalendar({ days }: { days: string[] }) {
+/** A month of the days a daily task was done (filled), with ‹ › to look back a year. Tap a past day (or today) to toggle it. */
+export function MonthCalendar({ daily, days }: { daily: DailyTask; days: string[] }) {
   const [offset, setOffset] = useState(0)
   const today = localDay()
   const first = monthStart(today, offset)
@@ -241,9 +241,19 @@ export function MonthCalendar({ days }: { days: string[] }) {
       </div>
       <div className="month-grid">
         {[...WEEK_LETTERS].map((l, i) => <span key={i} className="month-dow">{l}</span>)}
-        {cells.map((d, i) => d
-          ? <span key={d} className={`month-day ${done.has(d) ? 'on' : ''} ${d === today ? 'today' : ''} ${d > today ? 'future' : ''}`}>{Number(d.slice(8))}</span>
-          : <span key={`e${i}`} />)}
+        {cells.map((d, i) => d ? (
+          <button
+            type="button"
+            key={d}
+            disabled={d > today}
+            className={`month-day ${done.has(d) ? 'on' : ''} ${d === today ? 'today' : ''} ${d > today ? 'future' : ''}`}
+            onClick={() => toggleDaily(daily, d)}
+            aria-label={`${shortDate(d)}${done.has(d) ? ', hecha' : ''}`}
+            aria-pressed={done.has(d)}
+          >
+            {Number(d.slice(8))}
+          </button>
+        ) : <span key={`e${i}`} />)}
       </div>
     </div>
   )
@@ -307,9 +317,9 @@ export function DailySheet({ daily, onClose, startEditing = false }: { daily: Da
           <div className={`streak-card ${color ? `dc-${color}` : ''}`}>
             <div className="streak-text">
               <strong>🔥 {streak} {streak === 1 ? 'semana' : 'semanas'}</strong>
-              <span className="muted small-text">{streak ? 'seguidas haciéndola al menos un día' : 'Hazla un día esta semana para empezar la racha'}</span>
+              <span className="muted small-text">{streak ? 'seguidas haciéndola al menos un día · toca un día para marcarlo' : 'Hazla un día esta semana (o toca un día pasado) para empezar la racha'}</span>
             </div>
-            <MonthCalendar days={days} />
+            <MonthCalendar daily={daily} days={days} />
           </div>
         </>
       )}
@@ -360,7 +370,8 @@ export function NewDaily({ onClose }: { onClose: () => void }) {
   if (daily) return <DailySheet daily={daily} onClose={onClose} startEditing />
   const create = async () => {
     if (!title.trim()) return
-    const [d] = await insert('daily_tasks', [{ title: title.trim(), position: daily_tasks.length, ...NEW_DAILY }])
+    const nextPos = daily_tasks.reduce((m, d) => Math.max(m, d.position + 1), 0)
+    const [d] = await insert('daily_tasks', [{ title: title.trim(), position: nextPos, ...NEW_DAILY }])
     setCreated(d.id)
   }
   return (

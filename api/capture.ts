@@ -102,11 +102,12 @@ export async function POST(request: Request): Promise<Response> {
     // DeepSeek can't see photos or hear voice: those go to Gemini if there's a key for it.
     const useDeepseek = provider === 'deepseek' && !req.media
     if (provider === 'deepseek' && req.media && !env('GEMINI_API_KEY')) throw new Failed(400, 'text only')
+    if (!env(useDeepseek ? 'DEEPSEEK_API_KEY' : 'GEMINI_API_KEY')) throw new Failed(503, `missing ${useDeepseek ? 'DEEPSEEK' : 'GEMINI'}_API_KEY`)
 
     const { supa } = await allowedUser(request)
-    const { data: count, error } = await supa.rpc('ai_hit') // supabase/setup.sql
-    if (error) throw new Failed(503, 'daily counter missing: run supabase/setup.sql')
-    if ((count as number) > Number(env('AI_DAILY_LIMIT') ?? 20)) throw new Failed(429, 'daily limit')
+    const limit = Number(env('AI_DAILY_LIMIT') ?? 20)
+    const { data: usage } = await supa.from('ai_usage').select('count').eq('day', localDay(new Date(), 'UTC')).maybeSingle()
+    if ((usage?.count ?? 0) >= limit) throw new Failed(429, 'daily limit')
 
     // Their name, time zone and modules shape the prompt («mañana» is tomorrow where they live).
     const { data: p } = await supa.from('profiles').select('name, timezone, shifts, fp').maybeSingle()
@@ -114,6 +115,9 @@ export async function POST(request: Request): Promise<Response> {
     const projects = (req.projects ?? []).filter((x) => typeof x === 'string').slice(0, 50)
     const system = buildCapturePrompt(localDay(new Date(), user.timezone), projects, user)
     const out = cleanCapture(await (useDeepseek ? deepseek(system, req) : gemini(system, req)))
+    const { data: count, error } = await supa.rpc('ai_hit') // supabase/setup.sql
+    if (error) throw new Failed(503, 'daily counter missing: run supabase/setup.sql')
+    if ((count as number) > limit) throw new Failed(429, 'daily limit')
     // Belt and braces: never return items for a module they don't use.
     return Response.json({ ...out, shifts: user.shifts ? out.shifts : [], fp_tests: user.fp ? out.fp_tests : [] })
   } catch (e) {

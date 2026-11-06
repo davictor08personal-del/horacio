@@ -75,7 +75,7 @@ function ShiftSheet({ day, onClose }: { day: string; onClose: () => void }) {
       {kind !== 'libre' && (
         <div className="two-col">
           <label className="field">Entra<input type="time" value={hours.starts_at ?? ''} onChange={(e) => setHours({ ...hours, starts_at: e.target.value })} /></label>
-          <label className="field">Sale<input type="time" value={hours.ends_at === '24:00' ? '23:59' : hours.ends_at ?? ''} onChange={(e) => setHours({ ...hours, ends_at: e.target.value })} /></label>
+          <label className="field">Sale<input type="time" value={hours.ends_at === '24:00' ? '23:59' : hours.ends_at ?? ''} onChange={(e) => setHours({ ...hours, ends_at: e.target.value === '23:59' && hours.ends_at === '24:00' ? '24:00' : e.target.value })} /></label>
         </div>
       )}
       <button className="primary" onClick={save}>Guardar</button>

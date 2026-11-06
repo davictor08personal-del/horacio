@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { googleCalendarUrl, hhmm, localDay, relDay } from './logic'
+import { addDays, googleCalendarUrl, hhmm, localDay, mondayOf, relDay, splitToday } from './logic'
+import { ensureNotifications, notificationState } from './push'
 import { noteFromTask, remove, setTaskStatus, update, useData } from './store'
 import { openNote } from './NoteEditor'
 import Sheet, { Choice } from './Sheet'
@@ -20,9 +21,10 @@ export function TaskRow({ task, n }: { task: Task; n?: number }) {
   const today = localDay()
   const project = projects.find((p) => p.id === task.project_id)
   const note = notes.find((n) => n.id === task.note_id)
+  const hasReminder = !!(task.due_date && task.due_time)
   const late = task.due_date && task.due_date < today
   const sub = [
-    task.due_date && relDay(task.due_date, today),
+    task.due_date && `${hasReminder ? '🔔 ' : ''}${relDay(task.due_date, today)}`,
     task.due_time && hhmm(task.due_time),
     task.status === 'en_curso' && 'En curso',
     task.status === 'esperando' && 'Esperando',
@@ -72,16 +74,37 @@ export function CalendarLink({ task, label = 'Añadir a Google Calendar' }: { ta
 
 const EDITABLE: Record<Exclude<Status, 'hecho' | 'descartado'>, string> = { abierto: STATUS.abierto, en_curso: STATUS.en_curso, esperando: STATUS.esperando }
 
+const QUICK_HOURS = ['09:00', '13:00', '18:00', '21:00']
+
 /** Every field of a task. Each change is saved at once (no "Save" button to forget). */
 export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }) {
-  const { projects, notes } = useData()
+  const { tasks, projects, notes } = useData()
+  const [perm, setPerm] = useState(notificationState)
+  const today = localDay()
+  const nextMon = addDays(mondayOf(today), 7)
+  const inFocus = splitToday(tasks).focus.some((t) => t.id === task.id)
   const note = notes.find((n) => n.id === task.note_id)
   const set = (patch: Partial<Task>) => update('tasks', task.id, patch)
   const finish = (s: Status) => setTaskStatus(task, s).then(onClose)
+  const quickDays: [string, string | null][] = [['Hoy', today], ['Mañana', addDays(today, 1)], ['Próx. lunes', nextMon], ['Sin fecha', null]]
+  const timeVal = hhmm(task.due_time)
+  const hasReminder = !!(task.due_date && timeVal)
+
+  const setReminderTime = (t: string | null) => {
+    set(t ? { due_date: task.due_date ?? today, due_time: t } : { due_time: null })
+    if (t && perm === 'default') ensureNotifications().then(() => setPerm(notificationState()))
+  }
 
   return (
     <Sheet title="Tarea" onClose={onClose}>
       <input className="big-input" defaultValue={task.title} onBlur={(e) => e.target.value.trim() && e.target.value !== task.title && set({ title: e.target.value.trim() })} aria-label="Título" />
+      {inFocus ? (
+        <p className="in-focus-badge"><span aria-hidden>☀</span> Está en tus Prioridades de hoy</p>
+      ) : (
+        <button type="button" className="pin-today" onClick={() => set({ due_date: today, priority: 'alta', status: 'en_curso' })}>
+          <span aria-hidden>☀</span> Fijar en Prioridades de hoy
+        </button>
+      )}
       <div className="field">Estado
         <Choice value={task.status as keyof typeof EDITABLE} options={EDITABLE} onChange={(status) => set({ status })} />
       </div>
@@ -91,13 +114,51 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
       <div className="field">Esfuerzo
         <Choice value={task.effort} options={EFFORT} onChange={(effort) => set({ effort })} />
       </div>
-      <div className="two-col">
-        <label className="field">Fecha límite
-          <input type="date" defaultValue={task.due_date ?? ''} onChange={(e) => set({ due_date: e.target.value || null })} />
-        </label>
-        <label className="field">Hora
-          <input type="time" defaultValue={hhmm(task.due_time)} onChange={(e) => set({ due_time: e.target.value || null })} />
-        </label>
+      <div className="reminder-box">
+        <div className="reminder-head">
+          <span className="reminder-title"><span aria-hidden>🔔</span> Recordatorio y fecha</span>
+          {(task.due_date || timeVal) && (
+            <button type="button" className="link reminder-clear" onClick={() => set({ due_date: null, due_time: null })}>Quitar</button>
+          )}
+        </div>
+        <div className="choice">
+          {quickDays.map(([label, d]) => (
+            <button type="button" key={label} className={task.due_date === d ? 'on' : ''} onClick={() => set(d ? { due_date: d } : { due_date: null, due_time: null })}>{label}</button>
+          ))}
+        </div>
+        <div className="choice">
+          {QUICK_HOURS.map((h) => (
+            <button type="button" key={h} className={timeVal === h ? 'on' : ''} onClick={() => setReminderTime(timeVal === h ? null : h)}>{h}</button>
+          ))}
+        </div>
+        <div className="two-col">
+          <label className="field">Fecha
+            <input type="date" value={task.due_date ?? ''} onChange={(e) => set(e.target.value ? { due_date: e.target.value } : { due_date: null, due_time: null })} />
+          </label>
+          <label className="field">Hora del aviso
+            <input type="time" value={timeVal} onChange={(e) => setReminderTime(e.target.value || null)} />
+          </label>
+        </div>
+        {hasReminder ? (
+          <p className="reminder-status on">
+            🔔 Recibirás una notificación {relDay(task.due_date!, today).toLowerCase()} a las {timeVal}
+          </p>
+        ) : task.due_date ? (
+          <p className="reminder-status">Elige una hora para recibir una notificación el {relDay(task.due_date, today).toLowerCase()}.</p>
+        ) : (
+          <p className="reminder-status">Elige fecha y hora para que te llegue una notificación.</p>
+        )}
+        {hasReminder && perm === 'default' && (
+          <button type="button" className="pin-today" onClick={() => ensureNotifications().then(() => setPerm(notificationState()))}>
+            🔔 Permitir notificaciones en este dispositivo
+          </button>
+        )}
+        {hasReminder && perm === 'denied' && (
+          <p className="hint danger">Tienes las notificaciones bloqueadas en el navegador o móvil. Actívalas en los ajustes del navegador para recibir el aviso.</p>
+        )}
+        {hasReminder && perm === 'install' && (
+          <p className="hint">En iPhone, añade Cuadre a la pantalla de inicio para recibir notificaciones.</p>
+        )}
       </div>
       <div className="two-col">
         <label className="field">Área

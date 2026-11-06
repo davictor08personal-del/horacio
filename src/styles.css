@@ -212,7 +212,7 @@ input, textarea { caret-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .tab-indicator { transition: none; } }
 
 /* ---------- bottom sheet ---------- */
-.sheet-backdrop { position: fixed; inset: 0; background: var(--backdrop); z-index: 10; display: flex; align-items: flex-end; }
+.sheet-backdrop { position: fixed; inset: 0; background: var(--backdrop); z-index: 30; display: flex; align-items: flex-end; }
 .sheet {
   width: 100%; max-width: 560px; margin: 0 auto; max-height: 90dvh;
   background: var(--surface); border-radius: 24px 24px 0 0;
@@ -229,12 +229,6 @@ input, textarea { caret-color: var(--accent); }
 
 /* ---------- capture ---------- */
 .capture-text { font-size: 1.1rem; }
-.capture-actions { display: flex; gap: 10px; }
-.grow-btn { flex: 1; }
-.recording { background: var(--danger); color: #fff; font-variant-numeric: tabular-nums; }
-.photo-chip { display: flex; align-items: center; gap: 12px; background: var(--surface-2); border-radius: 14px; padding: 8px; }
-.photo-chip img { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; }
-.photo-chip span { flex: 1; font-size: 0.95rem; }
 .ai-note { background: var(--surface-2); border-radius: 14px; padding: 10px 14px; font-size: 0.92rem; color: var(--muted); }
 .review-card { background: var(--surface-2); border-radius: 18px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 .review-card input, .review-card select { background: var(--surface-3); }
@@ -317,11 +311,11 @@ input, textarea { caret-color: var(--accent); }
   background: var(--bg); padding-top: env(safe-area-inset-top);
 }
 .note-editor:not(.c-none) { background: color-mix(in srgb, var(--note) 55%, var(--bg)); }
-.note-bar, .note-scroll, .note-tools, .palette { width: 100%; max-width: 560px; margin: 0 auto; }
+.note-bar, .note-scroll { width: 100%; max-width: 560px; margin: 0 auto; }
 .note-bar { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px 0 4px; }
 .back { display: flex; align-items: center; gap: 0; color: var(--accent); padding: 0 8px 0 2px; font-weight: 500; font-size: 1.05rem; }
 .back svg { width: 26px; height: 26px; stroke-width: 2.2; }
-.note-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 4px 20px 24px; display: flex; flex-direction: column; gap: 8px; }
+.note-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 4px 20px calc(var(--nav-h) + var(--nav-bottom) + 28px); display: flex; flex-direction: column; gap: 8px; }
 .note-date { text-align: center; color: var(--muted); font-size: 0.8rem; padding-bottom: 6px; }
 .note-title, .note-body { background: none; border: 0; padding: 0; border-radius: 0; min-height: 0; overflow: hidden; }
 .note-title { font-family: var(--display); font-size: 1.7rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
@@ -337,17 +331,10 @@ input, textarea { caret-color: var(--accent); }
 .checklist-sep { flex-basis: 100%; color: var(--muted); font-size: 0.8rem; padding: 12px 0 2px 10px; border-top: 1px solid var(--line); margin-top: 6px; }
 .add-item { margin-left: 12px; }
 
-/* Bottom toolbar of the editor: glass, like iOS Notes */
-.note-tools {
-  display: flex; justify-content: space-around; padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-  background: var(--glass); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%);
-  border-top: 1px solid var(--line);
-}
-@media (min-width: 560px) { .note-tools { border-radius: 22px 22px 0 0; } }
-.palette { display: flex; justify-content: center; gap: 10px; padding: 10px; }
-.swatch { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; background: var(--note); box-shadow: inset 0 0 0 1px var(--ring-faint); }
-.swatch.c-none { background: var(--bg); box-shadow: inset 0 0 0 1px var(--ring); }
-.swatch.on { box-shadow: 0 0 0 2px var(--accent); }
+/* Bottom dock of the note editor: floating pill bar matching the main tab bar */
+.note-tools { grid-template-columns: repeat(3, 1fr); }
+.note-tools > button.active { background: var(--accent-soft); }
+.note-tools > button.danger { color: var(--danger); }
 
 .linked-note { display: flex; justify-content: space-between; align-items: center; background: var(--surface-3); border-radius: 14px; padding: 0 14px; color: var(--text); font-weight: 500; text-align: left; }
 
@@ -395,7 +382,7 @@ input, textarea { caret-color: var(--accent); }
 
 /* «Cada día»: two columns of toggles; a ticked one is struck through on a soft accent */
 .daily-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.daily-btn { min-height: 48px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); text-align: left; font-weight: 500; font-size: 0.95rem; line-height: 1.25; }
+.daily-btn { min-height: 52px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); text-align: left; font-weight: 500; font-size: 0.95rem; line-height: 1.25; }
 .daily-btn.done { color: var(--muted); }
 .group-head .count { font-size: 0.85rem; color: var(--muted); }
 
@@ -492,7 +479,7 @@ button.tag { padding: 5px 11px; }
 .project-text .tags { margin-top: 3px; }
 
 /* Daily tile, hold to tick: it sinks a little, a wash sweeps left → right (clip-path keeps the rounded corners),
-   and when done a check pops in. Coloured tiles (.colored) are solid with white text; their wash darkens them. */
+   and when done a check pops in. Coloured tiles (.colored) are translucent with frosted glass. */
 .daily-btn { touch-action: manipulation; transition: transform 220ms cubic-bezier(0.2, 0.8, 0.3, 1), background-color 200ms; }
 .daily-btn.pressing { transform: scale(0.965); }
 .daily-btn > :not(.daily-fill):not(.daily-art) { position: relative; }
@@ -505,16 +492,11 @@ button.tag { padding: 5px 11px; }
 .daily-check svg { width: 14px; height: 14px; stroke-width: 3; }
 .daily-btn.done .daily-check { transform: scale(1); opacity: 1; }
 .daily-btn.done .daily-title { text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: 0.75; }
-.daily-btn.colored { background: var(--tile); color: #fff; border-color: transparent; }
-.daily-btn.colored .daily-fill { background: rgb(0 0 0 / 0.24); }
-.daily-btn.colored .daily-check { background: #fff; color: var(--tile); }
-.daily-btn.colored .daily-tag { background: rgb(255 255 255 / 0.22); color: #fff; }
-.daily-btn.colored .streak { color: rgb(255 255 255 / 0.9); }
 .daily-btn.colored.done .daily-title { opacity: 0.9; }
 .dc-azul { --tile: #3b76d9; } .dc-verde { --tile: #2f9a63; } .dc-morado { --tile: #7c5ad6; } .dc-rosa { --tile: #d4508a; }
 .dc-rojo { --tile: #d65151; } .dc-naranja { --tile: #df7a2a; } .dc-vinotinto { --tile: #9b2a4c; } .dc-gris { --tile: #6b7685; }
 .color-picker { display: flex; flex-wrap: wrap; gap: 10px; }
-.swatch { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; background: var(--tile, var(--surface-2)); border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08); }
+.swatch { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; background: var(--tile, var(--note, var(--surface-2))); border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08); }
 .swatch.dc-none { background: var(--surface); border: 2px dashed var(--ring); }
 .swatch.on { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -541,13 +523,14 @@ button.tag { padding: 5px 11px; }
 .add-btn svg { width: 20px; height: 20px; stroke-width: 2.2; }
 .title-left { display: flex; align-items: center; gap: 10px; }
 
-/* The daily task's picture/emoji: bleeds in from the left, solid for ~20% of the width, faded out by ~35% */
-.daily-art { position: absolute; left: 0; top: 0; bottom: 0; width: 30%; height: 100%; object-fit: cover; pointer-events: none;
-  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 55%, transparent 100%); mask-image: linear-gradient(90deg, #000 0%, #000 55%, transparent 100%); }
-.daily-art.emoji { display: flex; align-items: center; justify-content: flex-start; font-size: 2.7rem; line-height: 1; padding-left: 0; text-indent: -8px; overflow: hidden; opacity: 0.95; }
+/* The daily task's picture/emoji: bleeds in from the left and fades towards the far corner */
+.daily-art { position: absolute; left: 0; top: 0; bottom: 0; width: 48%; height: 100%; object-fit: cover; pointer-events: none;
+  -webkit-mask-image: linear-gradient(115deg, #000 0%, rgb(0 0 0 / 0.7) 28%, transparent 78%); mask-image: linear-gradient(115deg, #000 0%, rgb(0 0 0 / 0.7) 28%, transparent 78%); }
+.daily-art.emoji { display: flex; align-items: center; justify-content: flex-start; font-size: 1.45rem; line-height: 1; padding: 0 0 2px 14px; overflow: hidden; opacity: 0.95; -webkit-mask-image: none; mask-image: none; }
 .has-art .daily-text { padding-left: 24%; }
+.has-art:has(.daily-art.emoji) .daily-text { padding-left: 42px; }
 .daily-text { min-width: 0; }
-.daily-title { overflow-wrap: anywhere; hyphens: auto; }
+.daily-title { overflow-wrap: break-word; width: 100%; }
 .daily-btn.has-art { padding-left: 10px; }
 .daily-btn.leaving { animation: daily-leave 420ms cubic-bezier(0.4, 0, 0.2, 1) 650ms forwards; }
 @keyframes daily-leave { to { opacity: 0; transform: scale(0.92); } }
@@ -557,24 +540,21 @@ button.tag { padding: 5px 11px; }
 .daily-cards { display: flex; flex-direction: column; gap: 12px; }
 .daily-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .daily-card-head { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 64px; padding: 12px 14px; text-align: left; border-radius: 0; overflow: hidden; font-weight: inherit; }
-.daily-card-head.colored { background: var(--tile); color: #fff; }
-.daily-card-head.colored .daily-sub { color: rgb(255 255 255 / 0.85); }
 .daily-card-head > :not(.daily-art) { position: relative; }
 .daily-card-head .daily-title { font-weight: 600; font-size: 1.02rem; }
 .daily-sub { font-size: 0.8rem; color: var(--muted); }
 .today-pill { margin-left: auto; flex-shrink: 0; font-size: 0.74rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
 .today-pill.on { background: var(--accent); color: #fff; }
-.colored .today-pill { background: rgb(255 255 255 / 0.2); color: #fff; }
-.colored .today-pill.on { background: #fff; color: var(--tile); }
 
 .month-cal { padding: 8px 12px 14px; }
 .month-head { display: flex; align-items: center; justify-content: space-between; }
 .month-head .ghost { min-width: 40px; min-height: 36px; font-size: 1.3rem; padding: 0; }
 .month-title { font-size: 0.88rem; font-weight: 600; }
 .month-title::first-letter { text-transform: uppercase; }
-.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); max-width: 300px; margin: 0 auto; gap: 3px; }
 .month-dow { text-align: center; font-size: 0.7rem; font-weight: 600; color: var(--faint); padding-bottom: 2px; }
-.month-day { aspect-ratio: 1; display: grid; place-items: center; border-radius: 9px; font-size: 0.78rem; color: var(--muted); background: var(--surface-2); }
+.month-day { aspect-ratio: 1; min-height: 0; padding: 0; width: 100%; display: grid; place-items: center; border-radius: 7px; font-size: 0.72rem; font-weight: 500; color: var(--muted); background: var(--surface-2); transition: transform 120ms, background-color 150ms; }
+.month-day:not(:disabled):active { transform: scale(0.9); }
 .month-day.on { background: var(--tile, var(--accent)); color: #fff; font-weight: 600; }
 .month-day.today { box-shadow: inset 0 0 0 2px var(--tile, var(--accent)); }
 .month-day.future { opacity: 0.35; background: none; }
@@ -582,13 +562,13 @@ button.tag { padding: 5px 11px; }
 
 /* Daily task page: a hero with the picture fading in, then read-only info; the pencil switches to editing */
 .daily-hero { position: relative; overflow: hidden; border-radius: 16px; min-height: 84px; display: flex; align-items: center; padding: 14px 16px; background: var(--surface-2); }
-.daily-hero.colored { background: var(--tile); color: #fff; }
 .daily-hero > :not(.daily-art) { position: relative; }
 .daily-hero.has-art { padding-left: 30%; }
+.daily-hero.has-art:has(.daily-art.emoji) { padding-left: 76px; }
 .daily-art.big { width: 45%; }
-.daily-art.big.emoji { font-size: 4.2rem; padding-left: 8px; }
+.daily-art.big.emoji { font-size: 2.2rem; padding-left: 20px; }
 .hero-title { font-family: var(--display); font-size: 1.45rem; font-weight: 700; letter-spacing: -0.02em; color: inherit; padding: 0; }
-.hero-input { background: rgb(255 255 255 / 0.12); color: inherit; }
+.hero-input { background: var(--surface); color: inherit; }
 .info-list { display: flex; flex-direction: column; background: var(--surface-2); border-radius: 14px; overflow: hidden; }
 .info-list > div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; }
 .info-list > div + div { border-top: 1px solid var(--line); }
@@ -599,9 +579,6 @@ button.tag { padding: 5px 11px; }
 .edit-toggle { min-height: 36px; min-width: 40px; padding: 0 10px; border-radius: 999px; display: grid; place-items: center; color: var(--accent); font-weight: 600; background: var(--accent-soft); }
 .edit-toggle svg { width: 18px; height: 18px; }
 .note-row-project { color: var(--muted); }
-/* Keep the calendars compact: a month fits in a short card */
-.month-grid { max-width: 300px; margin: 0 auto; gap: 3px; }
-.month-day { border-radius: 7px; font-size: 0.72rem; }
 .streak-card .month-day { background: var(--surface); }
 .streak-card .month-day.on { background: var(--tile, var(--accent)); }
 .streak-card .month-day.future { background: none; }
@@ -620,20 +597,17 @@ button.tag { padding: 5px 11px; }
 .daily-btn.colored .streak, .daily-card-head.colored .daily-sub { color: var(--muted); }
 .daily-card-head.colored .today-pill { background: color-mix(in srgb, var(--tile) 22%, transparent); color: var(--text); }
 .daily-card-head.colored .today-pill.on { background: var(--tile); color: #fff; }
-.hero-input { background: var(--surface); }
-
-/* The picture fades towards the far corner (diagonally), so a logo or photo reads as part of the card */
-.daily-art { width: 48%; -webkit-mask-image: linear-gradient(115deg, #000 0%, rgb(0 0 0 / 0.7) 28%, transparent 78%); mask-image: linear-gradient(115deg, #000 0%, rgb(0 0 0 / 0.7) 28%, transparent 78%); }
-.daily-art.emoji { -webkit-mask-image: linear-gradient(115deg, #000 0%, rgb(0 0 0 / 0.75) 35%, transparent 85%); mask-image: linear-gradient(115deg, #000 0%, rgb(0 0 0 / 0.75) 35%, transparent 85%); }
 
 /* Projects get the same treatment: their picture or emoji bleeds in from the left and fades out */
 .project.has-art { position: relative; overflow: hidden; padding-left: 26%; }
+.project.has-art:has(.daily-art.emoji) { padding-left: 64px; }
 .project.has-art .daily-art { width: 42%; }
-.project.has-art .daily-art.emoji { font-size: 2.4rem; }
+.project.has-art .daily-art.emoji { font-size: 1.65rem; padding-left: 16px; }
 .project.has-art > :not(.daily-art) { position: relative; }
 .project-hero { position: relative; overflow: hidden; border-radius: 18px; min-height: 96px; display: flex; align-items: center; padding: 14px 16px 14px 32%; background: var(--surface-2); margin-bottom: 4px; }
+.project-hero:has(.daily-art.emoji) { padding-left: 80px; }
 .project-hero .daily-art { width: 55%; }
-.project-hero .daily-art.emoji { font-size: 4rem; padding-left: 6px; }
+.project-hero .daily-art.emoji { font-size: 2.3rem; padding-left: 20px; }
 .project-hero > :not(.daily-art) { position: relative; }
 .project-hero h1 { font-size: 1.9rem; }
 
@@ -645,3 +619,28 @@ button.tag { padding: 5px 11px; }
 .week-row .chev { color: var(--muted); transition: transform 200ms; font-size: 1.2rem; }
 .week-row[aria-expanded='true'] .chev { transform: rotate(90deg); }
 .daily-card .month-cal { animation: task-enter 260ms ease-out both; border-top: 1px solid var(--line); }
+
+/* Undo toast above the tab bar when a task is finished or discarded */
+.undo-toast {
+  position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + var(--nav-bottom) + 12px); z-index: 8;
+  max-width: 500px; margin: 0 auto; padding: 10px 12px 10px 16px; border-radius: 16px;
+  background: var(--text); color: var(--on-text); box-shadow: 0 10px 28px var(--shadow);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  animation: task-enter 220ms ease-out both;
+}
+.undo-text { font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.undo-btn { min-height: 34px; padding: 0 12px; border-radius: 10px; background: rgb(255 255 255 / 0.16); color: inherit; font-size: 0.88rem; font-weight: 600; flex-shrink: 0; }
+[data-theme='dark'] .undo-btn { background: rgb(0 0 0 / 0.18); }
+
+/* Pin to Hoy & Reminder box inside TaskSheet */
+.pin-today { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; font-size: 0.94rem; }
+.in-focus-badge { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; font-size: 0.9rem; }
+.reminder-box { display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+.reminder-box input { background: var(--surface); }
+.reminder-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.reminder-title { font-weight: 600; font-size: 0.95rem; color: var(--text); display: flex; align-items: center; gap: 6px; }
+.reminder-clear { min-height: 28px; font-size: 0.85rem; }
+.reminder-status { font-size: 0.85rem; color: var(--muted); }
+.reminder-status.on { color: var(--accent-ink); font-weight: 600; background: var(--accent-soft); padding: 8px 12px; border-radius: 10px; }
+.reminder-alert { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--accent); }
+.reminder-alert .ghost { min-height: 32px; padding: 0 10px; color: var(--accent-ink); }

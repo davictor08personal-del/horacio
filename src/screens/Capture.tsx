@@ -123,24 +123,29 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
 
   async function save() {
     setBusy(true)
+    setError('')
     try {
       // Projects first, so the new tasks and notes can point at them by name.
       const created = await insert('projects', r.projects.map((p) => ({ ...p, status: 'activo' as const })))
+      if (created.length) setR((prev) => ({ ...prev, projects: [] }))
       const byName = new Map([...projects, ...created].map((p) => [p.name.toLowerCase(), p.id]))
       const projectId = (name: string | null) => (name && byName.get(name.toLowerCase())) || null
       const of = (k: Kind) => items.filter((it) => it.kind === k && (it.title.trim() || (k === 'nota' && it.details.trim())))
-      await insert('tasks', [...of('tarea'), ...of('recordatorio')].map((t) => ({
-        title: t.title.trim(), notes: t.details.trim() || null, priority: t.priority, effort: t.effort, status: t.status,
-        due_date: t.due_date, due_time: t.kind === 'recordatorio' ? t.due_time : null, area: t.area, project_id: projectId(t.project), note_id: null, done_at: null,
-      })))
       const now = new Date().toISOString()
-      await insert('notes', of('nota').map((n) => ({
-        title: n.title.trim(), body: n.checklist ? '' : n.details.trim(), items: n.checklist ? toChecklist(n.details) : null,
-        color: 'none' as const, project_id: projectId(n.project), pinned: false, archived: false, updated_at: now,
-      })))
-      await insert('daily_tasks', of('diaria').map((d, i) => ({ title: d.title.trim(), position: daily_tasks.length + i, done_on: null, project_id: projectId(d.project), description: null, icon: null, note_id: null, color: 'none' })))
-      await insert('shifts', r.shifts)
-      await insert('fp_tests', r.fp_tests.map((t) => ({ ...t, read: false })))
+      const nextPos = daily_tasks.reduce((m, d) => Math.max(m, d.position + 1), 0)
+      await Promise.all([
+        insert('tasks', [...of('tarea'), ...of('recordatorio')].map((t) => ({
+          title: t.title.trim(), notes: t.details.trim() || null, priority: t.priority, effort: t.effort, status: t.status,
+          due_date: t.due_date, due_time: t.kind === 'recordatorio' ? t.due_time : null, area: t.area, project_id: projectId(t.project), note_id: null, done_at: null,
+        }))),
+        insert('notes', of('nota').map((n) => ({
+          title: n.title.trim(), body: n.checklist ? '' : n.details.trim(), items: n.checklist ? toChecklist(n.details) : null,
+          color: 'none' as const, project_id: projectId(n.project), pinned: false, archived: false, updated_at: now,
+        }))),
+        insert('daily_tasks', of('diaria').map((d, i) => ({ title: d.title.trim(), position: nextPos + i, done_on: null, project_id: projectId(d.project), description: null, icon: null, note_id: null, color: 'none' }))),
+        insert('shifts', r.shifts),
+        insert('fp_tests', r.fp_tests.map((t) => ({ ...t, read: false }))),
+      ])
       const dated = of('recordatorio').filter((t) => t.due_date)
       if (dated.length) setToCalendar(dated)
       else onClose()

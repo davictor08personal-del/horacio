@@ -104,7 +104,7 @@ export const CAPTURE_SCHEMA = {
 }
 
 const DATE = /^\d{4}-\d\d-\d\d$/
-const TIME = /^([01]\d|2[0-4]):[0-5]\d$/
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$|^24:00$/
 const date = (v: unknown) => (typeof v === 'string' && DATE.test(v) ? v : null)
 const time = (v: unknown) => (typeof v === 'string' && TIME.test(v.slice(0, 5)) ? v.slice(0, 5) : null)
 const text = (v: unknown, max = 200) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)

@@ -107,7 +107,7 @@ const shiftLabel = (k: ShiftKind) => ({ opening: 'de opening', dia: 'de día', n
 const PRIORITY_RANK: Record<Priority, number> = { alta: 0, media: 1, baja: 2 }
 const EFFORT_RANK: Record<Effort, number> = { rapido: 0, medio: 1, grande: 2 }
 
-/** Nearest deadline first (no deadline last), then high priority, then quick effort, then oldest. */
+/** Nearest deadline first (no deadline last), then high priority, then in-progress, then quick effort, then oldest. */
 export function byPriority(a: Task, b: Task) {
   if (a.due_date !== b.due_date) {
     if (!a.due_date) return 1
@@ -115,6 +115,7 @@ export function byPriority(a: Task, b: Task) {
     return a.due_date < b.due_date ? -1 : 1
   }
   return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]
+    || (a.status === 'en_curso' ? 0 : 1) - (b.status === 'en_curso' ? 0 : 1)
     || EFFORT_RANK[a.effort] - EFFORT_RANK[b.effort]
     || (a.due_time ?? '99').localeCompare(b.due_time ?? '99')
     || a.created_at.localeCompare(b.created_at)

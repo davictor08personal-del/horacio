@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { demo, load, purgeClosed, supa, useData } from './store'
+import { checkDueReminders } from './push'
+import { demo, load, purgeClosed, supa, undoTask, useData, useUndo } from './store'
+import type { Task } from './types'
 import Login from './screens/Login'
 import Welcome from './screens/Welcome'
 import NewPassword from './screens/NewPassword'
@@ -8,7 +10,7 @@ import Today from './screens/Today'
 import Tasks from './screens/Tasks'
 import Notes from './screens/Notes'
 import Projects from './screens/Projects'
-import NoteEditor, { ICON, useOpenNote } from './NoteEditor'
+import NoteEditor, { ICON, openNote, useOpenNote } from './NoteEditor'
 import Capture from './screens/Capture'
 import Settings from './Settings'
 
@@ -32,7 +34,9 @@ export default function App() {
   const [settings, setSettings] = useState(false)
   const [recovering, setRecovering] = useState(false) // opened from the «new password» email
   const [error, setError] = useState('')
-  const { loaded, profile } = useData()
+  const [dueAlert, setDueAlert] = useState<Task | null>(null)
+  const { loaded, profile, tasks } = useData()
+  const undo = useUndo()
   const noteId = useOpenNote()
 
   useEffect(() => {
@@ -47,15 +51,27 @@ export default function App() {
 
   const signedIn = demo || !!session
   useEffect(() => {
-    if (!signedIn) return
+    if (!signedIn) { openNote(null); return }
+    let last = 0
     // Old finished tasks go first, so they never show up in «Terminadas». A failed purge just waits for next time.
-    const refresh = () => purgeClosed().catch(() => {}).then(load).catch((e) => setError(e.message))
+    const refresh = () => {
+      last = Date.now()
+      purgeClosed().catch(() => {}).then(load).catch((e) => setError(e.message))
+    }
     refresh()
     // Back from the background (the PWA stays open for days): fresh data for the new day.
-    const onShow = () => document.visibilityState === 'visible' && refresh()
+    const onShow = () => document.visibilityState === 'visible' && Date.now() - last > 30_000 && refresh()
     document.addEventListener('visibilitychange', onShow)
     return () => document.removeEventListener('visibilitychange', onShow)
   }, [signedIn])
+
+  useEffect(() => {
+    if (!signedIn || !loaded) return
+    const tick = () => checkDueReminders(tasks, (t) => setDueAlert(t))
+    tick()
+    const id = window.setInterval(tick, 15_000)
+    return () => clearInterval(id)
+  }, [signedIn, loaded, tasks])
 
   if (session === undefined) return null
   if (recovering) return <NewPassword onDone={() => setRecovering(false)} />
@@ -73,8 +89,20 @@ export default function App() {
         </div>
         {demo && <p className="banner">Modo demo: los datos se guardan solo en este navegador.</p>}
         {error && <p className="banner danger-banner">{error}</p>}
+        {dueAlert && (
+          <div className="banner reminder-alert" role="alert">
+            <span>🔔 <strong>Recordatorio:</strong> {dueAlert.title}</span>
+            <button type="button" className="ghost" onClick={() => setDueAlert(null)}>Cerrar</button>
+          </div>
+        )}
         {!loaded ? null : tab === 'today' ? <Today onGo={setTab} /> : tab === 'tasks' ? <Tasks /> : tab === 'notes' ? <Notes /> : <Projects />}
       </main>
+      {undo && (
+        <div className="undo-toast" role="status">
+          <span className="undo-text">{undo.closedAs === 'hecho' ? 'Hecha' : 'Descartada'}: «{undo.title}»</span>
+          <button className="undo-btn" onClick={undoTask}>Deshacer</button>
+        </div>
+      )}
       <nav className="dock">
         <div className="tabs">
           {/* Two tabs, the round ＋ in the middle, two tabs. The highlighted pill slides to the active tab (it skips the

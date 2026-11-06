@@ -7,7 +7,8 @@ create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
 select cron.unschedule('horacio-tick') where exists (select 1 from cron.job where jobname = 'horacio-tick');
-select cron.schedule('horacio-tick', '* * * * *', $$
+select cron.unschedule('cuadre-tick') where exists (select 1 from cron.job where jobname = 'cuadre-tick');
+select cron.schedule('cuadre-tick', '* * * * *', $$
   select net.http_post(
     url := 'https://YOUR-APP.vercel.app/api/tick',
     headers := jsonb_build_object('Authorization', 'Bearer YOUR_CRON_SECRET', 'Content-Type', 'application/json'),
@@ -16,4 +17,4 @@ select cron.schedule('horacio-tick', '* * * * *', $$
 $$);
 
 -- To check it's running: select * from cron.job_run_details order by start_time desc limit 5;
--- To stop it:            select cron.unschedule('horacio-tick');
+-- To stop it:            select cron.unschedule('cuadre-tick');

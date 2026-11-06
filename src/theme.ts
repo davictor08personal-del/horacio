@@ -4,12 +4,12 @@ import { useSyncExternalStore } from 'react'
 export type ThemePref = 'system' | 'light' | 'dark'
 export const THEME: Record<ThemePref, string> = { system: 'Automático', light: 'Claro', dark: 'Oscuro' }
 
-const KEY = 'horacio-theme'
+const KEY = 'cuadre-theme'
 const system = matchMedia('(prefers-color-scheme: dark)')
 const listeners = new Set<() => void>()
 
 let pref: ThemePref = (() => {
-  try { return (localStorage.getItem(KEY) as ThemePref) || 'system' } catch { return 'system' }
+  try { return ((localStorage.getItem(KEY) ?? localStorage.getItem('horacio-theme')) as ThemePref) || 'system' } catch { return 'system' }
 })()
 
 function apply() {

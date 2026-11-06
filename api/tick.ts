@@ -5,6 +5,7 @@
 // Why a cron outside Vercel: Vercel's free cron runs once a day; pg_cron (free in Supabase) runs every minute.
 // It reads every user's tasks, so it uses the Supabase secret key (bypasses RLS). That key and CRON_SECRET
 // only live in Vercel's environment variables, never in the app or in git.
+import { timingSafeEqual } from 'node:crypto'
 import { addDays, dueReminders, localDay, localMinutes, morningSummary, SUMMARY_FROM, SUMMARY_UNTIL, validTimeZone } from '../src/logic.js'
 import type { Shift, Task } from '../src/types.js'
 import { adminClient, env, errorResponse, Failed } from './_auth.js'
@@ -13,11 +14,17 @@ import { sendPush, type Message, type PushSub } from './_push.js'
 type Row = Task & { user_id: string }
 type Prof = { user_id: string; name: string | null; timezone: string; shifts: boolean }
 
+function validSecret(header: string | null, secret: string) {
+  const a = Buffer.from(header ?? '')
+  const b = Buffer.from(`Bearer ${secret}`)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
 export async function POST(request: Request): Promise<Response> {
   try {
     const secret = env('CRON_SECRET')
     if (!secret) throw new Failed(503, 'missing CRON_SECRET')
-    if (request.headers.get('authorization') !== `Bearer ${secret}`) throw new Failed(401, 'unauthorized')
+    if (!validSecret(request.headers.get('authorization'), secret)) throw new Failed(401, 'unauthorized')
     const admin = await adminClient()
 
     const { data: subs, error } = await admin.from('push_subscriptions').select('user_id, endpoint, p256dh, auth')
@@ -49,9 +56,12 @@ export async function POST(request: Request): Promise<Response> {
         .upsert(morning.map((user_id) => ({ user_id, day: localDay(now, zoneOf(user_id)) })), { onConflict: 'user_id,day', ignoreDuplicates: true }).select('user_id, day')
       if (fresh?.length) {
         const ids = fresh.map((f) => f.user_id as string)
+        const old = addDays(localDay(now, 'UTC'), -7)
         const [{ data: open }, { data: shifts }] = await Promise.all([
           admin.from('tasks').select('*').in('user_id', ids).in('status', ['abierto', 'en_curso', 'esperando']),
           admin.from('shifts').select('*').in('user_id', ids).in('day', [...new Set(fresh.map((f) => f.day as string))]),
+          admin.from('push_daily').delete().lt('day', old),
+          admin.from('ai_usage').delete().lt('day', old),
         ])
         for (const { user_id, day } of fresh) {
           const p = prof.get(user_id)

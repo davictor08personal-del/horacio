@@ -33,6 +33,7 @@ export default defineConfig(({ mode }) => {
   for (const [k, v] of Object.entries(loadEnv(mode, process.cwd(), ''))) process.env[k] ??= v
   return {
     define: { __APP_VERSION__: JSON.stringify(version) },
+    build: { rollupOptions: { output: { manualChunks: { supabase: ['@supabase/supabase-js'] } } } },
     preview: { headers: prodHeaders },
     plugins: [
       react(),

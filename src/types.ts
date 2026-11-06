@@ -20,6 +20,7 @@ export interface Task {
   note_id: string | null
   created_at: string
   done_at: string | null
+  notified_at?: string | null
 }
 
 export type NoteColor = 'none' | 'rojo' | 'naranja' | 'amarillo' | 'verde' | 'azul' | 'morado'

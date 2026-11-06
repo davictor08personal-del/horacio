@@ -80,12 +80,14 @@ Falta:
 
 ## Hecho (Fase 2, 2026-11-06)
 
-- ✅ Tras cada cambio solo se relee lo que cambió (1–2 consultas en vez de 9).
-- ✅ Límites de tamaño en la base para tareas, notas, proyectos y tareas diarias (iconos incluidos).
+- ✅ Tras cada cambio solo se relee lo que cambió (1–2 consultas en vez de 9); al volver a la app no se consultan módulos apagados (`shifts`, `fp_tests`) ni se repite la carga si han pasado menos de 30 s.
+- ✅ Cerrar sesión (`signOut`) y borrar cuenta limpian la memoria local, cierran notas abiertas y desvinculan la suscripción push del dispositivo.
+- ✅ La cuota diaria de IA (`ai_hit`) solo se descuenta si el proveedor responde bien; las tablas `ai_usage` y `push_daily` purgan los días antiguos automáticamente y `CRON_SECRET` se comprueba con `timingSafeEqual`.
+- ✅ Límites de tamaño en la base para todas las tablas (`tasks`, `notes`, `projects`, `daily_tasks`, `fp_tests`, `push_subscriptions` y `profiles`).
 - ✅ Cabeceras de seguridad (CSP sin scripts en línea, `X-Frame-Options`, HSTS, `Referrer-Policy`, `Permissions-Policy`); `npm run preview` las imita.
 - ✅ Turnstile listo en el código (entrar, crear cuenta, recuperar contraseña); falta crear el widget en Cloudflare y activarlo (README).
-- ✅ CI con GitHub Actions: tests y build en cada push.
-- Pendiente: rotar/quitar la clave de Gemini (ya no se usa: `AI_PROVIDER=deepseek`).
+- ✅ CI con GitHub Actions: tests y build en cada push; bundle separado (`supabase` + `index`) sin avisos de tamaño.
+- Pendiente: rotar/quitar la clave de Gemini (ya no se usa: `AI_PROVIDER=deepseek`) y añadir el email de contacto en `public/privacidad.html`.
 
 ## Orden recomendado
 

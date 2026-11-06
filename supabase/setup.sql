@@ -161,7 +161,7 @@ end $$;
 
 create index if not exists tasks_user_status on public.tasks (user_id, status);
 
--- Daily counter for the AI (api/capture.ts), same as Músculo. No policies: only the function touches it.
+-- Daily counter for the AI (api/capture.ts), same as Músculo. Users may read their own count; only the function writes.
 create table if not exists public.ai_usage (
   user_id uuid not null references auth.users on delete cascade,
   day date not null,
@@ -169,6 +169,9 @@ create table if not exists public.ai_usage (
   primary key (user_id, day)
 );
 alter table public.ai_usage enable row level security;
+drop policy if exists "ai_usage: own select" on public.ai_usage;
+create policy "ai_usage: own select" on public.ai_usage for select to authenticated
+  using (user_id = (select auth.uid()));
 
 create or replace function public.ai_hit() returns int
 language sql security definer set search_path = '' as $$
@@ -204,4 +207,13 @@ begin
   alter table public.daily_tasks drop constraint if exists daily_tasks_sizes;
   alter table public.daily_tasks add constraint daily_tasks_sizes
     check (char_length(title) <= 200 and char_length(coalesce(description, '')) <= 2000 and char_length(coalesce(icon, '')) <= 60000) not valid;
+  alter table public.fp_tests drop constraint if exists fp_tests_sizes;
+  alter table public.fp_tests add constraint fp_tests_sizes
+    check (char_length(subject) <= 200 and char_length(unit) <= 300) not valid;
+  alter table public.push_subscriptions drop constraint if exists push_subscriptions_sizes;
+  alter table public.push_subscriptions add constraint push_subscriptions_sizes
+    check (char_length(endpoint) <= 2000 and char_length(p256dh) <= 200 and char_length(auth) <= 100) not valid;
+  alter table public.profiles drop constraint if exists profiles_sizes;
+  alter table public.profiles add constraint profiles_sizes
+    check (char_length(timezone) <= 100) not valid;
 end $$;

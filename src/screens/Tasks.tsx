@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { byPriority, parseSearch, projectsTagged, textMatches } from '../logic'
 import { ICON, Icon } from '../NoteEditor'
 import { KEEP_CLOSED_DAYS, useData } from '../store'
@@ -19,7 +19,8 @@ export const openDailyView = () => { nextView = 'diarias' }
 export default function Tasks() {
   const { tasks: allOpen, closed: allClosed, projects } = useData()
   const [showClosed, setShowClosed] = useState(false)
-  const [view, setView] = useState<View>(() => { const v = nextView; nextView = 'puntuales'; return v })
+  const [view, setView] = useState<View>(() => nextView)
+  useEffect(() => { nextView = 'puntuales' }, [])
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<string | null>(null) // the task just created, to fill in the rest

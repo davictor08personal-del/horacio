@@ -27,7 +27,7 @@ export async function sendPush(subs: PushSub[], msg: Message) {
   const privateKey = env('VAPID_PRIVATE_KEY')
   if (!publicKey || !privateKey) throw new Failed(503, 'missing VAPID keys')
   // Apple wants a real https or mailto contact here; Vercel sets the production domain.
-  webpush.setVapidDetails(`https://${env('VERCEL_PROJECT_PRODUCTION_URL') ?? 'horacio.vercel.app'}`, publicKey, privateKey)
+  webpush.setVapidDetails(`https://${env('VERCEL_PROJECT_PRODUCTION_URL') ?? 'cuadre.vercel.app'}`, publicKey, privateKey)
   const gone: string[] = []
   await Promise.all(subs.filter((s) => validEndpoint(s.endpoint)).map(async (s) => {
     try {

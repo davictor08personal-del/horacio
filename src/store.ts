@@ -25,10 +25,10 @@ const subscribe = (l: () => void) => (listeners.add(l), () => listeners.delete(l
 export const useData = () => useSyncExternalStore(subscribe, () => data)
 
 // ---------- demo backend (localStorage) ----------
-const DEMO_KEY = 'horacio-demo'
+const DEMO_KEY = 'cuadre-demo'
 const demoAll = (): typeof EMPTY => {
   try {
-    return { ...EMPTY, ...JSON.parse(localStorage.getItem(DEMO_KEY) ?? '{}') }
+    return { ...EMPTY, ...JSON.parse(localStorage.getItem(DEMO_KEY) ?? localStorage.getItem('horacio-demo') ?? '{}') }
   } catch {
     return { ...EMPTY }
   }
@@ -91,7 +91,10 @@ export async function load() {
     data = { ...d, profile: d.profile ?? null, tasks: d.tasks.filter((t) => OPEN.includes(t.status)), closed: d.tasks.filter((t) => CLOSED.includes(t.status) && (t.done_at ?? '') >= cutoff).sort(byDoneDesc), shifts: d.shifts.filter((s) => s.day >= since), loaded: true }
     return emit()
   }
-  await refresh(ALL)
+  const parts = data.profile
+    ? ALL.filter((p) => (p !== 'shifts' || data.profile!.shifts) && (p !== 'fp_tests' || data.profile!.fp))
+    : ALL
+  await refresh(parts)
   data = { ...data, loaded: true }
   emit()
 }
@@ -122,12 +125,15 @@ export async function insert<T extends Table>(table: T, rows: Partial<RowOf[T]>[
 }
 
 export async function update<T extends Table>(table: T, id: string, patch: Partial<RowOf[T]>) {
+  const fullPatch = table === 'tasks' && ('due_date' in patch || 'due_time' in patch) && !('notified_at' in patch)
+    ? { ...patch, notified_at: null }
+    : patch
   if (!supa) {
     const d = demoAll()
-    ;(d[table] as unknown as { id: string }[]) = (d[table] as unknown as { id: string }[]).map((r) => (r.id === id ? { ...r, ...patch } : r))
+    ;(d[table] as unknown as { id: string }[]) = (d[table] as unknown as { id: string }[]).map((r) => (r.id === id ? { ...r, ...fullPatch } : r))
     demoSave(d)
   } else {
-    const { error } = await supa.from(table).update(patch as never).eq('id', id)
+    const { error } = await supa.from(table).update(fullPatch as never).eq('id', id)
     if (error) throw new Error(error.message)
   }
   await refresh(PARTS_OF[table])
@@ -162,28 +168,30 @@ export async function saveProfile(patch: Partial<Profile>) {
     const { error } = await supa.from('profiles').upsert(patch)
     if (error) throw new Error(error.message.includes('profiles') ? 'Falta la tabla profiles: ejecuta supabase/setup.sql' : error.message)
   }
-  await refresh(['profile', 'shifts']) // a new time zone moves «this week»
+  await refresh(['profile', 'shifts', ...(patch.fp ? ['fp_tests' as const] : [])]) // a new time zone moves «this week»
 }
 
-/** Tick or untick a daily task for today: done_on for Hoy, plus a row in daily_log for the streaks. */
-export async function toggleDaily(d: DailyTask, today: string) {
-  const done = d.done_on === today
+/** Tick or untick a daily task on `day` (today or a past day in the calendar): done_on for Hoy, daily_log for streaks. */
+export async function toggleDaily(d: DailyTask, day: string) {
+  const isToday = day === localDay()
+  const done = isToday ? d.done_on === day : data.daily_log.some((l) => l.daily_id === d.id && l.day === day)
+  const nextDoneOn = isToday ? (done ? null : day) : d.done_on === day && done ? null : d.done_on
   if (!supa) {
     const all = demoAll()
-    all.daily_tasks = all.daily_tasks.map((x) => (x.id === d.id ? { ...x, done_on: done ? null : today } : x))
-    all.daily_log = done ? all.daily_log.filter((l) => !(l.daily_id === d.id && l.day === today)) : [...all.daily_log, { daily_id: d.id, day: today }]
+    if (nextDoneOn !== d.done_on) all.daily_tasks = all.daily_tasks.map((x) => (x.id === d.id ? { ...x, done_on: nextDoneOn } : x))
+    all.daily_log = done ? all.daily_log.filter((l) => !(l.daily_id === d.id && l.day === day)) : [...all.daily_log, { daily_id: d.id, day }]
     demoSave(all)
   } else {
     const [a, b] = await Promise.all([
-      supa.from('daily_tasks').update({ done_on: done ? null : today }).eq('id', d.id),
+      nextDoneOn !== d.done_on ? supa.from('daily_tasks').update({ done_on: nextDoneOn }).eq('id', d.id) : Promise.resolve({ error: null }),
       done
-        ? supa.from('daily_log').delete().eq('daily_id', d.id).eq('day', today)
-        : supa.from('daily_log').upsert({ daily_id: d.id, day: today }, { onConflict: 'daily_id,day', ignoreDuplicates: true }),
+        ? supa.from('daily_log').delete().eq('daily_id', d.id).eq('day', day)
+        : supa.from('daily_log').upsert({ daily_id: d.id, day }, { onConflict: 'daily_id,day', ignoreDuplicates: true }),
     ])
     const error = a.error ?? b.error
     if (error) throw new Error(error.message.includes('daily_log') ? 'Falta la tabla daily_log: ejecuta supabase/setup.sql' : error.message)
   }
-  await refresh(['daily_tasks', 'daily_log'])
+  await refresh(nextDoneOn !== d.done_on ? ['daily_tasks', 'daily_log'] : ['daily_log'])
 }
 
 /** Daily task → its note: starts with its title and project, and they stay linked. */
@@ -204,9 +212,30 @@ export async function noteFromTask(t: Task) {
   return n
 }
 
+export interface UndoTask { id: string; title: string; status: Task['status']; done_at: string | null; closedAs: Task['status'] }
+let lastClosed: UndoTask | null = null
+let undoTimer = 0
+const clearUndo = () => { clearTimeout(undoTimer); if (lastClosed) { lastClosed = null; emit() } }
+export const useUndo = () => useSyncExternalStore(subscribe, () => lastClosed)
+
+export async function undoTask() {
+  if (!lastClosed) return
+  const { id, status, done_at } = lastClosed
+  clearUndo()
+  await update('tasks', id, { status, done_at })
+}
+
 /** Finishing or discarding stamps done_at (the 7 days in «Terminadas» count from it); reopening clears it. */
-export const setTaskStatus = (t: Task, status: Task['status']) =>
-  update('tasks', t.id, { status, done_at: CLOSED.includes(status) ? new Date().toISOString() : null })
+export const setTaskStatus = (t: Task, status: Task['status']) => {
+  if (CLOSED.includes(status)) {
+    clearTimeout(undoTimer)
+    lastClosed = { id: t.id, title: t.title, status: t.status, done_at: t.done_at, closedAs: status }
+    undoTimer = window.setTimeout(clearUndo, 4500)
+  } else if (lastClosed?.id === t.id) {
+    clearUndo()
+  }
+  return update('tasks', t.id, { status, done_at: CLOSED.includes(status) ? new Date().toISOString() : null })
+}
 
 /**
  * Deletes tasks closed more than KEEP_CLOSED_DAYS ago (and old discarded ones from before done_at was stamped).
@@ -240,7 +269,21 @@ export async function signUp(email: string, password: string, captchaToken?: str
   if (!data.session) throw new Error('Cuenta creada: te hemos enviado un email para confirmarla. Ábrelo y luego entra aquí.')
 }
 
-export const signOut = () => supa?.auth.signOut()
+export async function signOut() {
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration()
+    const sub = await reg?.pushManager?.getSubscription()
+    if (sub) {
+      await supa?.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+      await sub.unsubscribe()
+    }
+  } catch { /* offline or no service worker */ }
+  await supa?.auth.signOut()
+  clearUndo()
+  setTimeZone(null)
+  data = { ...EMPTY, closed: [], profile: null, loaded: false }
+  emit()
+}
 
 /**
  * «¿Olvidaste tu contraseña?»: Supabase emails a link back to the app; opening it signs the user in in
@@ -265,7 +308,7 @@ export async function deleteAccount() {
     body: JSON.stringify({ action: 'delete' }),
   })
   if (!r.ok) throw new Error('No se pudo borrar la cuenta. Inténtalo más tarde.')
-  await supa?.auth.signOut()
+  await signOut()
 }
 
 /** Proves to our own server (api/capture.ts) who is signed in. */
