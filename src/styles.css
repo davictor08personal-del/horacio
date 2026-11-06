@@ -492,7 +492,7 @@ button.tag { padding: 5px 11px; }
    and when done a check pops in. Coloured tiles (.colored) are solid with white text; their wash darkens them. */
 .daily-btn { touch-action: manipulation; transition: transform 220ms cubic-bezier(0.2, 0.8, 0.3, 1), background-color 200ms; }
 .daily-btn.pressing { transform: scale(0.965); }
-.daily-btn > :not(.daily-fill) { position: relative; }
+.daily-btn > :not(.daily-fill):not(.daily-art) { position: relative; }
 .daily-fill { position: absolute; inset: 0; background: var(--fill); clip-path: inset(0 100% 0 0); transition: clip-path 240ms ease-out; pointer-events: none; }
 .daily-btn.done .daily-fill { clip-path: inset(0 0 0 0); }
 .daily-btn.pressing:not(.done) .daily-fill { clip-path: inset(0 0 0 0); transition: clip-path 600ms cubic-bezier(0.45, 0, 0.25, 1); }
@@ -508,8 +508,8 @@ button.tag { padding: 5px 11px; }
 .daily-btn.colored .daily-tag { background: rgb(255 255 255 / 0.22); color: #fff; }
 .daily-btn.colored .streak { color: rgb(255 255 255 / 0.9); }
 .daily-btn.colored.done .daily-title { opacity: 0.9; }
-.dc-azul { --tile: #2f6fde; } .dc-verde { --tile: #2b9a5a; } .dc-morado { --tile: #7b4fd6; } .dc-rosa { --tile: #d6457f; }
-.dc-rojo { --tile: #d64545; } .dc-naranja { --tile: #e0761f; } .dc-vinotinto { --tile: #8b1e3f; } .dc-gris { --tile: #5f6b7a; }
+.dc-azul { --tile: #56739a; } .dc-verde { --tile: #5a8270; } .dc-morado { --tile: #786c9c; } .dc-rosa { --tile: #a06c84; }
+.dc-rojo { --tile: #a25f5f; } .dc-naranja { --tile: #a87b56; } .dc-vinotinto { --tile: #7a4152; } .dc-gris { --tile: #68717d; }
 .color-picker { display: flex; flex-wrap: wrap; gap: 10px; }
 .swatch { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; background: var(--tile, var(--surface-2)); border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08); }
 .swatch.dc-none { background: var(--surface); border: 2px dashed var(--ring); }
@@ -537,3 +537,70 @@ button.tag { padding: 5px 11px; }
 .add-btn { width: 38px; height: 38px; min-height: 0; padding: 0; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-ink); flex-shrink: 0; margin-top: 8px; }
 .add-btn svg { width: 20px; height: 20px; stroke-width: 2.2; }
 .title-left { display: flex; align-items: center; gap: 10px; }
+
+/* The daily task's picture/emoji: bleeds in from the left, solid for ~20% of the width, faded out by ~35% */
+.daily-art { position: absolute; left: 0; top: 0; bottom: 0; width: 30%; height: 100%; object-fit: cover; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 55%, transparent 100%); mask-image: linear-gradient(90deg, #000 0%, #000 55%, transparent 100%); }
+.daily-art.emoji { display: flex; align-items: center; justify-content: flex-start; font-size: 2.7rem; line-height: 1; padding-left: 0; text-indent: -8px; overflow: hidden; opacity: 0.95; }
+.has-art .daily-text { padding-left: 24%; }
+.daily-text { min-width: 0; }
+.daily-title { overflow-wrap: anywhere; hyphens: auto; }
+.daily-btn.has-art { padding-left: 10px; }
+.daily-btn.leaving { animation: daily-leave 420ms cubic-bezier(0.4, 0, 0.2, 1) 650ms forwards; }
+@keyframes daily-leave { to { opacity: 0; transform: scale(0.92); } }
+.daily-btn .streak { font-weight: 600; }
+
+/* Tareas → Diarias: one card per daily task with its month calendar */
+.daily-cards { display: flex; flex-direction: column; gap: 12px; }
+.daily-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.daily-card-head { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 64px; padding: 12px 14px; text-align: left; border-radius: 0; overflow: hidden; font-weight: inherit; }
+.daily-card-head.colored { background: var(--tile); color: #fff; }
+.daily-card-head.colored .daily-sub { color: rgb(255 255 255 / 0.85); }
+.daily-card-head > :not(.daily-art) { position: relative; }
+.daily-card-head .daily-title { font-weight: 600; font-size: 1.02rem; }
+.daily-sub { font-size: 0.8rem; color: var(--muted); }
+.today-pill { margin-left: auto; flex-shrink: 0; font-size: 0.74rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.today-pill.on { background: var(--accent); color: #fff; }
+.colored .today-pill { background: rgb(255 255 255 / 0.2); color: #fff; }
+.colored .today-pill.on { background: #fff; color: var(--tile); }
+
+.month-cal { padding: 8px 12px 14px; }
+.month-head { display: flex; align-items: center; justify-content: space-between; }
+.month-head .ghost { min-width: 40px; min-height: 36px; font-size: 1.3rem; padding: 0; }
+.month-title { font-size: 0.88rem; font-weight: 600; }
+.month-title::first-letter { text-transform: uppercase; }
+.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.month-dow { text-align: center; font-size: 0.7rem; font-weight: 600; color: var(--faint); padding-bottom: 2px; }
+.month-day { aspect-ratio: 1; display: grid; place-items: center; border-radius: 9px; font-size: 0.78rem; color: var(--muted); background: var(--surface-2); }
+.month-day.on { background: var(--tile, var(--accent)); color: #fff; font-weight: 600; }
+.month-day.today { box-shadow: inset 0 0 0 2px var(--tile, var(--accent)); }
+.month-day.future { opacity: 0.35; background: none; }
+.streak-card .month-cal { padding: 4px 0 0; }
+
+/* Daily task page: a hero with the picture fading in, then read-only info; the pencil switches to editing */
+.daily-hero { position: relative; overflow: hidden; border-radius: 16px; min-height: 84px; display: flex; align-items: center; padding: 14px 16px; background: var(--surface-2); }
+.daily-hero.colored { background: var(--tile); color: #fff; }
+.daily-hero > :not(.daily-art) { position: relative; }
+.daily-hero.has-art { padding-left: 30%; }
+.daily-art.big { width: 45%; }
+.daily-art.big.emoji { font-size: 4.2rem; padding-left: 8px; }
+.hero-title { font-family: var(--display); font-size: 1.45rem; font-weight: 700; letter-spacing: -0.02em; color: inherit; padding: 0; }
+.hero-input { background: rgb(255 255 255 / 0.12); color: inherit; }
+.info-list { display: flex; flex-direction: column; background: var(--surface-2); border-radius: 14px; overflow: hidden; }
+.info-list > div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; }
+.info-list > div + div { border-top: 1px solid var(--line); }
+.info-list dt { color: var(--muted); font-size: 0.9rem; flex-shrink: 0; }
+.info-list dd { margin: 0; text-align: right; font-size: 0.95rem; white-space: pre-wrap; overflow-wrap: anywhere; display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.swatch-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--tile, var(--surface)); border: 1px solid var(--ring-faint); display: inline-block; }
+.sheet-actions { display: flex; align-items: center; gap: 4px; }
+.edit-toggle { min-height: 36px; min-width: 40px; padding: 0 10px; border-radius: 999px; display: grid; place-items: center; color: var(--accent); font-weight: 600; background: var(--accent-soft); }
+.edit-toggle svg { width: 18px; height: 18px; }
+.note-row-project { color: var(--muted); }
+/* Keep the calendars compact: a month fits in a short card */
+.month-grid { max-width: 300px; margin: 0 auto; gap: 3px; }
+.month-day { border-radius: 7px; font-size: 0.72rem; }
+.streak-card .month-day { background: var(--surface); }
+.streak-card .month-day.on { background: var(--tile, var(--accent)); }
+.streak-card .month-day.future { background: none; }
+/* Sheets scroll; nothing inside them may shrink to fit (an overflow:hidden child would collapse to 0) */
+.sheet-body > * { flex-shrink: 0; }

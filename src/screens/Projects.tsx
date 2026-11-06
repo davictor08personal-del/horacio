@@ -159,7 +159,7 @@ function ProjectPage({ project, onBack }: { project: Project; onBack: () => void
                   {n.color !== 'none' && <span className={`dot c-${n.color}`} aria-hidden />}
                   <span className="note-row-text">
                     <span className="task-title">{n.title.trim() || notePreview(n) || 'Nota nueva'}</span>
-                    <span className="task-sub">{dailyOfNote(daily_tasks, n.id) && <span className="daily-note-tag">Nota de tarea diaria · {dailyOfNote(daily_tasks, n.id)!.title}</span>}<span className="note-time">{noteTime(n.updated_at)}</span> {n.title.trim() && notePreview(n)}</span>
+                    <span className="task-sub">{dailyOfNote(daily_tasks, n.id) && <span className="daily-note-tag">Nota de tarea diaria · {dailyOfNote(daily_tasks, n.id)!.title}</span>}<span className="note-time">{noteTime(n.updated_at)}</span></span>
                   </span>
                   <Icon d={ICON.note} />
                 </button>

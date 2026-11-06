@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Tab } from '../App'
 import DailyTasks from '../DailyTasks'
+import { openDailyView } from './Tasks'
 import Page from '../Page'
 import Agenda from './Agenda'
 import { dayPlan, fullDate, greeting, localDay, nextFpBlock, shortDate, splitToday } from '../logic'
@@ -46,7 +47,7 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
         )}
       </section>
 
-      <DailyTasks />
+      <DailyTasks onSeeAll={() => { openDailyView(); onGo('tasks') }} />
 
       {fp && (
         <p className="fp-card">

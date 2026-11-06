@@ -32,9 +32,9 @@ export default function Notes() {
     <section className="group" key={title}>
       {title && <h2 className="group-title">{title}</h2>}
       {grid ? (
-        <div className="note-grid">{list.map((n) => <NoteCard key={n.id} note={n} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} />)}</div>
+        <div className="note-grid">{list.map((n) => <NoteCard key={n.id} note={n} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} project={projects.find((p) => p.id === n.project_id)?.name} />)}</div>
       ) : (
-        <ul className="list card-list">{list.map((n) => <NoteRow key={n.id} note={n} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} />)}</ul>
+        <ul className="list card-list">{list.map((n) => <NoteRow key={n.id} note={n} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} project={projects.find((p) => p.id === n.project_id)?.name} />)}</ul>
       )}
     </section>
   )
@@ -71,8 +71,8 @@ export default function Notes() {
   )
 }
 
-/** iOS row: bold title, then time and the first line, in grey. */
-function NoteRow({ note, reminder, daily }: { note: Note; reminder: boolean; daily?: string }) {
+/** A row: bold title, then when and which project (not the first line of the text). */
+function NoteRow({ note, reminder, daily, project }: { note: Note; reminder: boolean; daily?: string; project?: string }) {
   return (
     <li>
       <button className="note-row" onClick={() => openNote(note.id)}>
@@ -81,7 +81,7 @@ function NoteRow({ note, reminder, daily }: { note: Note; reminder: boolean; dai
           <span className="task-title">{note.title.trim() || notePreview(note) || 'Nota nueva'}</span>
           <span className="task-sub">
             {daily && <span className="daily-note-tag">Diaria · {daily}</span>}
-            <span className="note-time">{noteTime(note.updated_at)}</span> {note.title.trim() ? notePreview(note) || 'Sin texto' : ''}
+            <span className="note-time">{noteTime(note.updated_at)}</span>{project && <span className="note-row-project"> · {project}</span>}
           </span>
         </span>
         {reminder && <span className="note-flag" aria-label="Con recordatorio"><Icon d={ICON.bell} /></span>}
@@ -91,7 +91,7 @@ function NoteRow({ note, reminder, daily }: { note: Note; reminder: boolean; dai
 }
 
 /** Keep card: coloured, the text (or the first items of the list) cut after a few lines. */
-function NoteCard({ note, reminder, daily }: { note: Note; reminder: boolean; daily?: string }) {
+function NoteCard({ note, reminder, daily, project }: { note: Note; reminder: boolean; daily?: string; project?: string }) {
   return (
     <button className={`note-card c-${note.color}`} onClick={() => openNote(note.id)}>
       {note.title.trim() && <strong>{note.title}</strong>}
@@ -104,7 +104,7 @@ function NoteCard({ note, reminder, daily }: { note: Note; reminder: boolean; da
         note.body.trim() && <span className="card-body">{note.body}</span>
       )}
       {daily && <span className="daily-note-tag">Diaria · {daily}</span>}
-      <span className="card-foot">{noteTime(note.updated_at)}{reminder && <Icon d={ICON.bell} />}</span>
+      <span className="card-foot">{noteTime(note.updated_at)}{project && ` · ${project}`}{reminder && <Icon d={ICON.bell} />}</span>
     </button>
   )
 }

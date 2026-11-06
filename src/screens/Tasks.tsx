@@ -3,15 +3,23 @@ import { byPriority, parseSearch, projectsTagged, textMatches } from '../logic'
 import { ICON, Icon } from '../NoteEditor'
 import { KEEP_CLOSED_DAYS, useData } from '../store'
 import { ClosedRow, TaskRow, TaskSheet } from '../TaskRow'
-import Sheet from '../Sheet'
+import Sheet, { Choice } from '../Sheet'
+import { DailyList, NewDaily } from '../DailyTasks'
 import { createTask } from '../store'
 import type { Status, Task } from '../types'
 
 const GROUPS: [Status, string][] = [['en_curso', 'En curso'], ['abierto', 'Abiertas'], ['esperando', 'Esperando']]
 
+type View = 'puntuales' | 'diarias'
+const VIEWS: Record<View, string> = { puntuales: 'Puntuales', diarias: 'Diarias' }
+// Hoy's «Ver todas» opens Tareas straight on Diarias.
+let nextView: View = 'puntuales'
+export const openDailyView = () => { nextView = 'diarias' }
+
 export default function Tasks() {
   const { tasks: allOpen, closed: allClosed, projects } = useData()
   const [showClosed, setShowClosed] = useState(false)
+  const [view, setView] = useState<View>(() => { const v = nextView; nextView = 'puntuales'; return v })
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<string | null>(null) // the task just created, to fill in the rest
@@ -28,8 +36,10 @@ export default function Tasks() {
     <>
       <div className="title-row">
         <h1 className="page-title">Tareas</h1>
-        <button className="add-btn" onClick={() => setAdding(true)} aria-label="Nueva tarea, sin IA"><svg viewBox="0 0 24 24" aria-hidden><path d="M12 5v14M5 12h14" /></svg></button>
+        <button className="add-btn" onClick={() => setAdding(true)} aria-label={view === 'diarias' ? 'Nueva tarea diaria' : 'Nueva tarea, sin IA'}><svg viewBox="0 0 24 24" aria-hidden><path d="M12 5v14M5 12h14" /></svg></button>
       </div>
+      <Choice value={view} options={VIEWS} onChange={setView} />
+      {view === 'diarias' ? <DailyList /> : <>
       {(allOpen.length > 0 || allClosed.length > 0) && (
         <label className="search">
           <Icon d={ICON.search} />
@@ -47,7 +57,6 @@ export default function Tasks() {
           </section>
         )
       })}
-      {adding && <NewTask onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); setEditing(id) }} />}
       {editingTask && <TaskSheet task={editingTask} onClose={() => setEditing(null)} />}
       {closed.length > 0 && (
         <section className="group">
@@ -63,6 +72,10 @@ export default function Tasks() {
           )}
         </section>
       )}
+      </>}
+      {adding && (view === 'diarias'
+        ? <NewDaily onClose={() => setAdding(false)} />
+        : <NewTask onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); setEditing(id) }} />)}
     </>
   )
 }
