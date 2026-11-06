@@ -13,10 +13,10 @@ export const supa = demo ? null : createClient(url!, key!)
 
 type Table = 'tasks' | 'projects' | 'shifts' | 'fp_tests' | 'notes' | 'daily_tasks'
 type RowOf = { tasks: Task; projects: Project; shifts: Shift; fp_tests: FpTest; notes: Note; daily_tasks: DailyTask }
-export interface Data { tasks: Task[]; projects: Project[]; shifts: Shift[]; fp_tests: FpTest[]; notes: Note[]; daily_tasks: DailyTask[]; loaded: boolean }
+export interface Data { tasks: Task[]; closed: Task[]; projects: Project[]; shifts: Shift[]; fp_tests: FpTest[]; notes: Note[]; daily_tasks: DailyTask[]; loaded: boolean }
 
-const EMPTY: Omit<Data, 'loaded'> = { tasks: [], projects: [], shifts: [], fp_tests: [], notes: [], daily_tasks: [] }
-let data: Data = { ...EMPTY, loaded: false }
+const EMPTY: Omit<Data, 'loaded' | 'closed'> = { tasks: [], projects: [], shifts: [], fp_tests: [], notes: [], daily_tasks: [] }
+let data: Data = { ...EMPTY, closed: [], loaded: false }
 const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((l) => l())
 const subscribe = (l: () => void) => (listeners.add(l), () => listeners.delete(l))
@@ -26,36 +26,43 @@ export const useData = () => useSyncExternalStore(subscribe, () => data)
 
 // ---------- demo backend (localStorage) ----------
 const DEMO_KEY = 'horacio-demo'
-const demoAll = (): Omit<Data, 'loaded'> => {
+const demoAll = (): Omit<Data, 'loaded' | 'closed'> => {
   try {
     return { ...EMPTY, ...JSON.parse(localStorage.getItem(DEMO_KEY) ?? '{}') }
   } catch {
     return { ...EMPTY }
   }
 }
-const demoSave = (d: Omit<Data, 'loaded'>) => localStorage.setItem(DEMO_KEY, JSON.stringify(d))
+const demoSave = (d: Omit<Data, 'loaded' | 'closed'>) => localStorage.setItem(DEMO_KEY, JSON.stringify(d))
 
 // Only what the screens need: unfinished tasks, shifts from last week on, every note and daily task. Small enough to load all at once.
 const OPEN = ['abierto', 'en_curso', 'esperando']
+const CLOSED = ['hecho', 'descartado']
+/** Finished and discarded tasks stay this many days in «Terminadas», then purgeClosed() deletes them. */
+export const KEEP_CLOSED_DAYS = 7
+const closedCutoff = () => new Date(Date.now() - KEEP_CLOSED_DAYS * 86_400_000).toISOString()
+const byDoneDesc = (a: Task, b: Task) => (b.done_at ?? '').localeCompare(a.done_at ?? '')
 
 export async function load() {
   const since = addDays(madridDay(), -7)
   if (!supa) {
     const d = demoAll()
-    data = { ...d, tasks: d.tasks.filter((t) => OPEN.includes(t.status)), shifts: d.shifts.filter((s) => s.day >= since), loaded: true }
+    const cutoff = closedCutoff()
+    data = { ...d, tasks: d.tasks.filter((t) => OPEN.includes(t.status)), closed: d.tasks.filter((t) => CLOSED.includes(t.status) && (t.done_at ?? '') >= cutoff).sort(byDoneDesc), shifts: d.shifts.filter((s) => s.day >= since), loaded: true }
     return emit()
   }
-  const [tasks, projects, shifts, tests, notes, daily] = await Promise.all([
+  const [tasks, closed, projects, shifts, tests, notes, daily] = await Promise.all([
     supa.from('tasks').select('*').in('status', OPEN),
+    supa.from('tasks').select('*').in('status', CLOSED).gte('done_at', closedCutoff()).order('done_at', { ascending: false }),
     supa.from('projects').select('*').order('created_at'),
     supa.from('shifts').select('*').gte('day', since).order('day'),
     supa.from('fp_tests').select('*').order('opens_on').order('unit'),
     supa.from('notes').select('*'),
     supa.from('daily_tasks').select('*').order('position'),
   ])
-  const error = tasks.error ?? projects.error ?? shifts.error ?? tests.error ?? notes.error ?? daily.error
+  const error = tasks.error ?? closed.error ?? projects.error ?? shifts.error ?? tests.error ?? notes.error ?? daily.error
   if (error) throw new Error(error.message.includes('does not exist') ? 'Faltan las tablas: ejecuta supabase/setup.sql' : error.message)
-  data = { tasks: tasks.data ?? [], projects: projects.data ?? [], shifts: shifts.data ?? [], fp_tests: tests.data ?? [], notes: notes.data ?? [], daily_tasks: daily.data ?? [], loaded: true }
+  data = { tasks: tasks.data ?? [], closed: closed.data ?? [], projects: projects.data ?? [], shifts: shifts.data ?? [], fp_tests: tests.data ?? [], notes: notes.data ?? [], daily_tasks: daily.data ?? [], loaded: true }
   emit()
 }
 
@@ -126,8 +133,24 @@ export async function noteFromTask(t: Task) {
   return n
 }
 
-export const setTaskStatus =(t: Task, status: Task['status']) =>
-  update('tasks', t.id, { status, done_at: status === 'hecho' ? new Date().toISOString() : null })
+/** Finishing or discarding stamps done_at (the 7 days in «Terminadas» count from it); reopening clears it. */
+export const setTaskStatus = (t: Task, status: Task['status']) =>
+  update('tasks', t.id, { status, done_at: CLOSED.includes(status) ? new Date().toISOString() : null })
+
+/**
+ * Deletes tasks closed more than KEEP_CLOSED_DAYS ago (and old discarded ones from before done_at was stamped).
+ * Called when the app opens or comes back, not on every change. RLS: only the user's own rows.
+ */
+export async function purgeClosed() {
+  const cutoff = closedCutoff()
+  if (!supa) {
+    const d = demoAll()
+    const kept = d.tasks.filter((t) => !CLOSED.includes(t.status) || (t.done_at ?? '') >= cutoff)
+    if (kept.length !== d.tasks.length) demoSave({ ...d, tasks: kept })
+    return
+  }
+  await supa.from('tasks').delete().in('status', CLOSED).or(`done_at.is.null,done_at.lt.${cutoff}`)
+}
 
 // ---------- session ----------
 export async function currentSession(): Promise<Session | null> {

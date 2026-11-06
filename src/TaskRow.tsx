@@ -35,6 +35,22 @@ export function TaskRow({ task, n }: { task: Task; n?: number }) {
   )
 }
 
+/** A finished or discarded task in «Terminadas»: the filled check reopens it. */
+export function ClosedRow({ task }: { task: Task }) {
+  const { projects } = useData()
+  const project = projects.find((p) => p.id === task.project_id)
+  const when = task.done_at ? relDay(madridDay(new Date(task.done_at)), madridDay()).toLowerCase() : ''
+  return (
+    <li className="task closed">
+      <button className={`tick ${task.status === 'hecho' ? 'done' : 'dropped'}`} onClick={() => setTaskStatus(task, 'abierto')} aria-label={`Reabrir «${task.title}»`} />
+      <div className="task-text">
+        <span className="task-title">{task.title}</span>
+        <span className="task-sub">{[`${STATUS[task.status]} ${when}`, project?.name].filter(Boolean).join(' · ')}</span>
+      </div>
+    </li>
+  )
+}
+
 const EDITABLE: Record<Exclude<Status, 'hecho' | 'descartado'>, string> = { abierto: STATUS.abierto, en_curso: STATUS.en_curso, esperando: STATUS.esperando }
 
 /** Every field of a task. Each change is saved at once (no "Save" button to forget). */

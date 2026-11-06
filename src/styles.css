@@ -402,3 +402,9 @@ input, textarea { caret-color: var(--accent); }
 .daily-btn.done .daily-title { text-decoration: line-through; }
 .daily-tag { font-size: 0.72rem; font-weight: 600; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .daily-project { flex: 0 1 120px; min-width: 0; font-size: 0.85rem; padding: 6px 8px; min-height: 0; }
+
+/* «Terminadas» in Tareas: struck through and quieter; the filled check reopens */
+.group-toggle { width: 100%; min-height: 0; padding: 0 2px; background: none; border: 0; text-align: left; }
+.task.closed .task-title { text-decoration: line-through; color: var(--muted); }
+.task.closed .task-text { cursor: default; }
+.tick.dropped::before { background: var(--ring-faint); border-color: var(--ring-faint); }

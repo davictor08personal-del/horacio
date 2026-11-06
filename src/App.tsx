@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { demo, load, supa, useData } from './store'
+import { demo, load, purgeClosed, supa, useData } from './store'
 import Login from './screens/Login'
 import Today from './screens/Today'
 import Tasks from './screens/Tasks'
@@ -37,7 +37,8 @@ export default function App() {
   const signedIn = demo || !!session
   useEffect(() => {
     if (!signedIn) return
-    const refresh = () => load().catch((e) => setError(e.message))
+    // Old finished tasks go first, so they never show up in «Terminadas». A failed purge just waits for next time.
+    const refresh = () => purgeClosed().catch(() => {}).then(load).catch((e) => setError(e.message))
     refresh()
     // Back from the background (the PWA stays open for days): fresh data for the new day.
     const onShow = () => document.visibilityState === 'visible' && refresh()
