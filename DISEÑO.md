@@ -21,7 +21,7 @@ Barra inferior flotante (como Músculo): **Hoy · Tareas · Notas · Proyectos**
 1. **Hoy**
    - **Cabecera**: el saludo de Horacio según la hora («Buenos días / Buenas tardes / Buenas noches, Victor») y debajo la fecha y el día: «Turno de noche 17:00–23:00 · Libre hasta las 16:30» o «Todo el día libre».
    - **Foco** (máx. 3): las tareas abiertas más importantes. Orden: fecha límite más cercana → prioridad alta → esfuerzo rápido. Tocar el círculo la marca hecha.
-   - **Tareas diarias**: lo que haces cada día (gimnasio, Busuu…). Se tachan y al día siguiente vuelven solas: se guarda el día en que se marcó (`done_on`) y, si no es hoy, sale sin tachar. Lista editable (añadir, renombrar, ordenar, quitar y asignar un proyecto, que sale como etiqueta bajo el nombre); la primera vez ofrece las de ejemplo.
+   - **Tareas diarias**: lo que haces cada día (gimnasio, Busuu…). **Mantener pulsada** una la marca hecha hoy (se rellena de derecha a izquierda; mantener otra vez la desmarca) y **tocarla** abre su ficha: nombre, icono (emoji o imagen), **racha semanal** (🔥 semanas seguidas haciéndola al menos un día, con los puntos L–D de esta semana), descripción, proyecto (sale como etiqueta) y una **nota** opcional, que aparece también en Notas y en el proyecto con la etiqueta «Diaria». Al día siguiente vuelven sin marcar (`done_on`); cada día hecho queda en `daily_log` para las rachas. «Editar» ordena, añade y quita.
    - **⏳ FP**: «Faltan 6 días para que abra el bloque 2 · 3 unidades sin leer». Solo informativo, sin veredictos.
    - **Puede esperar**: una línea con el resto («7 tareas más · 2 esperando»), que lleva a Tareas.
 2. **Tareas**: lista agrupada (En curso, Abiertas, Esperando) y, al final, **Terminadas** (plegada): las hechas y descartadas de los últimos 7 días, tachadas, con cuándo se cerraron; tocar el círculo la reabre. Pasados 7 días desde que se cerró, se borra sola (al abrir la app; `done_at` marca el momento). Tocar una tarea abre su ficha para editar estado, prioridad, esfuerzo, fecha, hora, área, proyecto y su nota.
@@ -29,7 +29,7 @@ Barra inferior flotante (como Músculo): **Hoy · Tareas · Notas · Proyectos**
    - **Nota ↔ recordatorio**: un recordatorio es una tarea con fecha (sale en Tareas y en Hoy). Desde una nota, la campana crea uno enlazado; desde la ficha de una tarea, «Crear nota de esta tarea» crea la nota con su título y detalles. La nota lista sus recordatorios y la tarea enlaza a su nota.
 4. **Proyectos**: todos los proyectos por estado, cada uno con su **icono** (emoji o imagen; sin él, su inicial), descripción y cuántos pendientes y notas tiene, con un campo para añadir. La ficha muestra la **descripción**, sus **tareas diarias** (se tachan igual que en Hoy), los **recordatorios** (tareas con hora), las **tareas** pendientes (con campo para añadir una) y las **notas** («Nueva nota» ya nace en el proyecto); se edita con «Editar».
 5. **Agenda** (desde Hoy): los turnos de esta semana (lunes a domingo) y los tests del FP por materia y bloque (fechas de apertura y cierre, casilla «leída»).
-6. **Capturar (＋)**: una hoja con un cuadro de texto, botón 🎙️ (graba y la IA lo escucha) y 📷 (foto o captura, p. ej. el horario). La IA devuelve lo que entendió (tareas, recordatorios, notas, tareas diarias, turnos, tests, proyectos) y lo muestra en tarjetas editables: corriges o quitas lo que sobre y pulsas **Guardar**. Cada tarjeta lleva arriba su tipo (Tarea · Recordatorio · Nota · Diaria) y se cambia con un toque si la IA se equivocó, sin perder lo escrito. Tareas, recordatorios, notas y tareas diarias llevan un selector de proyecto: la IA lo rellena si está claro y, si duda, la tarjeta pregunta «¿De qué proyecto es?». Nada se guarda sin tu confirmación.
+6. **Capturar (＋)**: una hoja con un cuadro de texto (solo texto desde el 2026-11-06: la foto y la voz dependían de Gemini gratis, demasiado saturado; para dictar, el micrófono del teclado). La IA devuelve lo que entendió (tareas, recordatorios, notas, tareas diarias, turnos, tests, proyectos) y lo muestra en tarjetas editables: corriges o quitas lo que sobre y pulsas **Guardar**. Cada tarjeta lleva arriba su tipo (Tarea · Recordatorio · Nota · Diaria) y se cambia con un toque si la IA se equivocó, sin perder lo escrito. Tareas, recordatorios, notas y tareas diarias llevan un selector de proyecto: la IA lo rellena si está claro y, si duda, la tarjeta pregunta «¿De qué proyecto es?». Nada se guarda sin tu confirmación.
 
 ## Reglas
 
@@ -48,7 +48,8 @@ Todas las tablas llevan `user_id` y RLS «solo el dueño».
 - `shifts`: id, day (único por usuario), kind (`opening`/`dia`/`noche`/`libre`), starts_at, ends_at.
 - `fp_tests`: id, subject, block, unit, opens_on, closes_on, read.
 - `notes`: id, title, body, items (jsonb: lista de casillas, o null), color, project_id, pinned, archived, created_at, updated_at.
-- `daily_tasks`: id, title, position, done_on, project_id, created_at.
+- `daily_tasks`: id, title, position, done_on, project_id, description, icon, note_id, created_at.
+- `daily_log`: daily_id, day (un registro por día hecho; de aquí salen las rachas semanales).
 - `tasks.note_id` → `notes`: una nota puede tener varios recordatorios; un recordatorio, una nota. Si se borra la nota, el recordatorio se queda.
 - `ai_usage` + función `ai_hit()`: límite de llamadas a la IA por día (copiado de Músculo).
 

@@ -41,7 +41,8 @@ const isEmpty = (d: Draft) => !d.title.trim() && !d.body.trim() && !(d.items ?? 
  * Pin, colour, checklist, archive and share come from Google Keep; the bell turns the note into a reminder.
  */
 export default function NoteEditor({ id }: { id: string }) {
-  const { notes, tasks, projects } = useData()
+  const { notes, tasks, projects, daily_tasks } = useData()
+  const daily = daily_tasks.find((d) => d.note_id === id)
   const note = notes.find((n) => n.id === id)
   const [draft, setDraft] = useState<Draft>(() => ({ title: note?.title ?? '', body: note?.body ?? '', items: note?.items ?? null }))
   const [palette, setPalette] = useState(false)
@@ -95,6 +96,7 @@ export default function NoteEditor({ id }: { id: string }) {
           <option value="">Sin proyecto</option>
           {projects.filter((p) => p.status !== 'hecho' || p.id === note.project_id).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
+        {daily && <p className="daily-note-tag note-of">Nota de la tarea diaria «{daily.title}»</p>}
         <Grow className="note-title" rows={1} value={draft.title} placeholder="Título" onChange={(e) => edit({ title: e.target.value.replace(/\n/g, ' ') })} aria-label="Título" />
         {draft.items ? (
           <Checklist items={draft.items} onChange={(items) => edit({ items })} />

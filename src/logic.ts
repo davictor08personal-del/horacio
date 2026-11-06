@@ -146,6 +146,21 @@ export const DEFAULT_DAILY = ['Ir al gimnasio', 'Una lección de Busuu', 'Una pe
 
 /** Ticked only on the day it was ticked: the next day it comes back unticked, with no job resetting anything. */
 export const doneToday = (d: DailyTask, today: string) => d.done_on === today
+/** The daily task this note belongs to, if any (shown as «Nota de tarea diaria» in Notas and in projects). */
+export const dailyOfNote = (daily: DailyTask[], noteId: string) => daily.find((d) => d.note_id === noteId)
+
+/**
+ * Weekly streak: how many weeks in a row (Monday to Sunday) it was done at least once.
+ * This week only counts once it's done; until Sunday, not having done it yet doesn't break the streak.
+ */
+export function weeklyStreak(days: string[], today: string) {
+  const weeks = new Set(days.map(mondayOf))
+  let week = mondayOf(today)
+  if (!weeks.has(week)) week = addDays(week, -7)
+  let n = 0
+  while (weeks.has(week)) { n++; week = addDays(week, -7) }
+  return n
+}
 export const byPosition = (a: DailyTask, b: DailyTask) => a.position - b.position || a.created_at.localeCompare(b.created_at)
 
 // ---------- notes ----------

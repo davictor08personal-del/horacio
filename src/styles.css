@@ -2,6 +2,7 @@
    cards, blue accent. Two palettes: light, and dark «Grafito». index.html sets data-theme on <html> before the first
    paint (system, or what the user forced in Ajustes); every colour below is a token, so the two blocks are the theme. */
 :root {
+  --fill: #dde3ec; /* a held / done daily task: a bit darker than the card */
   --bg: #f3f5f9;
   --surface: #ffffff;
   --surface-2: #eaeef4;
@@ -33,6 +34,7 @@
   -webkit-text-size-adjust: 100%;
 }
 :root[data-theme='dark'] {
+  --fill: #34343a; /* a bit lighter than the card */
   --bg: #121212;
   --surface: #1c1c1e;
   --surface-2: #2c2c2e;
@@ -391,11 +393,11 @@ input, textarea { caret-color: var(--accent); }
 /* «Cada día»: two columns of toggles; a ticked one is struck through on a soft accent */
 .daily-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .daily-btn { min-height: 48px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); text-align: left; font-weight: 500; font-size: 0.95rem; line-height: 1.25; }
-.daily-btn.done { border-color: var(--accent); background: var(--accent-soft); color: var(--muted); text-decoration: line-through; }
+.daily-btn.done { color: var(--muted); }
 .group-head .count { font-size: 0.85rem; color: var(--muted); }
 
 /* Daily tasks: the project shows as a small label under the title (not struck through when done) */
-.daily-btn { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; }
+.daily-btn { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; position: relative; overflow: hidden; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 .daily-btn.done { text-decoration: none; }
 .daily-btn.done .daily-title { text-decoration: line-through; }
 .daily-tag { font-size: 0.72rem; font-weight: 600; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -434,3 +436,33 @@ input, textarea { caret-color: var(--accent); }
 .emoji-btn.on { border-color: var(--accent); background: var(--accent-soft); }
 .icon-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .emoji-input { flex: 1 1 110px; min-width: 0; }
+
+/* Daily tile: hold to fill it from right to left; full = done today */
+.daily-fill { position: absolute; inset: 0; background: var(--fill); transform: scaleX(0); transform-origin: right; transition: transform 160ms ease-out; pointer-events: none; }
+.daily-btn > :not(.daily-fill) { position: relative; }
+.daily-btn.done .daily-fill { transform: scaleX(1); }
+.daily-btn.pressing:not(.done) .daily-fill { transform: scaleX(1); transition: transform 550ms linear; }
+.daily-btn.pressing.done .daily-fill { transform: scaleX(0); transform-origin: left; transition: transform 550ms linear; }
+.daily-text { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.daily-meta { display: flex; gap: 6px; align-items: center; max-width: 100%; }
+.streak { font-size: 0.74rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.project-icon.small { width: 30px; height: 30px; border-radius: 9px; font-size: 1.05rem; }
+.project-icon.small.letter { font-size: 0.95rem; }
+@media (prefers-reduced-motion: reduce) { .daily-btn.pressing .daily-fill { transition-duration: 550ms; } }
+
+/* Daily task page */
+.daily-head { display: flex; align-items: center; gap: 12px; }
+.daily-head .big-input { flex: 1; min-width: 0; }
+.streak-card { display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); border-radius: 14px; padding: 12px 14px; }
+.streak-text { display: flex; flex-direction: column; gap: 2px; }
+.week-dots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.week-dot { aspect-ratio: 1; max-width: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 0.75rem; font-weight: 600; color: var(--muted); border: 1px solid var(--line); justify-self: center; width: 100%; }
+.week-dot.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.week-dot.today { border-color: var(--accent); }
+.week-dot.future { opacity: 0.45; }
+.note-link { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font-weight: 400; }
+.note-link svg { width: 20px; height: 20px; color: var(--muted); flex-shrink: 0; }
+.note-link-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.daily-note-tag { font-size: 0.72rem; font-weight: 600; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; margin-right: 6px; white-space: nowrap; }
+.daily-note-tag.note-of { align-self: flex-start; margin: 4px 0 0; display: inline-block; }
+.note-card .daily-note-tag { align-self: flex-start; }

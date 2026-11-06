@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanCapture, mockCapture } from './capture'
-import { addDays, byPriority, dayPlan, doneToday, dueReminders, morningSummary, fromChecklist, greeting, madridDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
+import { addDays, byPriority, dayPlan, doneToday, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, madridDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
 import type { FpTest, Note, Shift, Task } from './types'
 
 const task = (p: Partial<Task>): Task => ({
@@ -125,7 +125,7 @@ describe('Hoy', () => {
     expect(greeting(2 * 60)).toBe('Buenas noches')
   })
   it('a daily task is ticked only on the day it was ticked', () => {
-    const d = { id: '1', title: 'Gimnasio', position: 0, done_on: '2026-11-03', created_at: '', project_id: null }
+    const d = { id: '1', title: 'Gimnasio', position: 0, done_on: '2026-11-03', created_at: '', project_id: null, description: null, icon: null, note_id: null }
     expect(doneToday(d, '2026-11-03')).toBe(true)
     expect(doneToday(d, '2026-11-04')).toBe(false)
   })
@@ -176,5 +176,23 @@ describe('notifications', () => {
     expect(s.title).toBe('Buenos días, Victor')
     expect(s.body).toBe('Tiene turno de noche a las 17:00. Hasta las 16:30, el día es suyo. Le propongo: 1. a · 2. b · 3. c (y 1 más que pueden esperar)')
     expect(morningSummary([], undefined, 'Victor').body).toBe('Hoy no trabaja: el día entero es suyo. Nada urgente para hoy.')
+  })
+})
+
+describe('weekly streaks', () => {
+  // Thursday 2026-11-05; weeks start on Monday 11-02, 10-26, 10-19…
+  const today = '2026-11-05'
+  it('counts weeks in a row with at least one day', () => {
+    expect(weeklyStreak(['2026-11-03', '2026-10-30', '2026-10-19', '2026-10-20'], today)).toBe(3)
+  })
+  it('a week with nothing breaks it', () => {
+    expect(weeklyStreak(['2026-11-03', '2026-10-19'], today)).toBe(1)
+  })
+  it('this week not done yet keeps last weeks alive', () => {
+    expect(weeklyStreak(['2026-10-28', '2026-10-21'], today)).toBe(2)
+  })
+  it('nothing, nothing', () => {
+    expect(weeklyStreak([], today)).toBe(0)
+    expect(weeklyStreak(['2026-10-12'], today)).toBe(0)
   })
 })

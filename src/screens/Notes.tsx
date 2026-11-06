@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { byEdited, noteMatches, notePreview, noteTime } from '../logic'
+import { byEdited, dailyOfNote, noteMatches, notePreview, noteTime } from '../logic'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import { createNote, useData } from '../store'
 import type { Note } from '../types'
@@ -10,7 +10,7 @@ const savedView = () => { try { return localStorage.getItem(VIEW_KEY) === 'grid'
 
 /** «Notas»: iOS Notes look (big title, search, grouped list) with Keep's pin, colours, grid and archive. */
 export default function Notes() {
-  const { notes, tasks } = useData()
+  const { notes, tasks, daily_tasks } = useData()
   const [query, setQuery] = useState('')
   const [grid, setGrid] = useState(savedView)
   const [archive, setArchive] = useState(false)
@@ -29,9 +29,9 @@ export default function Notes() {
     <section className="group" key={title}>
       {title && <h2 className="group-title">{title}</h2>}
       {grid ? (
-        <div className="note-grid">{list.map((n) => <NoteCard key={n.id} note={n} reminder={linked.has(n.id)} />)}</div>
+        <div className="note-grid">{list.map((n) => <NoteCard key={n.id} note={n} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} />)}</div>
       ) : (
-        <ul className="list card-list">{list.map((n) => <NoteRow key={n.id} note={n} reminder={linked.has(n.id)} />)}</ul>
+        <ul className="list card-list">{list.map((n) => <NoteRow key={n.id} note={n} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} />)}</ul>
       )}
     </section>
   )
@@ -67,7 +67,7 @@ export default function Notes() {
 }
 
 /** iOS row: bold title, then time and the first line, in grey. */
-function NoteRow({ note, reminder }: { note: Note; reminder: boolean }) {
+function NoteRow({ note, reminder, daily }: { note: Note; reminder: boolean; daily?: string }) {
   return (
     <li>
       <button className="note-row" onClick={() => openNote(note.id)}>
@@ -75,6 +75,7 @@ function NoteRow({ note, reminder }: { note: Note; reminder: boolean }) {
         <span className="note-row-text">
           <span className="task-title">{note.title.trim() || notePreview(note) || 'Nota nueva'}</span>
           <span className="task-sub">
+            {daily && <span className="daily-note-tag">Diaria · {daily}</span>}
             <span className="note-time">{noteTime(note.updated_at)}</span> {note.title.trim() ? notePreview(note) || 'Sin texto' : ''}
           </span>
         </span>
@@ -85,7 +86,7 @@ function NoteRow({ note, reminder }: { note: Note; reminder: boolean }) {
 }
 
 /** Keep card: coloured, the text (or the first items of the list) cut after a few lines. */
-function NoteCard({ note, reminder }: { note: Note; reminder: boolean }) {
+function NoteCard({ note, reminder, daily }: { note: Note; reminder: boolean; daily?: string }) {
   return (
     <button className={`note-card c-${note.color}`} onClick={() => openNote(note.id)}>
       {note.title.trim() && <strong>{note.title}</strong>}
@@ -97,6 +98,7 @@ function NoteCard({ note, reminder }: { note: Note; reminder: boolean }) {
       ) : (
         note.body.trim() && <span className="card-body">{note.body}</span>
       )}
+      {daily && <span className="daily-note-tag">Diaria · {daily}</span>}
       <span className="card-foot">{noteTime(note.updated_at)}{reminder && <Icon d={ICON.bell} />}</span>
     </button>
   )

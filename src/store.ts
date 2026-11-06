@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from 'react'
 import { createClient, type Session } from '@supabase/supabase-js'
 import { addDays, madridDay } from './logic'
-import type { DailyTask, FpTest, Note, Project, Shift, Task } from './types'
+import type { DailyLog, DailyTask, FpTest, Note, Project, Shift, Task } from './types'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const key = import.meta.env.VITE_SUPABASE_KEY as string | undefined
@@ -13,9 +13,9 @@ export const supa = demo ? null : createClient(url!, key!)
 
 type Table = 'tasks' | 'projects' | 'shifts' | 'fp_tests' | 'notes' | 'daily_tasks'
 type RowOf = { tasks: Task; projects: Project; shifts: Shift; fp_tests: FpTest; notes: Note; daily_tasks: DailyTask }
-export interface Data { tasks: Task[]; closed: Task[]; projects: Project[]; shifts: Shift[]; fp_tests: FpTest[]; notes: Note[]; daily_tasks: DailyTask[]; loaded: boolean }
+export interface Data { tasks: Task[]; closed: Task[]; projects: Project[]; shifts: Shift[]; fp_tests: FpTest[]; notes: Note[]; daily_tasks: DailyTask[]; daily_log: DailyLog[]; loaded: boolean }
 
-const EMPTY: Omit<Data, 'loaded' | 'closed'> = { tasks: [], projects: [], shifts: [], fp_tests: [], notes: [], daily_tasks: [] }
+const EMPTY: Omit<Data, 'loaded' | 'closed'> = { tasks: [], projects: [], shifts: [], fp_tests: [], notes: [], daily_tasks: [], daily_log: [] }
 let data: Data = { ...EMPTY, closed: [], loaded: false }
 const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((l) => l())
@@ -51,7 +51,7 @@ export async function load() {
     data = { ...d, tasks: d.tasks.filter((t) => OPEN.includes(t.status)), closed: d.tasks.filter((t) => CLOSED.includes(t.status) && (t.done_at ?? '') >= cutoff).sort(byDoneDesc), shifts: d.shifts.filter((s) => s.day >= since), loaded: true }
     return emit()
   }
-  const [tasks, closed, projects, shifts, tests, notes, daily] = await Promise.all([
+  const [tasks, closed, projects, shifts, tests, notes, daily, log] = await Promise.all([
     supa.from('tasks').select('*').in('status', OPEN),
     supa.from('tasks').select('*').in('status', CLOSED).gte('done_at', closedCutoff()).order('done_at', { ascending: false }),
     supa.from('projects').select('*').order('created_at'),
@@ -59,10 +59,12 @@ export async function load() {
     supa.from('fp_tests').select('*').order('opens_on').order('unit'),
     supa.from('notes').select('*'),
     supa.from('daily_tasks').select('*').order('position'),
+    // A year of ticks is plenty for the streaks (a few hundred tiny rows).
+    supa.from('daily_log').select('daily_id, day').gte('day', addDays(madridDay(), -371)),
   ])
-  const error = tasks.error ?? closed.error ?? projects.error ?? shifts.error ?? tests.error ?? notes.error ?? daily.error
+  const error = tasks.error ?? closed.error ?? projects.error ?? shifts.error ?? tests.error ?? notes.error ?? daily.error ?? log.error
   if (error) throw new Error(error.message.includes('does not exist') ? 'Faltan las tablas: ejecuta supabase/setup.sql' : error.message)
-  data = { tasks: tasks.data ?? [], closed: closed.data ?? [], projects: projects.data ?? [], shifts: shifts.data ?? [], fp_tests: tests.data ?? [], notes: notes.data ?? [], daily_tasks: daily.data ?? [], loaded: true }
+  data = { tasks: tasks.data ?? [], closed: closed.data ?? [], projects: projects.data ?? [], shifts: shifts.data ?? [], fp_tests: tests.data ?? [], notes: notes.data ?? [], daily_tasks: daily.data ?? [], daily_log: log.data ?? [], loaded: true }
   emit()
 }
 
@@ -119,6 +121,34 @@ export async function remove(table: Table, id: string) {
 export async function createNote(patch: Partial<Note> = {}) {
   const now = new Date().toISOString()
   const [n] = await insert('notes', [{ title: '', body: '', items: null, color: 'none', project_id: null, pinned: false, archived: false, updated_at: now, ...patch }])
+  return n
+}
+
+/** Tick or untick a daily task for today: done_on for Hoy, plus a row in daily_log for the streaks. */
+export async function toggleDaily(d: DailyTask, today: string) {
+  const done = d.done_on === today
+  if (!supa) {
+    const all = demoAll()
+    all.daily_tasks = all.daily_tasks.map((x) => (x.id === d.id ? { ...x, done_on: done ? null : today } : x))
+    all.daily_log = done ? all.daily_log.filter((l) => !(l.daily_id === d.id && l.day === today)) : [...all.daily_log, { daily_id: d.id, day: today }]
+    demoSave(all)
+  } else {
+    const [a, b] = await Promise.all([
+      supa.from('daily_tasks').update({ done_on: done ? null : today }).eq('id', d.id),
+      done
+        ? supa.from('daily_log').delete().eq('daily_id', d.id).eq('day', today)
+        : supa.from('daily_log').upsert({ daily_id: d.id, day: today }, { onConflict: 'daily_id,day', ignoreDuplicates: true }),
+    ])
+    const error = a.error ?? b.error
+    if (error) throw new Error(error.message.includes('daily_log') ? 'Falta la tabla daily_log: ejecuta supabase/setup.sql' : error.message)
+  }
+  await load()
+}
+
+/** Daily task → its note: starts with its title and project, and they stay linked. */
+export async function noteFromDaily(d: DailyTask) {
+  const n = await createNote({ title: d.title, project_id: d.project_id })
+  await update('daily_tasks', d.id, { note_id: n.id })
   return n
 }
 

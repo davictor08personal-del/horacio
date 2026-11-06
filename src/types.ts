@@ -46,6 +46,10 @@ export interface DailyTask {
   position: number
   done_on: string | null
   project_id: string | null
+  description: string | null
+  /** An emoji, or a small picture as a data: URL (like a project's). */
+  icon: string | null
+  note_id: string | null
   created_at: string
 }
 
@@ -89,3 +93,6 @@ export const NOTE_COLOR: Record<NoteColor, string> = {
   none: 'Sin color', rojo: 'Rojo', naranja: 'Naranja', amarillo: 'Amarillo', verde: 'Verde', azul: 'Azul', morado: 'Morado',
 }
 export const NOTE_COLORS = Object.keys(NOTE_COLOR) as NoteColor[]
+
+/** One day a daily task was done (table daily_log): the streaks are counted from these. */
+export interface DailyLog { daily_id: string; day: string }

@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { Capture as Result, CapturedTask, CaptureRequest } from '../capture'
 import { dayName, madridDay, shiftHours, shortDate, toChecklist } from '../logic'
-import { MAX_SECONDS, photoToJpeg, startRecording } from '../media'
 import { accessToken, insert, useData } from '../store'
 import Sheet, { Choice } from '../Sheet'
 import { EFFORT, PRIORITY, SHIFT, type Effort, type Priority } from '../types'
@@ -10,29 +9,26 @@ const ERRORS: Record<string, string> = {
   'not signed in': 'La sesión ha caducado: sal y vuelve a entrar.',
   'not allowed': 'Tu usuario no está en AI_ALLOWED_USERS (ver README).',
   'daily limit': 'Has llegado al límite de hoy de la IA.',
-  'text only': 'Con DeepSeek solo funciona el texto: escríbelo en vez de foto o voz.',
-  'too big': 'Es demasiado grande. Prueba con una foto más pequeña o un audio más corto.',
-  'unsupported media': 'Ese tipo de archivo no lo entiende la IA.',
 }
 
-/** ＋: write, dictate or send a photo → the AI says what it understood → you fix it → Guardar. */
+/**
+ * ＋: write → the AI says what it understood → you fix it → Guardar.
+ * Text only for now: photos and voice need an AI that sees and hears, and the free one (Gemini) was too
+ * often overloaded. The server (api/capture.ts) and src/media.ts still accept them, to bring them back.
+ */
 export default function Capture({ onClose }: { onClose: () => void }) {
   const { projects } = useData()
   const [text, setText] = useState('')
-  const [photo, setPhoto] = useState<{ mime: string; data: string; url: string } | null>(null)
-  const [recording, setRecording] = useState<Awaited<ReturnType<typeof startRecording>> | null>(null)
-  const [seconds, setSeconds] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<Result | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
 
-  async function ask(media?: CaptureRequest['media']) {
+  async function ask() {
     setBusy(true)
     setError('')
     try {
       const token = await accessToken()
-      const body: CaptureRequest = { text, media, projects: projects.filter((p) => p.status !== 'hecho').map((p) => p.name) }
+      const body: CaptureRequest = { text, projects: projects.filter((p) => p.status !== 'hecho').map((p) => p.name) }
       const r = await fetch('/api/capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
@@ -51,47 +47,6 @@ export default function Capture({ onClose }: { onClose: () => void }) {
     setBusy(false)
   }
 
-  // Recording: a counter, and it stops by itself at the limit.
-  useEffect(() => {
-    if (!recording) return
-    const t = setInterval(() => setSeconds((s) => s + 1), 1000)
-    return () => clearInterval(t)
-  }, [recording])
-  useEffect(() => { if (seconds >= MAX_SECONDS) stopRecording() })
-
-  async function record() {
-    setError('')
-    try {
-      setSeconds(0)
-      setRecording(await startRecording())
-    } catch {
-      setError('Sin acceso al micrófono. Actívalo en Ajustes → Safari → Micrófono (o usa el 🎙️ del teclado).')
-    }
-  }
-  async function stopRecording() {
-    if (!recording) return
-    const r = recording
-    setRecording(null)
-    try {
-      await ask(await r.stop())
-    } catch {
-      setError('No se pudo leer la grabación.')
-    }
-  }
-  // Closing the sheet mid-recording turns the microphone off.
-  const live = useRef(recording)
-  live.current = recording
-  useEffect(() => () => live.current?.cancel(), [])
-
-  async function pickPhoto(file?: File) {
-    if (!file) return
-    try {
-      setPhoto(await photoToJpeg(file))
-    } catch {
-      setError('No se pudo abrir la foto.')
-    }
-  }
-
   if (result) return <Review result={result} onBack={() => setResult(null)} onClose={onClose} />
 
   return (
@@ -103,32 +58,11 @@ export default function Capture({ onClose }: { onClose: () => void }) {
         placeholder="«Recuérdame llamar al casero mañana a las 12», «idea: …», «meditar todos los días»"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        disabled={busy || !!recording}
+        disabled={busy}
       />
-      {photo && (
-        <div className="photo-chip">
-          <img src={photo.url} alt="" />
-          <span>Foto adjunta</span>
-          <button className="ghost" onClick={() => setPhoto(null)}>Quitar</button>
-        </div>
-      )}
       {error && <p className="danger small-text">{error}</p>}
-      {recording ? (
-        <button className="primary recording" onClick={stopRecording}>■ Parar y enviar · {MAX_SECONDS - seconds}s</button>
-      ) : (
-        <div className="capture-actions">
-          <button className="secondary icon-btn" onClick={record} disabled={busy} aria-label="Dictar">
-            <svg viewBox="0 0 24 24" aria-hidden><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
-          </button>
-          <button className="secondary icon-btn" onClick={() => fileRef.current?.click()} disabled={busy} aria-label="Foto o captura">
-            <svg viewBox="0 0 24 24" aria-hidden><path d="M4 8h3l2-3h6l2 3h3v11H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" /></svg>
-          </button>
-          <button className="primary grow-btn" disabled={busy || (!text.trim() && !photo)} onClick={() => ask(photo ?? undefined)}>
-            {busy ? 'Pensando…' : 'Entender'}
-          </button>
-        </div>
-      )}
-      <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => pickPhoto(e.target.files?.[0])} />
+      <button className="primary" disabled={busy || !text.trim()} onClick={ask}>{busy ? 'Pensando…' : 'Entender'}</button>
+      <p className="hint">Para dictar, usa el micrófono del teclado del móvil.</p>
     </Sheet>
   )
 }
@@ -202,7 +136,7 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
         title: n.title.trim(), body: n.checklist ? '' : n.details.trim(), items: n.checklist ? toChecklist(n.details) : null,
         color: 'none' as const, project_id: projectId(n.project), pinned: false, archived: false, updated_at: now,
       })))
-      await insert('daily_tasks', of('diaria').map((d, i) => ({ title: d.title.trim(), position: daily_tasks.length + i, done_on: null, project_id: projectId(d.project) })))
+      await insert('daily_tasks', of('diaria').map((d, i) => ({ title: d.title.trim(), position: daily_tasks.length + i, done_on: null, project_id: projectId(d.project), description: null, icon: null, note_id: null })))
       await insert('shifts', r.shifts)
       await insert('fp_tests', r.fp_tests.map((t) => ({ ...t, read: false })))
       onClose()

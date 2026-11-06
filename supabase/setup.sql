@@ -62,6 +62,23 @@ create table if not exists public.daily_tasks (
 -- A daily task can belong to a project (a label on Hoy; listed on the project's page).
 alter table public.daily_tasks add column if not exists project_id uuid references public.projects on delete set null;
 
+-- A daily task's own page: picture or emoji, a description and an optional note (shown in Notas and in its project).
+alter table public.daily_tasks add column if not exists description text;
+alter table public.daily_tasks add column if not exists icon text;
+alter table public.daily_tasks add column if not exists note_id uuid references public.notes on delete set null;
+
+-- Every day a daily task was done: the weekly streaks are counted from here (done_on only knows today).
+create table if not exists public.daily_log (
+  user_id uuid not null default auth.uid() references auth.users on delete cascade,
+  daily_id uuid not null references public.daily_tasks on delete cascade,
+  day date not null,
+  primary key (daily_id, day)
+);
+-- The days already ticked before the log existed.
+insert into public.daily_log (user_id, daily_id, day)
+  select user_id, id, done_on from public.daily_tasks where done_on is not null
+  on conflict do nothing;
+
 -- A reminder (task) can point to one note; a note can have several reminders. Deleting the note keeps the reminders.
 alter table public.tasks add column if not exists note_id uuid references public.notes on delete set null;
 
@@ -114,7 +131,7 @@ create trigger tasks_reset_notified before update on public.tasks
 do $$
 declare t text;
 begin
-  foreach t in array array['projects', 'tasks', 'shifts', 'fp_tests', 'notes', 'daily_tasks', 'push_subscriptions'] loop
+  foreach t in array array['projects', 'tasks', 'shifts', 'fp_tests', 'notes', 'daily_tasks', 'push_subscriptions', 'daily_log'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "%1$s: own" on public.%1$I', t);
     execute format('create policy "%1$s: own" on public.%1$I for all to authenticated
