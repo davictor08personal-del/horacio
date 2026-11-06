@@ -19,6 +19,21 @@ export async function photoToJpeg(file: File, max = 1600) {
   return { mime: 'image/jpeg', data: await toBase64(blob), url: URL.createObjectURL(blob) }
 }
 
+/**
+ * A project's picture: the centre square at 160 px, as a data: URL (~10 KB) saved straight in the row.
+ * Small enough that no file storage is needed, and it loads with the project.
+ */
+export async function photoToIcon(file: File, size = 160) {
+  const img = await createImageBitmap(file)
+  const side = Math.min(img.width, img.height)
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  canvas.getContext('2d')!.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size)
+  const url = canvas.toDataURL('image/webp', 0.82)
+  // Safari before 17 can't write WebP and silently gives PNG; JPEG keeps it small there.
+  return url.startsWith('data:image/webp') ? url : canvas.toDataURL('image/jpeg', 0.85)
+}
+
 export const MAX_SECONDS = 60
 
 /**

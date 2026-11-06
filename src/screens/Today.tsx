@@ -4,7 +4,6 @@ import DailyTasks from '../DailyTasks'
 import Page from '../Page'
 import Agenda from './Agenda'
 import { OWNER, dayPlan, fullDate, greeting, madridDay, nextFpBlock, shortDate, splitToday } from '../logic'
-import Settings from '../Settings'
 import { useData } from '../store'
 import { TaskRow } from '../TaskRow'
 
@@ -13,7 +12,6 @@ import { TaskRow } from '../TaskRow'
 /** «Hoy»: Horacio greets you and says the day, then his proposal (Foco), Cada día, FP and what can wait. */
 export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
   const { tasks, shifts, fp_tests } = useData()
-  const [settings, setSettings] = useState(false)
   const [agenda, setAgenda] = useState(false) // out of the tab bar since Proyectos took its place; shifts still shape the day
   const today = madridDay()
   const plan = dayPlan(shifts.find((s) => s.day === today))
@@ -26,7 +24,6 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
       <header className="today-head">
         <div className="head-top">
           <span className="eyebrow">{fullDate(today)}</span>
-          <button className="monogram" onClick={() => setSettings(true)} aria-label="Ajustes"><img src="/horacio-face.webp" alt="" width="44" height="44" /></button>
         </div>
         <h1>{greeting()}, {OWNER}.</h1>
         <p className="butler">{plan.line}</p>
@@ -57,7 +54,6 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
           <span className="chev" aria-hidden>›</span>
         </button>
       )}
-      {settings && <Settings onClose={() => setSettings(false)} />}
       {agenda && <Page back="Hoy" onBack={() => setAgenda(false)}><Agenda /></Page>}
     </>
   )

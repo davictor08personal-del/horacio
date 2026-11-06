@@ -59,7 +59,7 @@ Antes: Supabase y Gemini conectados en local (arriba) y tu cuenta creada en la a
 4. **GitHub.** Crea un repo privado y sube el código: `gh repo create horacio --private --source . --push`.
 5. **Vercel.** [vercel.com/new](https://vercel.com/new) → importa el repo `horacio` (detecta Vite solo). En **Environment Variables** pon: `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`, `AI_PROVIDER`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY` (si usas DeepSeek), `AI_ALLOWED_USERS`, `VITE_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `SUPABASE_SECRET_KEY` y `CRON_SECRET`. Pulsa **Deploy**. Desde entonces cada `git push` publica.
 6. **El reloj.** Abre [supabase/cron.sql](supabase/cron.sql), cambia la dirección por la de Vercel y `YOUR_CRON_SECRET` por tu `CRON_SECRET`, y ejecútalo en el SQL Editor. Desde ese momento Supabase llama a `/api/tick` cada minuto.
-7. **En el iPhone.** Abre la dirección en Safari → **Compartir → Añadir a pantalla de inicio**. Abre Horacio desde el icono, entra, toca la cara de Horacio (Ajustes) → **Activar avisos** → **Probar aviso**.
+7. **En el iPhone.** Abre la dirección en Safari → **Compartir → Añadir a pantalla de inicio**. Abre Horacio desde el icono, entra, toca el engranaje ⚙ de arriba a la derecha (Ajustes) → **Activar avisos** → **Probar aviso**.
 
 Si un aviso no llega: Vercel → proyecto → **Logs** (busca `tick` o `ping`) y, en Supabase, `select * from cron.job_run_details order by start_time desc limit 5;`.
 

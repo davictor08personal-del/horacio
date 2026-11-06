@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { photoToIcon } from '../media'
 import { byEdited, byPosition, byPriority, notePreview, noteTime } from '../logic'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import Page from '../Page'
@@ -19,7 +20,7 @@ export default function Projects() {
 
   const add = () => {
     if (!name.trim()) return
-    insert('projects', [{ name: name.trim(), status: 'activo', description: null, next_step: null, area: null }])
+    insert('projects', [{ name: name.trim(), status: 'activo', description: null, icon: null, next_step: null, area: null }])
     setName('')
   }
 
@@ -44,8 +45,11 @@ export default function Projects() {
                 return (
                   <li key={p.id}>
                     <button className="project" onClick={() => setOpen(p.id)}>
+                      <ProjectIcon project={p} />
+                      <span className="project-text">
                       <span className="task-title">{p.name}</span>
                       <span className="task-sub">{[p.description || (p.next_step ? `Siguiente: ${p.next_step}` : null), count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
+                      </span>
                     </button>
                   </li>
                 )
@@ -82,6 +86,7 @@ function ProjectPage({ project, onBack }: { project: Project; onBack: () => void
   return (
     <Page back="Proyectos" onBack={onBack} actions={<button className="link" onClick={() => setEditing(true)}>Editar</button>}>
       <header className="today-head">
+        <ProjectIcon project={project} big />
         <h1>{project.name}</h1>
         <p className="day-line">{PROJECT_STATUS[project.status]}{project.area && ` · ${project.area}`}</p>
         {project.description
@@ -143,11 +148,53 @@ function ProjectPage({ project, onBack }: { project: Project; onBack: () => void
   )
 }
 
+/** The project's emoji or picture; without one, its first letter on a soft tile. */
+export function ProjectIcon({ project, big }: { project: Project; big?: boolean }) {
+  const cls = `project-icon ${big ? 'big' : ''}`
+  if (project.icon?.startsWith('data:image/')) return <img className={cls} src={project.icon} alt="" />
+  if (project.icon) return <span className={`${cls} emoji`} aria-hidden>{project.icon}</span>
+  return <span className={`${cls} letter`} aria-hidden>{project.name.trim().charAt(0).toUpperCase() || '·'}</span>
+}
+
+const EMOJIS = ['📁', '🏠', '📚', '🎓', '💼', '💻', '🏋️', '✈️', '💰', '🎨', '🎵', '❤️']
+// Only the first emoji typed (one emoji can be several characters: 🏋️, 👨‍👩‍👧).
+const firstEmoji = (s: string) => [...new Intl.Segmenter().segment(s.trim())][0]?.segment ?? ''
+
+/** Pick an emoji (or type any), or upload a picture. Saved at once, like the rest of the sheet. */
+function IconPicker({ project, set }: { project: Project; set: (p: Partial<Project>) => void }) {
+  const file = useRef<HTMLInputElement>(null)
+  const [error, setError] = useState('')
+  const isPicture = project.icon?.startsWith('data:image/')
+  const upload = async (f: File | undefined) => {
+    if (!f) return
+    setError('')
+    try { set({ icon: await photoToIcon(f) }) } catch { setError('No se pudo leer esa imagen.') }
+  }
+  return (
+    <div className="field">Icono
+      <div className="icon-picker">
+        {EMOJIS.map((e) => (
+          <button key={e} type="button" className={`emoji-btn ${project.icon === e ? 'on' : ''}`} onClick={() => set({ icon: e })} aria-label={`Usar ${e}`}>{e}</button>
+        ))}
+      </div>
+      <div className="icon-actions">
+        <input className="emoji-input" defaultValue={isPicture ? '' : project.icon ?? ''} placeholder="Otro emoji" aria-label="Otro emoji"
+          onBlur={(e) => { const v = firstEmoji(e.target.value); if (v && v !== project.icon) set({ icon: v }) }} />
+        <button type="button" className="secondary" onClick={() => file.current?.click()}>{isPicture ? 'Cambiar imagen' : 'Subir imagen'}</button>
+        {project.icon && <button type="button" className="ghost" onClick={() => set({ icon: null })}>Quitar</button>}
+        <input ref={file} type="file" accept="image/*" hidden onChange={(e) => upload(e.target.files?.[0])} />
+      </div>
+      {error && <p className="danger small-text">{error}</p>}
+    </div>
+  )
+}
+
 function ProjectSheet({ project, onClose, onDeleted }: { project: Project; onClose: () => void; onDeleted: () => void }) {
   const set = (patch: Partial<Project>) => update('projects', project.id, patch)
   return (
     <Sheet title="Proyecto" onClose={onClose}>
       <input className="big-input" defaultValue={project.name} onBlur={(e) => e.target.value.trim() && e.target.value !== project.name && set({ name: e.target.value.trim() })} aria-label="Nombre" />
+      <IconPicker project={project} set={set} />
       <div className="field">Estado
         <Choice value={project.status} options={PROJECT_STATUS} onChange={(status) => set({ status })} />
       </div>

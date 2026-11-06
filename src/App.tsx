@@ -8,6 +8,7 @@ import Notes from './screens/Notes'
 import Projects from './screens/Projects'
 import NoteEditor, { ICON, useOpenNote } from './NoteEditor'
 import Capture from './screens/Capture'
+import Settings from './Settings'
 
 // SVG path data for each tab icon (24×24, drawn with strokes).
 const TABS = [
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'notes', label: 'Notas', icon: ICON.note },
   { id: 'projects', label: 'Proyectos', icon: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' },
 ] as const
+const GEAR = 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'
 export type Tab = (typeof TABS)[number]['id']
 
 export default function App() {
@@ -23,6 +25,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(demo ? null : undefined)
   const [tab, setTab] = useState<Tab>('today')
   const [capturing, setCapturing] = useState(false)
+  const [settings, setSettings] = useState(false)
   const [error, setError] = useState('')
   const { loaded } = useData()
   const noteId = useOpenNote()
@@ -52,6 +55,12 @@ export default function App() {
   return (
     <>
       <main className="screen">
+        {/* Ajustes from every screen, always in the same corner. */}
+        <div className="screen-top">
+          <button className="icon-btn settings-btn" onClick={() => setSettings(true)} aria-label="Ajustes">
+            <svg viewBox="0 0 24 24" aria-hidden><path d={GEAR} /></svg>
+          </button>
+        </div>
         {demo && <p className="banner">Modo demo: los datos se guardan solo en este navegador.</p>}
         {error && <p className="banner danger-banner">{error}</p>}
         {!loaded ? null : tab === 'today' ? <Today onGo={setTab} /> : tab === 'tasks' ? <Tasks /> : tab === 'notes' ? <Notes /> : <Projects />}
@@ -72,6 +81,7 @@ export default function App() {
         </button>
       </nav>
       {capturing && <Capture onClose={() => setCapturing(false)} />}
+      {settings && <Settings back={TABS.find((t) => t.id === tab)!.label} onClose={() => setSettings(false)} />}
       {noteId && <NoteEditor key={noteId} id={noteId} />}
     </>
   )

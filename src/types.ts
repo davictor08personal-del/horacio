@@ -54,6 +54,7 @@ export interface Project {
   name: string
   status: ProjectStatus
   description: string | null
+  icon: string | null
   next_step: string | null
   area: string | null
   created_at: string

@@ -1,6 +1,10 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs'
+
+// Shown in Ajustes → Acerca de.
+const version = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version as string
 
 // `npm run dev` only: answers /api/* with the files in api/, the way Vercel does once published.
 // With AI_PROVIDER=mock in .env.local the capture works without a key and without cost.
@@ -26,6 +30,7 @@ export default defineConfig(({ mode }) => {
   // Vite only exposes VITE_* to the app; the server functions read the rest (AI_PROVIDER, keys…) from process.env.
   for (const [k, v] of Object.entries(loadEnv(mode, process.cwd(), ''))) process.env[k] ??= v
   return {
+    define: { __APP_VERSION__: JSON.stringify(version) },
     plugins: [
       react(),
       devApi(),
