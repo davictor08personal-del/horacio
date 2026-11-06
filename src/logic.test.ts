@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanCapture, mockCapture } from './capture'
-import { addDays, byPriority, dayPlan, doneToday, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, madridDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
+import { addDays, byPriority, dayPlan, doneToday, googleCalendarUrl, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, madridDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
 import type { FpTest, Note, Shift, Task } from './types'
 
 const task = (p: Partial<Task>): Task => ({
@@ -36,10 +36,10 @@ describe('shifts', () => {
     expect(dayPlan(shift({ kind: 'opening', starts_at: '10:00:00', ends_at: '17:30:00' })).free).toBe('Libre desde las 17:30')
     expect(dayPlan(undefined)).toMatchObject({ work: false, free: 'Todo el día libre' })
   })
-  it('Horacio says the day like a butler', () => {
-    expect(dayPlan(shift({ kind: 'noche', starts_at: '17:00', ends_at: '23:00' })).line).toBe('Tiene turno de noche a las 17:00. Hasta las 16:30, el día es suyo.')
-    expect(dayPlan(shift({ kind: 'opening', starts_at: '10:00', ends_at: '17:30' })).line).toBe('Tiene turno de opening hasta las 17:30. Después, el día es suyo.')
-    expect(dayPlan(undefined).line).toBe('Hoy no trabaja: el día entero es suyo.')
+  it('says the day in one sentence', () => {
+    expect(dayPlan(shift({ kind: 'noche', starts_at: '17:00', ends_at: '23:00' })).line).toBe('Turno de noche a las 17:00. Libre hasta las 16:30.')
+    expect(dayPlan(shift({ kind: 'opening', starts_at: '10:00', ends_at: '17:30' })).line).toBe('Turno de opening hasta las 17:30. Libre después.')
+    expect(dayPlan(undefined).line).toBe('Hoy no trabajas: tienes el día libre.')
   })
 })
 
@@ -174,8 +174,8 @@ describe('notifications', () => {
     const tasks = ['a', 'b', 'c', 'd'].map((title, i) => task({ title, created_at: `2026-11-0${i + 1}T10:00:00Z` }))
     const s = morningSummary(tasks, shift({ kind: 'noche', starts_at: '17:00', ends_at: '23:00' }), 'Victor')
     expect(s.title).toBe('Buenos días, Victor')
-    expect(s.body).toBe('Tiene turno de noche a las 17:00. Hasta las 16:30, el día es suyo. Le propongo: 1. a · 2. b · 3. c (y 1 más que pueden esperar)')
-    expect(morningSummary([], undefined, 'Victor').body).toBe('Hoy no trabaja: el día entero es suyo. Nada urgente para hoy.')
+    expect(s.body).toBe('Turno de noche a las 17:00. Libre hasta las 16:30. Prioridades: 1. a · 2. b · 3. c (y 1 más que pueden esperar)')
+    expect(morningSummary([], undefined, 'Victor').body).toBe('Hoy no trabajas: tienes el día libre. Nada urgente para hoy.')
   })
 })
 
@@ -194,5 +194,20 @@ describe('weekly streaks', () => {
   it('nothing, nothing', () => {
     expect(weeklyStreak([], today)).toBe(0)
     expect(weeklyStreak(['2026-10-12'], today)).toBe(0)
+  })
+})
+
+describe('Google Calendar link', () => {
+  const params = (url: string | null) => Object.fromEntries(new URL(url!).searchParams)
+  it('a reminder with a time is a 30-minute event in Madrid time', () => {
+    expect(params(googleCalendarUrl({ title: 'Llamar al casero', notes: null, due_date: '2026-11-07', due_time: '12:00:00' })))
+      .toMatchObject({ action: 'TEMPLATE', text: 'Llamar al casero', dates: '20261107T120000/20261107T123000', ctz: 'Europe/Madrid' })
+  })
+  it('only a day: all day; late at night it ends the next day', () => {
+    expect(params(googleCalendarUrl({ title: 'x', notes: null, due_date: '2026-11-07', due_time: null })).dates).toBe('20261107/20261108')
+    expect(params(googleCalendarUrl({ title: 'x', notes: null, due_date: '2026-11-07', due_time: '23:45' })).dates).toBe('20261107T234500/20261108T001500')
+  })
+  it('no day, no link', () => {
+    expect(googleCalendarUrl({ title: 'x', notes: null, due_date: null, due_time: null })).toBeNull()
   })
 })

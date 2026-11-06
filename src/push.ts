@@ -27,7 +27,7 @@ export async function pushEnabled() {
 
 /** Asks for permission (must follow a tap) and saves this phone's address. */
 export async function enablePush() {
-  if (await Notification.requestPermission() !== 'granted') throw new Error('Permiso denegado: actívelo en Ajustes del iPhone → Notificaciones → Horacio')
+  if (await Notification.requestPermission() !== 'granted') throw new Error('Permiso denegado: actívalo en Ajustes del iPhone → Notificaciones → Cuadre')
   const reg = await registration()
   const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes(PUBLIC_KEY!) }))
   const { endpoint, keys } = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } }

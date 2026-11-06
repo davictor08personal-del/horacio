@@ -1,6 +1,6 @@
-# Horacio
+# Cuadre
 
-La app de prioridades de Victor: qué hacer **hoy**, qué **puede esperar** y (fase 2) **avisos** al móvil. PWA para el iPhone. Diseño y fases en [DISEÑO.md](DISEÑO.md).
+(Antes «Horacio»; la carpeta y el repo conservan ese nombre.) La app de organización y productividad de Victor: qué hacer **hoy**, qué **puede esperar** y (fase 2) **avisos** al móvil. PWA para el iPhone. Diseño y fases en [DISEÑO.md](DISEÑO.md).
 
 ## Arrancarla en local
 
@@ -47,7 +47,7 @@ La clave **nunca** va en git ni en el navegador: solo la lee `api/capture.ts`, q
 - `src/media.ts`: reduce las fotos y convierte la voz en WAV antes de enviarlas.
 - `api/capture.ts`: la llamada a la IA (Gemini o DeepSeek) en el servidor.
 - `api/tick.ts`, `api/ping.ts`, `api/_push.ts`, `src/push.ts` y `public/push-sw.js`: los avisos push.
-- `public/icon.png`: el icono (Horacio sobre el azul); `npm run icons` genera todos los tamaños. El dibujo original está en `docs/horacio-mascota.webp`.
+- `public/icon.png`: el icono provisional (cuadrado vinotinto con un cuadro blanco); `npm run icons` genera todos los tamaños. El dibujo del antiguo mayordomo sigue en `docs/horacio-mascota.webp`.
 
 ## Publicar (Vercel + avisos al iPhone)
 
@@ -59,16 +59,20 @@ Antes: Supabase y Gemini conectados en local (arriba) y tu cuenta creada en la a
 4. **GitHub.** Crea un repo privado y sube el código: `gh repo create horacio --private --source . --push`.
 5. **Vercel.** [vercel.com/new](https://vercel.com/new) → importa el repo `horacio` (detecta Vite solo). En **Environment Variables** pon: `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`, `AI_PROVIDER`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY` (si usas DeepSeek), `AI_ALLOWED_USERS`, `VITE_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `SUPABASE_SECRET_KEY` y `CRON_SECRET`. Pulsa **Deploy**. Desde entonces cada `git push` publica.
 6. **El reloj.** Abre [supabase/cron.sql](supabase/cron.sql), cambia la dirección por la de Vercel y `YOUR_CRON_SECRET` por tu `CRON_SECRET`, y ejecútalo en el SQL Editor. Desde ese momento Supabase llama a `/api/tick` cada minuto.
-7. **En el iPhone.** Abre la dirección en Safari → **Compartir → Añadir a pantalla de inicio**. Abre Horacio desde el icono, entra, toca el engranaje ⚙ de arriba a la derecha (Ajustes) → **Activar avisos** → **Probar aviso**.
+7. **En el iPhone.** Abre la dirección en Safari → **Compartir → Añadir a pantalla de inicio**. Abre Cuadre desde el icono, entra, toca el engranaje ⚙ de arriba a la derecha (Ajustes) → **Activar avisos** → **Probar aviso**.
 
 Si un aviso no llega: Vercel → proyecto → **Logs** (busca `tick` o `ping`) y, en Supabase, `select * from cron.job_run_details order by start_time desc limit 5;`.
 
 ## Cómo funcionan los avisos
 
 - El iPhone, al activar los avisos, da una «dirección» (suscripción) que se guarda en `push_subscriptions`.
-- Cada minuto `pg_cron` llama a `api/tick.ts`. Este busca los recordatorios (tareas con día y hora) que ya tocan y no se han avisado, los marca (`notified_at`) y los envía. Entre las 9:30 y las 12:00 manda una vez al día el resumen («Buenos días, Victor…»); `push_daily` evita repetirlo.
+- Cada minuto `pg_cron` llama a `api/tick.ts`. Este busca los recordatorios (tareas con día y hora) que ya tocan y no se han avisado, los marca (`notified_at`) y los envía. Entre las 9:30 y las 12:00 manda una vez al día el resumen («Buenos días, Victor»); `push_daily` evita repetirlo.
 - Si cambias el día o la hora de un recordatorio, vuelve a avisar a la nueva hora (lo hace un trigger en la base).
 - Las reglas (qué toca y el texto del resumen) están en `src/logic.ts`, con tests.
+
+## Google Calendar
+
+Un recordatorio con día ofrece «Añadir a Google Calendar» (en su ficha y justo después de guardarlo con ＋). Usa el enlace oficial de Google para crear un evento (`googleCalendarUrl` en `src/logic.ts`): abre tu calendario con título, día y hora rellenos y solo pulsas Guardar. Sin login con Google ni permisos. Leer tus eventos o crearlos sin ese toque necesitaría login con Google (OAuth); ver DISEÑO.md.
 
 ## Siguiente fase
 

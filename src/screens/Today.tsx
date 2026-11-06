@@ -7,9 +7,9 @@ import { OWNER, dayPlan, fullDate, greeting, madridDay, nextFpBlock, shortDate, 
 import { useData } from '../store'
 import { TaskRow } from '../TaskRow'
 
-// Single user for now. When Horacio is for anyone, the name comes from their profile.
+// Single user for now. When Cuadre is for anyone, the name comes from their profile.
 
-/** «Hoy»: Horacio greets you and says the day, then his proposal (Foco), Cada día, FP and what can wait. */
+/** «Hoy»: the greeting and the day, then the priorities (Foco), daily tasks, FP and what can wait. */
 export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
   const { tasks, shifts, fp_tests } = useData()
   const [agenda, setAgenda] = useState(false) // out of the tab bar since Proyectos took its place; shifts still shape the day
@@ -31,11 +31,11 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
       </header>
 
       <section className="group">
-        <h2 className="group-title">{focus.length ? 'Le propongo, por orden' : 'Nada urgente'}</h2>
+        <h2 className="group-title">{focus.length ? 'Prioridades de hoy' : 'Nada urgente'}</h2>
         {focus.length ? (
           <ul className="list card-list">{focus.map((t, i) => <TaskRow key={t.id} task={t} n={i + 1} />)}</ul>
         ) : (
-          <p className="empty">Cuando apunte algo con ＋, aquí le diré por dónde empezar.</p>
+          <p className="empty">Cuando apuntes algo con ＋, aquí verás por dónde empezar.</p>
         )}
       </section>
 
@@ -44,7 +44,7 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
       {fp && (
         <p className="fp-card">
           <em>Una nota sobre el FP:</em> el siguiente bloque abre {fp.days === 1 ? 'mañana' : `en ${fp.days} días`} ({shortDate(fp.opensOn)}{fp.subjects.length === 1 ? ` · ${fp.subjects[0]}` : ''}){' '}
-          {fp.unread ? `y quedan ${fp.unread} de ${fp.units} ${fp.units === 1 ? 'unidad' : 'unidades'} por leer.` : 'y ya lo ha leído todo.'}
+          {fp.unread ? `y quedan ${fp.unread} de ${fp.units} ${fp.units === 1 ? 'unidad' : 'unidades'} por leer.` : 'y ya lo has leído todo.'}
         </p>
       )}
 

@@ -3,6 +3,7 @@ import type { Capture as Result, CapturedTask, CaptureRequest } from '../capture
 import { dayName, madridDay, shiftHours, shortDate, toChecklist } from '../logic'
 import { accessToken, insert, useData } from '../store'
 import Sheet, { Choice } from '../Sheet'
+import { CalendarLink } from '../TaskRow'
 import { EFFORT, PRIORITY, SHIFT, type Effort, type Priority } from '../types'
 
 const ERRORS: Record<string, string> = {
@@ -103,6 +104,7 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
   const [items, setItems] = useState(() => toItems(result))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [toCalendar, setToCalendar] = useState<Item[] | null>(null) // saved reminders with a day: offer Google Calendar
   type Key = 'shifts' | 'fp_tests' | 'projects'
   const edit = <K extends Key>(key: K, i: number, patch: Partial<Result[K][number]>) =>
     setR({ ...r, [key]: r[key].map((x, j) => (j === i ? { ...x, ...patch } : x)) })
@@ -139,11 +141,29 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
       await insert('daily_tasks', of('diaria').map((d, i) => ({ title: d.title.trim(), position: daily_tasks.length + i, done_on: null, project_id: projectId(d.project), description: null, icon: null, note_id: null })))
       await insert('shifts', r.shifts)
       await insert('fp_tests', r.fp_tests.map((t) => ({ ...t, read: false })))
-      onClose()
+      const dated = of('recordatorio').filter((t) => t.due_date)
+      if (dated.length) setToCalendar(dated)
+      else onClose()
     } catch (e) {
       setError((e as Error).message)
       setBusy(false)
     }
+  }
+
+  if (toCalendar) {
+    return (
+      <Sheet title="Guardado" onClose={onClose}>
+        <p className="muted">¿Quieres {toCalendar.length === 1 ? 'este recordatorio' : 'estos recordatorios'} también en tu Google Calendar? Se abre con todo relleno: solo pulsa Guardar.</p>
+        {toCalendar.map((t, i) => (
+          <div className="review-card" key={i}>
+            <strong>{t.title.trim()}</strong>
+            <span className="muted small-text">{t.due_date && `${dayName(t.due_date)} ${shortDate(t.due_date)}`}{t.due_time && ` · ${t.due_time.slice(0, 5)}`}</span>
+            <CalendarLink task={{ title: t.title.trim(), notes: t.details.trim() || null, due_date: t.due_date, due_time: t.due_time }} />
+          </div>
+        ))}
+        <button className="primary" onClick={onClose}>Listo</button>
+      </Sheet>
+    )
   }
 
   return (

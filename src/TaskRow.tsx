@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { hhmm, madridDay, relDay } from './logic'
+import { googleCalendarUrl, hhmm, madridDay, relDay } from './logic'
 import { noteFromTask, remove, setTaskStatus, update, useData } from './store'
 import { openNote } from './NoteEditor'
 import Sheet, { Choice } from './Sheet'
 import { EFFORT, PRIORITY, STATUS, type Status, type Task } from './types'
 
-/** One task: round check to finish it, tap the text to edit it. `n` numbers it (Horacio's order on Hoy). */
+/** One task: round check to finish it, tap the text to edit it. `n` numbers it (the order on Hoy). */
 export function TaskRow({ task, n }: { task: Task; n?: number }) {
   const [open, setOpen] = useState(false)
   const { projects, notes } = useData()
@@ -51,6 +51,17 @@ export function ClosedRow({ task }: { task: Task }) {
   )
 }
 
+/** Opens Google Calendar with this task as a new event (see googleCalendarUrl). */
+export function CalendarLink({ task, label = 'Añadir a Google Calendar' }: { task: Pick<Task, 'title' | 'notes' | 'due_date' | 'due_time'>; label?: string }) {
+  const url = googleCalendarUrl(task)
+  return url ? (
+    <a className="calendar-link" href={url} target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24" aria-hidden><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M12 13v4M10 15h4" /></svg>
+      {label}
+    </a>
+  ) : null
+}
+
 const EDITABLE: Record<Exclude<Status, 'hecho' | 'descartado'>, string> = { abierto: STATUS.abierto, en_curso: STATUS.en_curso, esperando: STATUS.esperando }
 
 /** Every field of a task. Each change is saved at once (no "Save" button to forget). */
@@ -91,6 +102,7 @@ function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }) {
           </select>
         </label>
       </div>
+      {googleCalendarUrl(task) && <CalendarLink task={task} />}
       <label className="field">Detalles
         <textarea rows={2} defaultValue={task.notes ?? ''} onBlur={(e) => e.target.value !== (task.notes ?? '') && set({ notes: e.target.value.trim() || null })} />
       </label>

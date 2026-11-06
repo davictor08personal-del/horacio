@@ -1,7 +1,7 @@
 import { defineConfig, minimal2023Preset as preset } from '@vite-pwa/assets-generator/config'
 
-// Generates every icon size from public/icon.png (Horacio on the app's blue): `npm run icons`
-const bg = { background: '#1f5fd6' }
+// Generates every icon size from public/icon.png (the vinotinto square): `npm run icons`
+const bg = { background: '#7a1e3a' }
 
 export default defineConfig({
   preset: {

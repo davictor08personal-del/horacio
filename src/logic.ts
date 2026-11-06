@@ -2,7 +2,7 @@
 import type { ChecklistItem, DailyTask, Effort, FpTest, Note, Priority, Shift, ShiftKind, Task } from './types'
 
 const TZ = 'Europe/Madrid'
-/** Who Horacio serves (greeting on Hoy and the 9:30 notification). */
+/** Whose app it is (greeting on Hoy and the 9:30 notification). */
 export const OWNER = 'Victor'
 
 /** 'YYYY-MM-DD' in Madrid time, whatever the device's time zone. */
@@ -69,12 +69,11 @@ const DAY_END = toMin('23:30')
 const GET_READY = 30 // minutes before a shift to get there
 
 /**
- * What today looks like: the headline, whether it's a work day, and `line`, the same said by Horacio
- * (formal «usted», like a butler) under the greeting on Hoy.
+ * What today looks like: the headline, whether it's a work day, and `line`, the same in a sentence under the greeting on Hoy.
  */
 export function dayPlan(shift: Shift | undefined) {
   if (!shift || shift.kind === 'libre' || !shift.starts_at || !shift.ends_at) {
-    return { work: false, title: 'Libre', free: 'Todo el día libre', line: 'Hoy no trabaja: el día entero es suyo.' }
+    return { work: false, title: 'Libre', free: 'Todo el día libre', line: 'Hoy no trabajas: tienes el día libre.' }
   }
   const start = toMin(shift.starts_at)
   const end = toMin(shift.ends_at)
@@ -85,12 +84,12 @@ export function dayPlan(shift: Shift | undefined) {
   // Whichever gap is bigger is the one worth planning around.
   if (before >= after && before >= 60) {
     const until = fromMin(start - GET_READY)
-    return { work: true, title, free: `Libre hasta las ${until}`, line: `Tiene turno ${label} a las ${hhmm(shift.starts_at)}. Hasta las ${until}, el día es suyo.` }
+    return { work: true, title, free: `Libre hasta las ${until}`, line: `Turno ${label} a las ${hhmm(shift.starts_at)}. Libre hasta las ${until}.` }
   }
   if (after > before && after >= 60) {
-    return { work: true, title, free: `Libre desde las ${hhmm(shift.ends_at)}`, line: `Tiene turno ${label} hasta las ${hhmm(shift.ends_at)}. Después, el día es suyo.` }
+    return { work: true, title, free: `Libre desde las ${hhmm(shift.ends_at)}`, line: `Turno ${label} hasta las ${hhmm(shift.ends_at)}. Libre después.` }
   }
-  return { work: true, title, free: 'Sin hueco libre', line: `Tiene turno ${label} de ${hhmm(shift.starts_at)} a ${hhmm(shift.ends_at)}. Hoy queda poco hueco.` }
+  return { work: true, title, free: 'Sin hueco libre', line: `Turno ${label} de ${hhmm(shift.starts_at)} a ${hhmm(shift.ends_at)}. Hoy queda poco hueco.` }
 }
 const shiftLabel = (k: ShiftKind) => ({ opening: 'de opening', dia: 'de día', noche: 'de noche', libre: 'libre' })[k]
 
@@ -133,7 +132,7 @@ export function nextFpBlock(tests: FpTest[], today: string) {
   }
 }
 
-/** Horacio's hello on Hoy, by the hour in Madrid. */
+/** The hello on Hoy, by the hour in Madrid. */
 export function greeting(minutes = madridMinutes()) {
   const h = Math.floor(minutes / 60)
   return h >= 6 && h < 13 ? 'Buenos días' : h >= 13 && h < 21 ? 'Buenas tardes' : 'Buenas noches'
@@ -215,11 +214,33 @@ export function dueReminders(tasks: Task[], now = new Date()) {
     t.due_date >= yesterday && `${t.due_date} ${hhmm(t.due_time)}` <= stamp)
 }
 
-/** The 9:30 notification: Horacio's morning line, then what he proposes first. */
+/** The 9:30 notification: how the day looks, then the first priorities. */
 export function morningSummary(tasks: Task[], shift: Shift | undefined, name: string) {
   const { focus, later } = splitToday(tasks)
   const plan = dayPlan(shift)
-  const list = focus.length ? `Le propongo: ${focus.map((t, i) => `${i + 1}. ${t.title}`).join(' · ')}` : 'Nada urgente para hoy.'
+  const list = focus.length ? `Prioridades: ${focus.map((t, i) => `${i + 1}. ${t.title}`).join(' · ')}` : 'Nada urgente para hoy.'
   const more = later.length ? ` (y ${later.length} más que pueden esperar)` : ''
   return { title: `Buenos días, ${name}`, body: `${plan.line} ${list}${more}` }
+}
+
+// ---------- Google Calendar ----------
+/**
+ * Google's own «new event» link, filled in: it opens the user's Google Calendar (web or app) and one tap on
+ * Guardar adds it. No sign-in with Google, no permissions, nothing for Google to review. With a time it's a
+ * 30-minute event in Madrid time; with only a day, an all-day event.
+ */
+export function googleCalendarUrl(t: Pick<Task, 'title' | 'notes' | 'due_date' | 'due_time'>) {
+  if (!t.due_date) return null
+  const day = t.due_date.replace(/-/g, '')
+  let dates: string
+  if (t.due_time) {
+    const start = toMin(t.due_time)
+    const end = start + 30
+    const endDay = end >= 24 * 60 ? addDays(t.due_date, 1).replace(/-/g, '') : day
+    dates = `${day}T${fromMin(start).replace(':', '')}00/${endDay}T${fromMin(end % (24 * 60)).replace(':', '')}00`
+  } else {
+    dates = `${day}/${addDays(t.due_date, 1).replace(/-/g, '')}`
+  }
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: t.title, dates, ctz: TZ, details: [t.notes, 'Apuntado en Cuadre'].filter(Boolean).join('\n\n') })
+  return `https://calendar.google.com/calendar/render?${q}`
 }

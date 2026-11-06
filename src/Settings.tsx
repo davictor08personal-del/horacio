@@ -38,7 +38,7 @@ export default function Settings({ back, onClose }: { back: string; onClose: () 
       <Section title="Acerca de">
         <div className="settings-row about">
           <img src="/pwa-64x64.png" alt="" width="40" height="40" />
-          <span><strong>Horacio</strong><br /><span className="muted small-text">Versión {__APP_VERSION__} · Qué hacer hoy y qué puede esperar</span></span>
+          <span><strong>Cuadre</strong><br /><span className="muted small-text">Versión {__APP_VERSION__} · Qué hacer hoy y qué puede esperar</span></span>
         </div>
       </Section>
     </Page>
@@ -66,7 +66,7 @@ function Notifications() {
   if (support === 'install') {
     return (
       <Section title="Avisos">
-        <div className="settings-row"><span className="muted">Para recibir avisos, añada Horacio a la pantalla de inicio (Compartir → Añadir a pantalla de inicio) y ábralo desde allí.</span></div>
+        <div className="settings-row"><span className="muted">Para recibir avisos, añade Cuadre a la pantalla de inicio (Compartir → Añadir a pantalla de inicio) y ábrelo desde allí.</span></div>
       </Section>
     )
   }

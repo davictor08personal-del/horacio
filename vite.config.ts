@@ -39,8 +39,8 @@ export default defineConfig(({ mode }) => {
         includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png'],
         workbox: { globPatterns: ['**/*.{js,css,html,woff2,png,webp,svg,ico}'], globIgnores: ['icon.png'], importScripts: ['push-sw.js'] },
         manifest: {
-          name: 'Horacio',
-          short_name: 'Horacio',
+          name: 'Cuadre',
+          short_name: 'Cuadre',
           description: 'Qué hacer hoy y qué puede esperar',
           lang: 'es',
           theme_color: '#f3f5f9',

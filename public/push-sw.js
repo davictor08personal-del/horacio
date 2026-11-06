@@ -2,7 +2,7 @@
 // Shows the notifications sent by api/tick.ts and api/ping.ts, even with the phone locked.
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {}
-  event.waitUntil(self.registration.showNotification(data.title || 'Horacio', {
+  event.waitUntil(self.registration.showNotification(data.title || 'Cuadre', {
     body: data.body || '',
     icon: 'pwa-192x192.png',
     tag: data.tag, // the same reminder or summary replaces itself instead of piling up

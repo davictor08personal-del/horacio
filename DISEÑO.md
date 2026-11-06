@@ -1,6 +1,6 @@
-# Horacio: diseño
+# Cuadre: diseño
 
-La app de prioridades de Victor. Le dice **qué hacer hoy**, **qué puede esperar** y le **avisa**. Se usa en el iPhone (PWA instalada). Objetivo: menos carga mental, no acumular tareas.
+La app de organización y productividad de Victor (antes «Horacio», el mayordomo; desde el 2026-11-06 es Cuadre: en Venezuela *cuadrar* es organizar, «¿cuadramos para mañana?»). Le dice **qué hacer hoy**, **qué puede esperar** y le **avisa**. Se usa en el iPhone (PWA instalada). Objetivo: menos carga mental, no acumular tareas.
 
 ## Decisiones
 
@@ -55,7 +55,7 @@ Todas las tablas llevan `user_id` y RLS «solo el dueño».
 
 ## La idea de fondo
 
-Horacio es un **mayordomo**: como Claude Code organiza un proyecto en el ordenador, Horacio organiza la vida de una persona normal. Le hablas o le escribes, él entiende qué es cada cosa (tarea, recordatorio, nota, tarea diaria, de qué proyecto) y te dice qué hacer hoy y qué puede esperar. Cada paso de la hoja de ruta acerca la app a eso.
+Cuadre es una app de **organización y productividad**: le escribes, entiende qué es cada cosa (tarea, recordatorio, nota, tarea diaria, de qué proyecto) y te dice qué hacer hoy y qué puede esperar. Trabaja **junto a Google Calendar** en vez de tener un calendario propio: los recordatorios con fecha se mandan allí con un toque.
 
 ## Hoja de ruta
 
@@ -83,20 +83,20 @@ El orden sigue las dependencias: primero lo pequeño y lo que cambia los datos, 
 
 **Bloque 4 · Publicar (lo que pide un servidor siempre encendido)**
 8. ✅ (código) **Vercel + avisos push** (era la v2; falta publicar, pasos en el README): instalar en el iPhone, resumen a las 9:30 y aviso de cada recordatorio a su hora. Sin esto un recordatorio no avisa.
-9. **Agenda con Google Calendar**: primero leer los eventos (salen en Agenda y cuentan para el hueco libre de Hoy), después crear eventos desde Horacio. Necesita login con Google (OAuth) y una URL publicada.
+9. **Google Calendar**: ✅ enviar un recordatorio con fecha a Google Calendar con el enlace oficial de «crear evento» (un toque en Guardar, sin login). Siguiente: leer los eventos (cuentan para el hueco libre de Hoy) y crearlos sin ese toque, que necesita login con Google (OAuth, scope de calendario; con la app sin verificar vale para hasta 100 usuarios de prueba).
 
 **Bloque 5 · El mayordomo**
-10. **Hablar con Horacio**: un chat (texto o voz) con la mascota. Lee tus tareas, proyectos, notas y calendario, propone el plan del día y qué dejar para luego, y pide permiso antes de cambiar nada, igual que Claude Code. Va al final porque usa todo lo anterior.
+10. **Hablar con Cuadre**: un chat (texto o voz) con la mascota. Lee tus tareas, proyectos, notas y calendario, propone el plan del día y qué dejar para luego, y pide permiso antes de cambiar nada, igual que Claude Code. Va al final porque usa todo lo anterior.
 
 Ideas aparcadas: que el asistente de Obsidian lea Horacio, reenviar correos, repetir tareas.
 
 ## Estilo
 
-**Mayordomo** (elegido el 2026-11-05). Fraunces (serif, con cursiva) para los títulos y la voz de Horacio; Inter para el resto. Tarjetas con borde fino, botón ＋ cuadrado-redondeado en color tinta, resaltado **azul**. Horacio habla de **usted** en Hoy («Le propongo, por orden», «Hasta las 16:30, el día es suyo»); el resto de la app usa etiquetas neutras.
-
-- **Claro**: fondo `#f3f5f9`, tarjetas blancas, tinta `#0e1a2b`, azul `#1f5fd6`.
-- **Oscuro «Grafito»**: fondo `#121212`, tarjetas `#1c1c1e`, texto `#ededed`, azul `#5e9eff`.
+**Cuadre** (2026-11-06; antes «Mayordomo»).
+- **Tipografía**: Bricolage Grotesque (variable, moderna y algo juguetona) para títulos y la letra del sistema para el texto (SF Pro en el iPhone, así se siente nativa). Fuera Inter y Fraunces.
+- **Color**: vinotinto como acento (claro `#8b1e3f`, oscuro `#e2718f`, más luminoso para que se lea). Fondos y tarjetas: claro `#f3f5f9` / blanco; oscuro «Grafito» `#121212` / `#1c1c1e`.
+- **Tono neutro**, de tú, sin mayordomo: «Prioridades de hoy», «Hoy no trabajas: tienes el día libre».
+- **Icono provisional**: cuadrado vinotinto `#7a1e3a` con un cuadro blanco redondeado dentro (cuadrar).
 - **Automático** (por defecto) sigue al móvil; en Ajustes (⚙) se puede forzar claro u oscuro. Se guarda por dispositivo.
 - Todos los colores son variables en `src/styles.css` (dos bloques: `:root` y `:root[data-theme='dark']`); `index.html` aplica el tema antes de pintar para que no parpadee.
-- **Logo**: Horacio, mayordomo con esmoquin, gafas redondas y bigote. Icono = su busto sobre el azul `#1f5fd6`.
-- **Ajustes**: engranaje ⚙ arriba a la derecha en todas las pantallas; abre una pantalla completa con tarjetas por sección (Apariencia, Avisos, Cuenta, Acerca de). Cada ajuste nuevo es una sección o una fila más.
+- **Ajustes**: engranaje ⚙ arriba a la derecha en todas las pantallas; abre una pantalla completa con tarjetas por sección (Apariencia, Avisos, Cuenta, Acerca de).

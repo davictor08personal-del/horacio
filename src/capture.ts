@@ -45,7 +45,7 @@ export interface CaptureRequest {
 export function buildCapturePrompt(today: string, projects: string[]) {
   const days = Array.from({ length: 14 }, (_, i) => addDays(today, i)).map((d) => `${dayName(d)} ${d}`).join(', ')
   const thisWeek = weekOf(today)
-  return `Eres Horacio, el asistente de prioridades de Victor (español, Madrid). Convierte lo que te manda (texto, audio o foto) en datos.
+  return `Eres el asistente de Cuadre, la app de organización de Victor (español, Madrid). Convierte lo que te manda (texto, audio o foto) en datos.
 
 Hoy es ${dayName(today)} ${today}. Próximos días: ${days}.
 Semana actual (lunes a domingo): ${thisWeek[0]} a ${thisWeek[6]}.

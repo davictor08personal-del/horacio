@@ -37,7 +37,7 @@ export async function POST(request: Request): Promise<Response> {
     if (due.length) {
       const { data: claimed } = await admin.from('tasks').update({ notified_at: now.toISOString() })
         .in('id', due.map((t) => t.id)).is('notified_at', null).select('id, user_id, title')
-      for (const t of claimed ?? []) out.push({ user_id: t.user_id, title: 'Le recuerdo', body: t.title, tag: t.id })
+      for (const t of claimed ?? []) out.push({ user_id: t.user_id, title: 'Recordatorio', body: t.title, tag: t.id })
     }
 
     // Morning summary, once a day: push_daily only accepts one row per user and day.

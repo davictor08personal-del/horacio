@@ -1,5 +1,5 @@
-/* «Mayordomo» look: Fraunces (serif) for Horacio's voice and titles, Inter for everything else, hairline-bordered
-   cards, blue accent. Two palettes: light, and dark «Grafito». index.html sets data-theme on <html> before the first
+/* Cuadre look: Bricolage Grotesque for titles (modern, a bit playful), the system font for text (SF Pro on iPhone,
+   so it feels native), hairline-bordered cards, vinotinto accent. Two palettes: light, and dark «Grafito». index.html sets data-theme on <html> before the first
    paint (system, or what the user forced in Ajustes); every colour below is a token, so the two blocks are the theme. */
 :root {
   --fill: #dde3ec; /* a held / done daily task: a bit darker than the card */
@@ -14,21 +14,21 @@
   --faint: #8a94a8; /* placeholders */
   --ring: rgb(14 26 43 / 0.3);
   --ring-faint: rgb(14 26 43 / 0.16);
-  --accent: #1f5fd6;
-  --accent-soft: rgb(31 95 214 / 0.1);
-  --accent-ink: #1a4fae; /* accent as text on --accent-soft */
+  --accent: #8b1e3f; /* vinotinto */
+  --accent-soft: rgb(139 30 63 / 0.09);
+  --accent-ink: #6e1530; /* accent as text on --accent-soft */
   --danger: #c62828;
   --danger-soft: rgb(198 40 40 / 0.1);
   --late: #b5461b;
   --glass: rgb(255 255 255 / 0.86);
   --shadow: rgb(10 20 40 / 0.12);
   --backdrop: rgb(10 20 40 / 0.35);
-  --serif: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+  --display: 'Bricolage Grotesque Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --radius: 16px;
   --nav-h: 62px;
   --nav-bottom: max(10px, calc(env(safe-area-inset-bottom) - 6px));
   color-scheme: light;
-  font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-text-size-adjust: 100%;
@@ -46,9 +46,9 @@
   --faint: #7c7c82;
   --ring: rgb(255 255 255 / 0.32);
   --ring-faint: rgb(255 255 255 / 0.18);
-  --accent: #5e9eff;
-  --accent-soft: rgb(94 158 255 / 0.14);
-  --accent-ink: #a9ccff;
+  --accent: #e2718f; /* vinotinto, lifted so it reads on dark */
+  --accent-soft: rgb(226 113 143 / 0.15);
+  --accent-ink: #f4b6c7;
   --danger: #ff6b6b;
   --danger-soft: rgb(255 107 107 / 0.14);
   --late: #ff9f7a;
@@ -73,8 +73,8 @@ ul { list-style: none; padding: 0; }
   gap: 22px;
 }
 
-h1 { font-family: var(--serif); font-size: 2.1rem; font-weight: 400; letter-spacing: -0.01em; line-height: 1.12; }
-h2 { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; }
+h1 { font-family: var(--display); font-size: 2.15rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1.08; }
+h2 { font-family: var(--display); font-size: 1.2rem; font-weight: 650; letter-spacing: -0.02em; }
 h3 { font-size: 1rem; font-weight: 600; color: var(--muted); padding-left: 4px; }
 .muted { color: var(--muted); }
 .small-text { font-size: 0.88rem; }
@@ -131,11 +131,11 @@ input, textarea { caret-color: var(--accent); }
 .day-date { color: var(--accent); font-weight: 600; display: inline-block; }
 .head-top { display: flex; justify-content: space-between; align-items: center; }
 .eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-.butler { font-family: var(--serif); font-style: italic; font-size: 1.08rem; line-height: 1.45; color: var(--muted); }
+.butler { font-size: 1.02rem; line-height: 1.45; color: var(--muted); }
 .day-date::first-letter, .shift-day::first-letter, .review-shift span:first-child::first-letter { text-transform: uppercase; }
 
 .group { display: flex; flex-direction: column; gap: 8px; }
-.group-title { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; padding-left: 2px; }
+.group-title { font-family: var(--display); font-size: 1.2rem; font-weight: 650; letter-spacing: -0.02em; padding-left: 2px; }
 .card-list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .card-list > li + li { border-top: 1px solid var(--line); }
 
@@ -154,13 +154,13 @@ input, textarea { caret-color: var(--accent); }
 .tick.prio-alta::before { border-color: var(--accent); }
 .tick.prio-baja::before { border-color: var(--ring-faint); }
 /* Foco's order, as a butler would number it */
-.num { width: 22px; flex-shrink: 0; text-align: center; font-family: var(--serif); font-size: 1.25rem; color: var(--accent); margin-left: 6px; }
+.num { width: 22px; flex-shrink: 0; text-align: center; font-family: var(--display); font-size: 1.25rem; color: var(--accent); margin-left: 6px; }
 .tick.small::before { width: 20px; height: 20px; }
 .tick.done::before { background: var(--accent); border-color: var(--accent); }
 
 
 .fp-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; line-height: 1.45; color: var(--muted); }
-.fp-card em { font-family: var(--serif); color: var(--text); }
+.fp-card em { font-style: normal; font-weight: 600; color: var(--text); }
 
 .wait-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; text-align: left; font-weight: 400; color: var(--muted); }
 .wait-line strong { color: var(--text); font-weight: 600; }
@@ -298,7 +298,7 @@ input, textarea { caret-color: var(--accent); }
   width: 100%; margin-bottom: 10px; break-inside: avoid; display: flex; flex-direction: column; align-items: stretch; gap: 6px;
   background: var(--note); border: 1px solid var(--line); border-radius: 16px; padding: 14px; text-align: left; font-weight: 400; min-height: 0;
 }
-.note-card strong { font-family: var(--serif); font-weight: 600; font-size: 1.05rem; }
+.note-card strong { font-family: var(--display); font-weight: 600; font-size: 1.05rem; }
 .card-body { font-size: 0.9rem; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 9; -webkit-box-orient: vertical; overflow: hidden; }
 .card-checks { display: flex; flex-direction: column; gap: 3px; font-size: 0.9rem; color: var(--muted); }
 .card-checks li::before { content: '○ '; color: var(--muted); }
@@ -321,7 +321,7 @@ input, textarea { caret-color: var(--accent); }
 .note-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 4px 20px 24px; display: flex; flex-direction: column; gap: 8px; }
 .note-date { text-align: center; color: var(--muted); font-size: 0.8rem; padding-bottom: 6px; }
 .note-title, .note-body { background: none; border: 0; padding: 0; border-radius: 0; min-height: 0; overflow: hidden; }
-.note-title { font-family: var(--serif); font-size: 1.7rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
+.note-title { font-family: var(--display); font-size: 1.7rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
 .note-body { min-height: 8em; font-size: 1.05rem; line-height: 1.5; }
 .note-title:focus, .note-body:focus { border: 0; }
 .note-reminders { margin-top: 18px; }
@@ -428,7 +428,7 @@ input, textarea { caret-color: var(--accent); }
 
 /* Project icon: emoji, picture or first letter, on a rounded tile */
 .project-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 11px; display: grid; place-items: center; background: var(--surface-2); font-size: 1.35rem; line-height: 1; object-fit: cover; }
-.project-icon.letter { background: var(--accent-soft); color: var(--accent-ink); font-family: var(--serif); font-size: 1.2rem; }
+.project-icon.letter { background: var(--accent-soft); color: var(--accent-ink); font-family: var(--display); font-size: 1.2rem; }
 .project-icon.big { width: 64px; height: 64px; border-radius: 16px; font-size: 2.1rem; }
 .project-icon.big.letter { font-size: 1.8rem; }
 .icon-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
@@ -466,3 +466,7 @@ input, textarea { caret-color: var(--accent); }
 .daily-note-tag { font-size: 0.72rem; font-weight: 600; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; margin-right: 6px; white-space: nowrap; }
 .daily-note-tag.note-of { align-self: flex-start; margin: 4px 0 0; display: inline-block; }
 .note-card .daily-note-tag { align-self: flex-start; }
+
+/* «Añadir a Google Calendar»: a link styled as a soft button */
+.calendar-link { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; font-size: 0.95rem; text-decoration: none; }
+.calendar-link svg { width: 20px; height: 20px; }
