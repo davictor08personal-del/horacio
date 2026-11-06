@@ -52,6 +52,7 @@ export interface Project {
   id: string
   name: string
   status: ProjectStatus
+  description: string | null
   next_step: string | null
   area: string | null
   created_at: string

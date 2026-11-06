@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { Tab } from '../App'
 import DailyTasks from '../DailyTasks'
+import Page from '../Page'
+import Agenda from './Agenda'
 import { OWNER, dayPlan, fullDate, greeting, madridDay, nextFpBlock, shortDate, splitToday } from '../logic'
 import Settings from '../Settings'
 import { useData } from '../store'
@@ -12,6 +14,7 @@ import { TaskRow } from '../TaskRow'
 export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
   const { tasks, shifts, fp_tests } = useData()
   const [settings, setSettings] = useState(false)
+  const [agenda, setAgenda] = useState(false) // out of the tab bar since Proyectos took its place; shifts still shape the day
   const today = madridDay()
   const plan = dayPlan(shifts.find((s) => s.day === today))
   const { focus, later, waiting } = splitToday(tasks)
@@ -27,7 +30,7 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
         </div>
         <h1>{greeting()}, {OWNER}.</h1>
         <p className="butler">{plan.line}</p>
-        {!hasShifts && <button className="link" onClick={() => onGo('agenda')}>Aún no hay turnos de esta semana · Añadir</button>}
+        <button className="link" onClick={() => setAgenda(true)}>{hasShifts ? 'Turnos y FP' : 'Aún no hay turnos de esta semana · Añadir'}</button>
       </header>
 
       <section className="group">
@@ -55,6 +58,7 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
         </button>
       )}
       {settings && <Settings onClose={() => setSettings(false)} />}
+      {agenda && <Page back="Hoy" onBack={() => setAgenda(false)}><Agenda /></Page>}
     </>
   )
 }

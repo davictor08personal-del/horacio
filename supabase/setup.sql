@@ -42,6 +42,9 @@ create table if not exists public.notes (
   updated_at timestamptz not null default now()
 );
 
+-- A short description, shown at the top of the project's page.
+alter table public.projects add column if not exists description text;
+
 alter table public.notes add column if not exists project_id uuid references public.projects on delete set null;
 
 -- Things to do every day. Ticked = done_on is today, so tomorrow they come back unticked by themselves.

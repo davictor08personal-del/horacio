@@ -9,21 +9,21 @@ import { PROJECT_STATUS, type Project, type ProjectStatus } from '../types'
 
 const GROUPS: [ProjectStatus, string][] = [['activo', 'Activos'], ['pausado', 'Pausados'], ['hecho', 'Terminados']]
 
-/** Every project in one place: add them, and open one to see its tasks, reminders and notes. */
-export default function Projects({ onBack }: { onBack: () => void }) {
-  const { projects, tasks } = useData()
+/** Tab «Proyectos»: every project in one place; open one to see its description, reminders, tasks and notes. */
+export default function Projects() {
+  const { projects, tasks, notes } = useData()
   const [name, setName] = useState('')
   const [open, setOpen] = useState<string | null>(null)
   const project = projects.find((p) => p.id === open)
 
   const add = () => {
     if (!name.trim()) return
-    insert('projects', [{ name: name.trim(), status: 'activo', next_step: null, area: null }])
+    insert('projects', [{ name: name.trim(), status: 'activo', description: null, next_step: null, area: null }])
     setName('')
   }
 
   return (
-    <Page back="Tareas" onBack={onBack}>
+    <>
       <h1 className="page-title">Proyectos</h1>
       <form className="add-row" onSubmit={(e) => (e.preventDefault(), add())}>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nuevo proyecto" aria-label="Nuevo proyecto" />
@@ -38,11 +38,12 @@ export default function Projects({ onBack }: { onBack: () => void }) {
             <ul className="list card-list">
               {list.map((p) => {
                 const count = tasks.filter((t) => t.project_id === p.id).length
+                const noteCount = notes.filter((n) => n.project_id === p.id && !n.archived).length
                 return (
                   <li key={p.id}>
                     <button className="project" onClick={() => setOpen(p.id)}>
                       <span className="task-title">{p.name}</span>
-                      <span className="task-sub">{[p.next_step ? `Siguiente: ${p.next_step}` : 'Sin siguiente paso', count && `${count} ${count === 1 ? 'tarea' : 'tareas'}`].filter(Boolean).join(' · ')}</span>
+                      <span className="task-sub">{[p.description || (p.next_step ? `Siguiente: ${p.next_step}` : null), count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
                     </button>
                   </li>
                 )
@@ -52,16 +53,21 @@ export default function Projects({ onBack }: { onBack: () => void }) {
         )
       })}
       {project && <ProjectPage project={project} onBack={() => setOpen(null)} />}
-    </Page>
+    </>
   )
 }
 
-/** One project: its fields, open tasks and reminders, and notes. New ones made here already belong to it. */
+/**
+ * One project: its description, then what's pending (reminders = tasks with a time, then the rest) and its notes.
+ * New ones made here already belong to it.
+ */
 function ProjectPage({ project, onBack }: { project: Project; onBack: () => void }) {
   const { tasks, notes } = useData()
   const [text, setText] = useState('')
   const [editing, setEditing] = useState(false)
   const own = tasks.filter((t) => t.project_id === project.id).sort(byPriority)
+  const reminders = own.filter((t) => t.due_time)
+  const todo = own.filter((t) => !t.due_time)
   const ownNotes = notes.filter((n) => n.project_id === project.id && !n.archived).sort(byEdited)
 
   const addTask = () => {
@@ -75,12 +81,22 @@ function ProjectPage({ project, onBack }: { project: Project; onBack: () => void
       <header className="today-head">
         <h1>{project.name}</h1>
         <p className="day-line">{PROJECT_STATUS[project.status]}{project.area && ` · ${project.area}`}</p>
+        {project.description
+          ? <p className="butler project-desc">{project.description}</p>
+          : <button className="link" onClick={() => setEditing(true)}>Añadir una descripción</button>}
         {project.next_step && <p className="next-step">Siguiente paso: {project.next_step}</p>}
       </header>
 
+      {reminders.length > 0 && (
+        <section className="group">
+          <h2 className="group-title">Recordatorios · {reminders.length}</h2>
+          <ul className="list card-list">{reminders.map((t) => <TaskRow key={t.id} task={t} />)}</ul>
+        </section>
+      )}
+
       <section className="group">
-        <h2 className="group-title">Tareas y recordatorios</h2>
-        {own.length > 0 && <ul className="list card-list">{own.map((t) => <TaskRow key={t.id} task={t} />)}</ul>}
+        <h2 className="group-title">Tareas{todo.length > 0 && ` · ${todo.length}`}</h2>
+        {todo.length > 0 && <ul className="list card-list">{todo.map((t) => <TaskRow key={t.id} task={t} />)}</ul>}
         <form className="add-row" onSubmit={(e) => (e.preventDefault(), addTask())}>
           <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Nueva tarea" aria-label="Nueva tarea" />
           <button className="secondary" disabled={!text.trim()}>Añadir</button>
@@ -89,7 +105,7 @@ function ProjectPage({ project, onBack }: { project: Project; onBack: () => void
 
       <section className="group">
         <div className="group-head">
-          <h2 className="group-title">Notas</h2>
+          <h2 className="group-title">Notas{ownNotes.length > 0 && ` · ${ownNotes.length}`}</h2>
           <button className="link" onClick={() => createNote({ project_id: project.id }).then((n) => openNote(n.id))}>Nueva nota</button>
         </div>
         {ownNotes.length ? (
@@ -125,6 +141,9 @@ function ProjectSheet({ project, onClose, onDeleted }: { project: Project; onClo
       <div className="field">Estado
         <Choice value={project.status} options={PROJECT_STATUS} onChange={(status) => set({ status })} />
       </div>
+      <label className="field">Descripción
+        <textarea rows={3} placeholder="De qué va, en una o dos frases" defaultValue={project.description ?? ''} onBlur={(e) => e.target.value !== (project.description ?? '') && set({ description: e.target.value.trim() || null })} />
+      </label>
       <label className="field">Siguiente paso
         <textarea rows={2} defaultValue={project.next_step ?? ''} onBlur={(e) => e.target.value !== (project.next_step ?? '') && set({ next_step: e.target.value.trim() || null })} />
       </label>

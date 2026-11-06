@@ -11,6 +11,8 @@ npm run dev
 
 Abre http://localhost:5173 (o el puerto que diga). Sin `.env.local` arranca en **modo demo**: guarda en el navegador y la IA da respuestas simuladas. Así se puede probar todo sin cuentas.
 
+Para probar sin cuenta aunque tengas Supabase conectado: crea `.env.demo.local` con `VITE_SUPABASE_URL=`, `VITE_SUPABASE_KEY=` y `AI_PROVIDER=mock`, y arranca `npm run dev -- --mode demo --port 5174`.
+
 `npm test` pasa los tests de las reglas (`src/logic.test.ts`). `npm run build` comprueba tipos y genera `dist/`.
 
 ## Conectar Supabase (los datos de verdad)
@@ -37,7 +39,7 @@ La clave **nunca** va en git ni en el navegador: solo la lee `api/capture.ts`, q
 
 ## Cómo está hecha
 
-- `src/screens/`: Hoy, Tareas (y Proyectos), Notas, Agenda, Capture (＋) y Login. `src/DailyTasks.tsx`: las tareas diarias de Hoy.
+- `src/screens/`: Hoy, Tareas, Notas, Proyectos, Agenda (se abre desde Hoy), Capture (＋) y Login. `src/DailyTasks.tsx`: las tareas diarias de Hoy.
 - `src/NoteEditor.tsx`: el editor de notas a pantalla completa (lista de casillas, color, fijar, archivar, compartir y crear un recordatorio desde la nota).
 - `src/logic.ts`: las reglas (orden de prioridad, Foco, hueco libre, turnos, bloque del FP).
 - `src/capture.ts`: lo que la IA debe devolver, el prompt y la limpieza de su respuesta (compartido con el servidor).

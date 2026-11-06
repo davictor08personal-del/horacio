@@ -370,6 +370,7 @@ input, textarea { caret-color: var(--accent); }
 }
 .page .note-bar .link { padding: 0 8px; min-height: 44px; }
 .next-step { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; margin-top: 6px; font-size: 0.95rem; }
+.project-desc { margin-top: 4px; color: var(--text); }
 .note-row > svg { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
 
 /* Project of a note: a small pill under the date, like a tag */

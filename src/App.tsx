@@ -5,7 +5,7 @@ import Login from './screens/Login'
 import Today from './screens/Today'
 import Tasks from './screens/Tasks'
 import Notes from './screens/Notes'
-import Agenda from './screens/Agenda'
+import Projects from './screens/Projects'
 import NoteEditor, { ICON, useOpenNote } from './NoteEditor'
 import Capture from './screens/Capture'
 
@@ -14,7 +14,7 @@ const TABS = [
   { id: 'today', label: 'Hoy', icon: 'M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
   { id: 'tasks', label: 'Tareas', icon: 'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01' },
   { id: 'notes', label: 'Notas', icon: ICON.note },
-  { id: 'agenda', label: 'Agenda', icon: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' },
+  { id: 'projects', label: 'Proyectos', icon: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' },
 ] as const
 export type Tab = (typeof TABS)[number]['id']
 
@@ -53,7 +53,7 @@ export default function App() {
       <main className="screen">
         {demo && <p className="banner">Modo demo: los datos se guardan solo en este navegador.</p>}
         {error && <p className="banner danger-banner">{error}</p>}
-        {!loaded ? null : tab === 'today' ? <Today onGo={setTab} /> : tab === 'tasks' ? <Tasks /> : tab === 'notes' ? <Notes /> : <Agenda />}
+        {!loaded ? null : tab === 'today' ? <Today onGo={setTab} /> : tab === 'tasks' ? <Tasks /> : tab === 'notes' ? <Notes /> : <Projects />}
       </main>
       <nav className="dock">
         <div className="tabs">
