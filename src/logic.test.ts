@@ -125,7 +125,7 @@ describe('Hoy', () => {
     expect(greeting(2 * 60)).toBe('Buenas noches')
   })
   it('a daily task is ticked only on the day it was ticked', () => {
-    const d = { id: '1', title: 'Gimnasio', position: 0, done_on: '2026-11-03', created_at: '' }
+    const d = { id: '1', title: 'Gimnasio', position: 0, done_on: '2026-11-03', created_at: '', project_id: null }
     expect(doneToday(d, '2026-11-03')).toBe(true)
     expect(doneToday(d, '2026-11-04')).toBe(false)
   })
@@ -135,17 +135,17 @@ describe('capture kinds', () => {
   it('keeps notes, checklists and daily tasks, and only true asks', () => {
     const r = cleanCapture({
       notes: [{ title: 'Compra', body: '', items: ['leche', ' ', 'pan'], ask_project: 'yes' }, { title: '', body: '' }],
-      daily_tasks: [{ title: 'Leer 10 minutos' }, { title: '' }],
+      daily_tasks: [{ title: 'Leer 10 minutos', project: 'FP', ask_project: 'yes' }, { title: '' }],
       tasks: [{ title: 'Pedir presupuestos', project: 'Mudanza', ask_project: true }],
     })
     expect(r.notes).toEqual([{ title: 'Compra', body: '', items: ['leche', 'pan'], project: null, ask_project: false }])
-    expect(r.daily_tasks).toEqual([{ title: 'Leer 10 minutos' }])
+    expect(r.daily_tasks).toEqual([{ title: 'Leer 10 minutos', project: 'FP', ask_project: false }])
     expect(r.tasks[0]).toMatchObject({ project: 'Mudanza', ask_project: true, details: null })
   })
   it('the canned AI tells the kinds apart and finds the project', () => {
     const today = '2026-11-02'
     expect(mockCapture({ text: 'lista de la compra: leche, pan' }, today).notes[0]).toMatchObject({ title: 'La compra', items: ['leche', 'pan'] })
-    expect(mockCapture({ text: 'meditar todos los días' }, today).daily_tasks).toEqual([{ title: 'Meditar' }])
+    expect(mockCapture({ text: 'meditar todos los días' }, today).daily_tasks).toEqual([{ title: 'Meditar', project: null, ask_project: false }])
     expect(mockCapture({ text: 'recuérdame llamar a mamá a las 20' }, today).tasks[0]).toMatchObject({ title: 'Llamar a mamá', due_date: today, due_time: '20:00' })
     expect(mockCapture({ text: 'comprar cajas para la mudanza', projects: ['Mudanza'] }, today).tasks[0]).toMatchObject({ project: 'Mudanza', ask_project: false })
     expect(mockCapture({ text: 'idea para el proyecto: modo claro' }, today).notes[0]).toMatchObject({ ask_project: true })

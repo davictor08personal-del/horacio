@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { byEdited, byPriority, notePreview, noteTime } from '../logic'
+import { byEdited, byPosition, byPriority, notePreview, noteTime } from '../logic'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import Page from '../Page'
 import Sheet, { Choice } from '../Sheet'
+import { DailyGrid } from '../DailyTasks'
 import { createNote, createTask, insert, remove, update, useData } from '../store'
 import { TaskRow } from '../TaskRow'
 import { PROJECT_STATUS, type Project, type ProjectStatus } from '../types'
@@ -11,7 +12,7 @@ const GROUPS: [ProjectStatus, string][] = [['activo', 'Activos'], ['pausado', 'P
 
 /** Tab «Proyectos»: every project in one place; open one to see its description, reminders, tasks and notes. */
 export default function Projects() {
-  const { projects, tasks, notes } = useData()
+  const { projects, tasks, notes, daily_tasks } = useData()
   const [name, setName] = useState('')
   const [open, setOpen] = useState<string | null>(null)
   const project = projects.find((p) => p.id === open)
@@ -39,11 +40,12 @@ export default function Projects() {
               {list.map((p) => {
                 const count = tasks.filter((t) => t.project_id === p.id).length
                 const noteCount = notes.filter((n) => n.project_id === p.id && !n.archived).length
+                const dailyCount = daily_tasks.filter((d) => d.project_id === p.id).length
                 return (
                   <li key={p.id}>
                     <button className="project" onClick={() => setOpen(p.id)}>
                       <span className="task-title">{p.name}</span>
-                      <span className="task-sub">{[p.description || (p.next_step ? `Siguiente: ${p.next_step}` : null), count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
+                      <span className="task-sub">{[p.description || (p.next_step ? `Siguiente: ${p.next_step}` : null), count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
                     </button>
                   </li>
                 )
@@ -62,7 +64,8 @@ export default function Projects() {
  * New ones made here already belong to it.
  */
 function ProjectPage({ project, onBack }: { project: Project; onBack: () => void }) {
-  const { tasks, notes } = useData()
+  const { tasks, notes, daily_tasks } = useData()
+  const daily = daily_tasks.filter((d) => d.project_id === project.id).sort(byPosition)
   const [text, setText] = useState('')
   const [editing, setEditing] = useState(false)
   const own = tasks.filter((t) => t.project_id === project.id).sort(byPriority)
@@ -86,6 +89,13 @@ function ProjectPage({ project, onBack }: { project: Project; onBack: () => void
           : <button className="link" onClick={() => setEditing(true)}>Añadir una descripción</button>}
         {project.next_step && <p className="next-step">Siguiente paso: {project.next_step}</p>}
       </header>
+
+      {daily.length > 0 && (
+        <section className="group">
+          <h2 className="group-title">Tareas diarias · {daily.length}</h2>
+          <DailyGrid list={daily} />
+        </section>
+      )}
 
       {reminders.length > 0 && (
         <section className="group">

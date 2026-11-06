@@ -19,7 +19,7 @@ export interface CapturedTask {
 /** Something to keep, not to do: an idea, a list, a fact. `items` makes it a checklist. */
 export interface CapturedNote { title: string; body: string; items: string[] | null; project: string | null; ask_project: boolean }
 /** Something done every day («todos los días», «a diario»). */
-export interface CapturedDaily { title: string }
+export interface CapturedDaily { title: string; project: string | null; ask_project: boolean }
 export interface CapturedShift { day: string; kind: ShiftKind; starts_at: string | null; ends_at: string | null }
 export interface CapturedTest { subject: string; block: number | null; unit: string; opens_on: string | null; closes_on: string | null }
 export interface CapturedProject { name: string; next_step: string | null; area: string | null }
@@ -56,10 +56,10 @@ Primero decide qué es cada cosa:
 - Recordatorio: «recuérdame», «avísame», «que no se me olvide» o algo a una hora concreta. Va en tasks con due_date y due_time (si no dice hora pero sí día, due_time null).
 - Tarea: algo que hacer, sin hora fija. Va en tasks.
 - Nota (notes): algo para guardar, no para hacer: una idea, un dato, apuntes, una lista (de la compra, de pelis…). title corto; body el texto; si es una lista, items con un elemento por línea y body vacío. «Apunta que…», «nota:», «idea:» son notas.
-- Tarea diaria (daily_tasks): algo que quiere hacer cada día («todos los días», «a diario», «cada mañana»). Solo title.
+- Tarea diaria (daily_tasks): algo que quiere hacer cada día («todos los días», «a diario», «cada mañana»). title, y project/ask_project como las tareas.
 - Ante la duda entre tarea y nota: si hay que hacer algo, tarea; si es para recordar o consultar, nota.
 
-Proyecto de tareas, recordatorios y notas: project = nombre exacto de un proyecto existente si encaja claramente (por tema o porque lo nombra). Si parece de algún proyecto pero no sabes de cuál, o podría ser un proyecto nuevo, project null y ask_project true. Si no tiene que ver con ningún proyecto (la compra, una llamada), project null y ask_project false.
+Proyecto de tareas, recordatorios, notas y tareas diarias: project = nombre exacto de un proyecto existente si encaja claramente (por tema o porque lo nombra). Si parece de algún proyecto pero no sabes de cuál, o podría ser un proyecto nuevo, project null y ask_project true. Si no tiene que ver con ningún proyecto (la compra, una llamada), project null y ask_project false.
 
 Campos:
 - Tareas y recordatorios (tasks): title breve en infinitivo («Sacar el dinero del alquiler»). priority: alta si dice urgente/importante/ya, baja si dice cuando pueda/sin prisa, si no media. effort: rapido (<15 min), medio, grande (varias horas). due_date YYYY-MM-DD si dice un día («mañana», «el viernes» = el próximo viernes); due_time HH:MM si dice una hora. status: abierto salvo que diga que ya lo está haciendo (en_curso) o que espera a alguien (esperando). details: detalles extra que diga, si los hay.
@@ -85,7 +85,7 @@ export const CAPTURE_SCHEMA = {
       due_date: nstr, due_time: nstr, area: nstr, details: nstr, project: nstr, ask_project: { type: 'BOOLEAN' },
     }, ['title', 'priority', 'effort', 'status']),
     notes: list({ title: str, body: str, items: { type: 'ARRAY', items: str, nullable: true }, project: nstr, ask_project: { type: 'BOOLEAN' } }, ['title', 'body']),
-    daily_tasks: list({ title: str }, ['title']),
+    daily_tasks: list({ title: str, project: nstr, ask_project: { type: 'BOOLEAN' } }, ['title']),
     shifts: list({ day: str, kind: { type: 'STRING', enum: ['opening', 'dia', 'noche', 'libre'] }, starts_at: nstr, ends_at: nstr }, ['day', 'kind']),
     fp_tests: list({ subject: str, block: { type: 'INTEGER', nullable: true }, unit: str, opens_on: nstr, closes_on: nstr }, ['subject', 'unit']),
     projects: list({ name: str, next_step: nstr, area: nstr }, ['name']),
@@ -129,7 +129,7 @@ export function cleanCapture(raw: unknown): Capture {
     }),
     daily_tasks: arr(r.daily_tasks).flatMap((d) => {
       const title = text(d.title, 120)
-      return title ? [{ title }] : []
+      return title ? [{ title, project: text(d.project, 80), ask_project: d.ask_project === true }] : []
     }),
     shifts: arr(r.shifts).flatMap((s) => {
       const day = date(s.day)
@@ -176,7 +176,7 @@ export function mockCapture(req: CaptureRequest, today: string): Capture {
     return { ...empty, notes: [{ title: cap(head.trim()), body: items.length ? '' : rest.join(':').trim(), items: items.length ? items : null, project, ask_project }] }
   }
   if (/todos los días|a diario|cada día/.test(lower)) {
-    return { ...empty, daily_tasks: [{ title: cap(t.replace(/,?\s*(todos los días|a diario|cada día)/gi, '').trim()) }] }
+    return { ...empty, daily_tasks: [{ title: cap(t.replace(/,?\s*(todos los días|a diario|cada día)/gi, '').trim()), project: null, ask_project: false }] }
   }
   const due_date = lower.includes('pasado mañana') ? addDays(today, 2) : lower.includes('mañana') ? addDays(today, 1) : lower.includes('hoy') ? today : null
   const hour = lower.match(/a las (\d{1,2})(?::(\d\d))?/)

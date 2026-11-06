@@ -45,6 +45,7 @@ export interface DailyTask {
   title: string
   position: number
   done_on: string | null
+  project_id: string | null
   created_at: string
 }
 

@@ -158,7 +158,7 @@ function toItems(r: Result): Item[] {
   return [
     ...r.tasks.map((t): Item => ({ ...BLANK, ...t, kind: t.due_time ? 'recordatorio' : 'tarea', details: t.details ?? '' })),
     ...r.notes.map((n): Item => ({ ...BLANK, kind: 'nota', title: n.title, details: n.items ? n.items.join('\n') : n.body, checklist: !!n.items, project: n.project, ask_project: n.ask_project })),
-    ...r.daily_tasks.map((d): Item => ({ ...BLANK, kind: 'diaria', title: d.title })),
+    ...r.daily_tasks.map((d): Item => ({ ...BLANK, kind: 'diaria', title: d.title, project: d.project, ask_project: d.ask_project })),
   ]
 }
 
@@ -202,7 +202,7 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
         title: n.title.trim(), body: n.checklist ? '' : n.details.trim(), items: n.checklist ? toChecklist(n.details) : null,
         color: 'none' as const, project_id: projectId(n.project), pinned: false, archived: false, updated_at: now,
       })))
-      await insert('daily_tasks', of('diaria').map((d, i) => ({ title: d.title.trim(), position: daily_tasks.length + i, done_on: null })))
+      await insert('daily_tasks', of('diaria').map((d, i) => ({ title: d.title.trim(), position: daily_tasks.length + i, done_on: null, project_id: projectId(d.project) })))
       await insert('shifts', r.shifts)
       await insert('fp_tests', r.fp_tests.map((t) => ({ ...t, read: false })))
       onClose()
@@ -243,7 +243,7 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
             </>
           )}
           {t.kind === 'diaria' && <p className="muted small-text">Saldrá cada día en Hoy, para tacharla.</p>}
-          {t.kind !== 'diaria' && (projectNames.length > 0 || t.project) && (
+          {(projectNames.length > 0 || t.project) && (
             <label className={`field ${t.ask_project && !t.project ? 'asking' : ''}`}>
               {t.ask_project && !t.project ? '¿De qué proyecto es?' : 'Proyecto'}
               <select value={t.project ?? ''} onChange={(e) => editItem(i, { project: e.target.value || null, ask_project: false })}>

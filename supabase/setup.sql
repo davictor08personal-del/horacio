@@ -57,6 +57,9 @@ create table if not exists public.daily_tasks (
   created_at timestamptz not null default now()
 );
 
+-- A daily task can belong to a project (a label on Hoy; listed on the project's page).
+alter table public.daily_tasks add column if not exists project_id uuid references public.projects on delete set null;
+
 -- A reminder (task) can point to one note; a note can have several reminders. Deleting the note keeps the reminders.
 alter table public.tasks add column if not exists note_id uuid references public.notes on delete set null;
 
