@@ -323,9 +323,35 @@ export function colorParts(c?: string | null): { key: string; alpha: number } {
 export const joinColor = (key: string, alpha: number) => (key === 'none' ? 'none' : alpha === DEFAULT_TINT ? key : `${key}:${alpha}`)
 /** The colour name for the `dc-…` class, or null when there's none. */
 export const colorKey = (c?: string | null) => { const { key } = colorParts(c); return key === 'none' ? null : key }
-/** Inline style that sets how strong every translucent use of the colour is (the CSS blends with --lo and --hi). */
-export const tintStyle = (c?: string | null): { [k: string]: number } | undefined => {
+// The palette (same as .dc-* in styles.css) and what's behind a coloured card in each theme, to pick readable text.
+const TILE: Record<string, [number, number, number]> = {
+  azul: [0x3b, 0x76, 0xd9], verde: [0x2f, 0x9a, 0x63], morado: [0x7c, 0x5a, 0xd6], rosa: [0xd4, 0x50, 0x8a],
+  rojo: [0xd6, 0x51, 0x51], naranja: [0xdf, 0x7a, 0x2a], vinotinto: [0x9b, 0x2a, 0x4c], gris: [0x6b, 0x76, 0x85],
+}
+const PAGE = { light: { row: [255, 255, 255], tile: [243, 245, 249] }, dark: { row: [28, 28, 30], tile: [18, 18, 18] } } as const
+const BASE = { row: 14, tile: 24 } // how much colour the card has at the default opacity (%), see styles.css
+const luminance = ([r, g, b]: number[]) => {
+  const f = (v: number) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+}
+/** White or dark text, whichever reads better on the card's real colour (the tint blended over the page). */
+function inkFor(key: string, alpha: number, theme: 'light' | 'dark', kind: 'row' | 'tile'): string {
+  const tile = TILE[key]
+  if (!tile) return ''
+  const lo = Math.min(alpha / DEFAULT_TINT, 1), hi = Math.max((alpha - DEFAULT_TINT) / DEFAULT_TINT, 0)
+  const cover = (BASE[kind] * lo + (100 - BASE[kind]) * hi) / 100
+  const page = PAGE[theme][kind]
+  const bg = tile.map((t, i) => t * cover + page[i] * (1 - cover))
+  const L = luminance(bg)
+  const white = 1.05 / (L + 0.05), dark = (L + 0.05) / (luminance([14, 26, 43]) + 0.05) // contrast against white and against the dark ink
+  return white * 1.5 >= dark ? '#ffffff' : '#0e1a2b' // leans to white: on a saturated colour it looks right even when dark text measures a little higher
+}
+
+/** Inline style for a coloured card: how strong the tint is (--lo/--hi, blended in the CSS) and the text colour that reads on it (--ink-l/--ink-d, one per theme). */
+export const tintStyle = (c?: string | null, kind: 'row' | 'tile' = 'tile'): { [k: string]: string | number } | undefined => {
   const { key, alpha } = colorParts(c)
+  if (key === 'none') return undefined
+  const ink = { '--ink-l': inkFor(key, alpha, 'light', kind), '--ink-d': inkFor(key, alpha, 'dark', kind) }
   // 0-50 fades from clear to the usual look (--lo 0→1); 50-100 goes on to the solid palette colour (--hi 0→1).
-  return key === 'none' || alpha === DEFAULT_TINT ? undefined : { '--lo': Math.min(alpha / DEFAULT_TINT, 1), '--hi': Math.max((alpha - DEFAULT_TINT) / DEFAULT_TINT, 0) }
+  return { '--lo': Math.min(alpha / DEFAULT_TINT, 1), '--hi': Math.max((alpha - DEFAULT_TINT) / DEFAULT_TINT, 0), ...ink }
 }

@@ -39,7 +39,7 @@ export function TaskRow({ task: initialTask, n, deletable }: { task: Task; n?: n
   ].filter(Boolean).join(' · ')
 
   return (
-    <li style={tintStyle(task.color)} className={`task ${color ? `colored dc-${color}` : ''} ${leaving ? 'leaving' : ''}`}>
+    <li style={tintStyle(task.color, 'row')} className={`task ${color ? `colored dc-${color}` : ''} ${leaving ? 'leaving' : ''}`}>
       {n && <span className="num" aria-hidden>{n}</span>}
       <button className={`tick prio-${task.priority}`} onClick={finish} aria-label={`Marcar «${task.title}» como hecha`} />
       <button className="task-text" onClick={() => setOpen(true)}>
@@ -62,7 +62,7 @@ export function ClosedRow({ task: initialTask }: { task: Task }) {
   const when = task.done_at ? relDay(localDay(new Date(task.done_at)), localDay()).toLowerCase() : ''
   const color = colorKey(task.color)
   return (
-    <li style={tintStyle(task.color)} className={`task closed ${color ? `colored dc-${color}` : ''}`}>
+    <li style={tintStyle(task.color, 'row')} className={`task closed ${color ? `colored dc-${color}` : ''}`}>
       <button className={`tick ${task.status === 'hecho' ? 'done' : 'dropped'}`} onClick={() => setTaskStatus(task, 'abierto')} aria-label={`Reabrir «${task.title}»`} />
       <div className="task-text">
         <span className="task-title">{task.title}</span>

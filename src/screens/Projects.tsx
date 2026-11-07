@@ -71,7 +71,7 @@ export default function Projects() {
                 const color = colorKey(p.color)
                 return (
                   <li key={p.id}>
-                    <button style={tintStyle(p.color)} className={`project ${color ? `colored dc-${color}` : ''} ${p.icon ? 'has-art' : ''}`} onClick={() => setOpen(p.id)}>
+                    <button style={tintStyle(p.color, 'row')} className={`project ${color ? `colored dc-${color}` : ''} ${p.icon ? 'has-art' : ''}`} onClick={() => setOpen(p.id)}>
                       {p.icon ? <DailyArt icon={p.icon} /> : <ItemIcon icon={null} name={p.name} />}
                       <span className="project-text">
                       <span className="task-title">{p.name}</span>
