@@ -186,14 +186,36 @@ export const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').to
 export function noteMatches(n: Note, query: string) {
   const q = fold(query.trim())
   if (!q) return true
-  return fold([n.title, n.body, ...(n.items ?? []).map((i) => i.text)].join('\n')).includes(q)
+  return fold([n.title, stripImages(n.body), ...(n.items ?? []).map((i) => i.text)].join('\n')).includes(q)
 }
 
 /** The second line of a row in the list: the first line of text that isn't the title. */
 export function notePreview(n: Note) {
-  const lines = n.items ? n.items.map((i) => i.text) : n.body.split('\n')
+  const lines = n.items ? n.items.map((i) => i.text) : stripImages(n.body).split('\n')
   return lines.map((l) => l.trim()).find(Boolean) ?? ''
 }
+
+// ---------- pictures inside a note ----------
+// A picture is one line of the body, «[[img:<user>/<id>.webp]]», so the text stays plain text (search, AI, export)
+// and no extra column is needed. The editor shows those lines as pictures between the text blocks.
+const IMG_LINE = /^\[\[img:([A-Za-z0-9/_.-]{1,200})\]\]$/
+export type Block = { type: 'text'; text: string } | { type: 'img'; path: string }
+
+/** Body → alternating text and picture blocks. It always starts and ends with a text block (maybe empty), so there's somewhere to type. */
+export function splitBody(body: string): Block[] {
+  const blocks: Block[] = []
+  let text: string[] = []
+  for (const line of body.split('\n')) {
+    const m = IMG_LINE.exec(line.trim())
+    if (m) { blocks.push({ type: 'text', text: text.join('\n') }, { type: 'img', path: m[1] }); text = [] } else text.push(line)
+  }
+  blocks.push({ type: 'text', text: text.join('\n') })
+  return blocks
+}
+export const joinBlocks = (blocks: Block[]) => blocks.map((b) => (b.type === 'img' ? `[[img:${b.path}]]` : b.text)).join('\n')
+export const imagePaths = (body: string) => splitBody(body).flatMap((b) => (b.type === 'img' ? [b.path] : []))
+/** The text without the picture lines (for search, previews and sharing). */
+export const stripImages = (body: string) => body.split('\n').filter((l) => !IMG_LINE.test(l.trim())).join('\n').trim()
 
 /** Like iOS Notes: "10:42" today, "Ayer", the day name this week, "3 nov" before. */
 export function noteTime(iso: string, now = new Date()) {
@@ -275,8 +297,14 @@ export function parseSearch(query: string) {
 export function projectsTagged(projects: Pick<Project, 'id' | 'tags'>[], tags: string[]) {
   return new Set(projects.filter((p) => tags.every((t) => (p.tags ?? []).some((pt) => pt.startsWith(t)))).map((p) => p.id))
 }
+/** A task matches if it or its project has every tag searched (a tag matches by prefix: #idio finds #idiomas). */
+export function taskMatchesTags(t: Pick<Task, 'tags' | 'project_id'>, tags: string[], taggedProjects?: Set<string> | null) {
+  if (!tags.length) return true
+  return tags.every((tag) => (t.tags ?? []).some((pt) => pt.startsWith(tag)) || (!!t.project_id && !!taggedProjects?.has(t.project_id)))
+}
 /** Every tag in use, for picking an existing one instead of typing it again. */
-export const allTags = (projects: Pick<Project, 'tags'>[]) => [...new Set(projects.flatMap((p) => p.tags ?? []))].sort()
+export const allTags = (...collections: ({ tags?: string[] | null }[])[]) =>
+  [...new Set(collections.flat().flatMap((p) => p.tags ?? []))].sort()
 /** Plain-text search in a few strings, ignoring accents and case. */
 export const textMatches = (query: string, ...fields: (string | null | undefined)[]) => {
   const q = fold(query.trim())

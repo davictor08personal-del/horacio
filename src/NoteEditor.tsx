@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type TextareaHTMLAttributes } from 'react'
-import { fromChecklist, timeZone, toChecklist } from './logic'
+import { fromChecklist, imagePaths, joinBlocks, splitBody, stripImages, timeZone, toChecklist, type Block } from './logic'
+import { deleteNoteImages, MAX_NOTE_IMAGES, uploadNoteImage, useImageUrl } from './noteImages'
 import { remove, update, useData } from './store'
 import { TaskRow } from './TaskRow'
 import type { ChecklistItem, Note } from './types'
@@ -19,6 +20,7 @@ export const ICON = {
   list: 'M4 6h16M4 12h16M4 18h16',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
   note: 'M6 3h9l4 4v14H6zM9 9h6M9 13h6M9 17h4',
+  image: 'M4 5h16v14H4zM4 16l5-5 4 4 3-3 4 4M9 9h.01',
   x: 'M6 6l12 12M18 6L6 18',
 }
 export const Icon = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden><path d={d} /></svg>
@@ -45,12 +47,20 @@ export default function NoteEditor({ id }: { id: string }) {
   const note = notes.find((n) => n.id === id)
   const [draft, setDraft] = useState<Draft>(() => ({ title: note?.title ?? '', body: note?.body ?? '', items: note?.items ?? null }))
   const dirty = useRef(false)
+  const removed = useRef<string[]>([]) // pictures taken out of the text: their files go once the note is saved
+  const caret = useRef({ i: -1, pos: 0 }) // where the cursor was last, to drop a picture there
+  const fileInput = useRef<HTMLInputElement>(null)
+  const bodyRef = useRef(draft.body) // the latest text, for pictures that arrive while the state is still updating
+  const [uploading, setUploading] = useState(false)
+  const [viewing, setViewing] = useState<string | null>(null)
   const reminders = tasks.filter((t) => t.note_id === id)
 
   const save = () => {
     if (!dirty.current) return
     dirty.current = false
-    return update('notes', id, { ...draft, updated_at: new Date().toISOString() })
+    const gone = removed.current
+    removed.current = []
+    return update('notes', id, { ...draft, updated_at: new Date().toISOString() }).then(() => deleteNoteImages(gone))
   }
   useEffect(() => {
     if (!dirty.current) return
@@ -69,14 +79,58 @@ export default function NoteEditor({ id }: { id: string }) {
   async function close() {
     openNote(null)
     // An empty note with nothing linked is discarded, as in Keep and iOS.
-    if (isEmpty(draft) && !reminders.length && !daily) return remove('notes', id)
+    if (isEmpty(draft) && !reminders.length && !daily) return dropNote()
     await save()
   }
+  /** Deleting a note also deletes its picture files. */
+  async function dropNote() {
+    const files = [...imagePaths(note!.body), ...imagePaths(draft.body), ...removed.current]
+    await remove('notes', id)
+    await deleteNoteImages([...new Set(files)])
+  }
 
-  const toggleChecklist = () => edit(draft.items ? { items: null, body: fromChecklist(draft.items) } : { items: toChecklist(draft.body), body: '' })
+  const blocks = splitBody(draft.body)
+  bodyRef.current = draft.body
+  const imageCount = blocks.filter((b) => b.type === 'img').length
+  const setBlocks = (next: Block[]) => edit({ body: joinBlocks(next) })
+  const typeIn = (i: number, text: string) => setBlocks(blocks.map((b, j) => (j === i ? { type: 'text', text } : b)))
+  const removePicture = (i: number) => {
+    const b = blocks[i]
+    if (b.type !== 'img') return
+    removed.current.push(b.path)
+    // The text above and below join into one block again.
+    const above = blocks[i - 1] as { text: string }, below = blocks[i + 1] as { text: string }
+    setBlocks([...blocks.slice(0, i - 1), { type: 'text', text: [above.text, below.text].filter(Boolean).join('\n') }, ...blocks.slice(i + 2)])
+  }
+  async function addPictures(files: FileList | null) {
+    const list = [...(files ?? [])].slice(0, MAX_NOTE_IMAGES - imageCount)
+    if (!list.length) return alert(`Máximo ${MAX_NOTE_IMAGES} imágenes por nota.`)
+    setUploading(true)
+    try {
+      for (const file of list) {
+        const path = await uploadNoteImage(file)
+        // Dropped where the cursor was (text before it above the picture, text after it below); else at the end.
+        const cur = splitBody(bodyRef.current)
+        const at = caret.current.i >= 0 && cur[caret.current.i]?.type === 'text' ? caret.current.i : cur.length - 1
+        const t = cur[at] as { text: string }
+        const pos = at === caret.current.i ? Math.min(caret.current.pos, t.text.length) : t.text.length
+        caret.current = { i: at + 2, pos: 0 } // the next picture goes below this one
+        const next: Block[] = [...cur.slice(0, at), { type: 'text', text: t.text.slice(0, pos).replace(/\n$/, '') }, { type: 'img', path }, { type: 'text', text: t.text.slice(pos).replace(/^\n/, '') }, ...cur.slice(at + 1)]
+        bodyRef.current = joinBlocks(next)
+        edit({ body: bodyRef.current })
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'No se pudo añadir la imagen.')
+    } finally {
+      setUploading(false)
+      if (fileInput.current) fileInput.current.value = ''
+    }
+  }
+
+  const toggleChecklist = () => imageCount && !draft.items ? alert('Quita las imágenes antes de pasar la nota a casillas.') : edit(draft.items ? { items: null, body: fromChecklist(draft.items) } : { items: toChecklist(draft.body), body: '' })
 
   async function share() {
-    const text = [draft.title, draft.items ? draft.items.map((i) => `${i.done ? '☑' : '☐'} ${i.text}`).join('\n') : draft.body].filter(Boolean).join('\n\n')
+    const text = [draft.title, draft.items ? draft.items.map((i) => `${i.done ? '☑' : '☐'} ${i.text}`).join('\n') : stripImages(draft.body)].filter(Boolean).join('\n\n')
     if (navigator.share) await navigator.share({ title: draft.title, text }).catch(() => {})
     else await navigator.clipboard.writeText(text).then(() => alert('Copiada al portapapeles'))
   }
@@ -102,7 +156,16 @@ export default function NoteEditor({ id }: { id: string }) {
         {draft.items ? (
           <Checklist items={draft.items} onChange={(items) => edit({ items })} />
         ) : (
-          <Grow className="note-body" value={draft.body} placeholder="Nota" onChange={(e) => edit({ body: e.target.value })} aria-label="Texto" autoFocus={isEmpty(draft)} />
+          <div className="note-blocks">
+            {blocks.map((b, i) => b.type === 'img' ? (
+              <NoteImage key={`${b.path}-${i}`} path={b.path} onOpen={setViewing} onRemove={() => confirm('¿Quitar esta imagen de la nota?') && removePicture(i)} />
+            ) : (
+              <Grow key={`t${i}`} className="note-body note-seg" value={b.text} placeholder={blocks.length === 1 ? 'Nota' : i === blocks.length - 1 ? 'Escribe aquí…' : ''}
+                onChange={(e) => typeIn(i, e.target.value)}
+                onSelect={(e) => { caret.current = { i, pos: e.currentTarget.selectionStart } }}
+                aria-label="Texto" autoFocus={i === 0 && isEmpty(draft)} />
+            ))}
+          </div>
         )}
 
         {reminders.length > 0 && (
@@ -115,6 +178,12 @@ export default function NoteEditor({ id }: { id: string }) {
 
       <nav className="dock note-dock" aria-label="Acciones de la nota">
         <div className="tabs note-tools">
+          {!draft.items && (
+            <button onClick={() => fileInput.current?.click()} disabled={uploading}>
+              <Icon d={ICON.image} />
+              {uploading ? 'Subiendo…' : 'Imagen'}
+            </button>
+          )}
           <button className={draft.items ? 'active' : ''} onClick={toggleChecklist} aria-pressed={!!draft.items}>
             <Icon d={ICON.checklist} />
             Casillas
@@ -123,14 +192,32 @@ export default function NoteEditor({ id }: { id: string }) {
             <Icon d={ICON.archive} />
             {note.archived ? 'Desarchivar' : 'Archivar'}
           </button>
-          <button className="danger" onClick={() => confirm(reminders.length ? '¿Borrar esta nota? Sus recordatorios se quedan.' : '¿Borrar esta nota?') && (openNote(null), remove('notes', id))}>
+          <button className="danger" onClick={() => confirm(reminders.length ? '¿Borrar esta nota? Sus recordatorios se quedan.' : '¿Borrar esta nota?') && (openNote(null), dropNote())}>
             <Icon d={ICON.trash} />
             Borrar
           </button>
         </div>
       </nav>
+      <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={(e) => addPictures(e.target.files)} />
+      {viewing && <Lightbox path={viewing} onClose={() => setViewing(null)} />}
     </div>
   )
+}
+
+/** A picture in the text: tap to see it big, × to take it out. */
+function NoteImage({ path, onOpen, onRemove }: { path: string; onOpen: (path: string) => void; onRemove: () => void }) {
+  const url = useImageUrl(path)
+  return (
+    <figure className="note-img">
+      {url ? <img src={url} alt="" loading="lazy" onClick={() => onOpen(path)} /> : <span className="note-img-wait" aria-hidden />}
+      <button type="button" className="note-img-x" onClick={onRemove} aria-label="Quitar imagen"><Icon d={ICON.x} /></button>
+    </figure>
+  )
+}
+
+function Lightbox({ path, onClose }: { path: string; onClose: () => void }) {
+  const url = useImageUrl(path)
+  return <div className="lightbox" role="dialog" aria-label="Imagen" onClick={onClose}>{url && <img src={url} alt="" />}<button className="icon-btn lightbox-x" aria-label="Cerrar"><Icon d={ICON.x} /></button></div>
 }
 
 /** Keep-style list: Enter adds the next item, Backspace on an empty one removes it, ticked items sink to the bottom. */

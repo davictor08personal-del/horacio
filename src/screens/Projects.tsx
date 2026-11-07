@@ -7,7 +7,7 @@ import Sheet, { Choice } from '../Sheet'
 import { DailyArt, DailyGrid } from '../DailyTasks'
 import { createNote, createTask, insert, remove, update, useData } from '../store'
 import { TaskRow } from '../TaskRow'
-import { PROJECT_STATUS, type Project, type ProjectStatus } from '../types'
+import { DAILY_COLORS, PROJECT_STATUS, type Project, type ProjectStatus } from '../types'
 
 const GROUPS: [ProjectStatus, string][] = [['activo', 'Activos'], ['pausado', 'Pausados'], ['hecho', 'Terminados']]
 
@@ -32,7 +32,7 @@ export default function Projects() {
     if (!q) return
     if (exact) return setOpen(exact.id)
     if (!canCreate) return shown.length === 1 && setOpen(shown[0].id)
-    const [created] = await insert('projects', [{ name: query.trim(), status: 'activo', description: null, icon: null, tags: [], next_step: null, area: null }])
+    const [created] = await insert('projects', [{ name: query.trim(), status: 'activo', description: null, icon: null, tags: [], next_step: null, area: null, color: 'none' }])
     setQuery('')
     setOpen(created.id)
   }
@@ -67,14 +67,14 @@ export default function Projects() {
                 const count = tasks.filter((t) => t.project_id === p.id).length
                 const noteCount = notes.filter((n) => n.project_id === p.id && !n.archived).length
                 const dailyCount = daily_tasks.filter((d) => d.project_id === p.id).length
+                const color = p.color && p.color !== 'none' ? p.color : null
                 return (
                   <li key={p.id}>
-                    <button className={`project ${p.icon ? 'has-art' : ''}`} onClick={() => setOpen(p.id)}>
+                    <button className={`project ${color ? `colored dc-${color}` : ''} ${p.icon ? 'has-art' : ''}`} onClick={() => setOpen(p.id)}>
                       {p.icon ? <DailyArt icon={p.icon} /> : <ItemIcon icon={null} name={p.name} />}
                       <span className="project-text">
                       <span className="task-title">{p.name}</span>
-                      <span className="task-sub">{[p.description || (p.next_step ? `Siguiente: ${p.next_step}` : null), count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
-                        <TagChips tags={p.tags} />
+                      <span className="task-sub">{[count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
                       </span>
                     </button>
                   </li>
@@ -94,8 +94,9 @@ export default function Projects() {
  * One project: its description, then what's pending (reminders = tasks with a time, then the rest) and its notes.
  * New ones made here already belong to it.
  */
-function ProjectPage({ project, onBack }: { project: Project; onBack: () => void }) {
-  const { tasks, notes, daily_tasks } = useData()
+function ProjectPage({ project: initialProject, onBack }: { project: Project; onBack: () => void }) {
+  const { projects, tasks, notes, daily_tasks } = useData()
+  const project = projects.find((p) => p.id === initialProject.id) ?? initialProject
   const daily = daily_tasks.filter((d) => d.project_id === project.id).sort(byPosition)
   const [text, setText] = useState('')
   const [editing, setEditing] = useState(false)
@@ -109,19 +110,25 @@ function ProjectPage({ project, onBack }: { project: Project; onBack: () => void
     createTask({ title: text.trim(), project_id: project.id })
     setText('')
   }
+  const heroColor = project.color && project.color !== 'none' ? project.color : null
 
   return (
     <Page back="Proyectos" onBack={onBack} actions={<button className="link" onClick={() => setEditing(true)}>Editar</button>}>
       <header className="today-head">
-        {project.icon
-          ? <div className="project-hero"><DailyArt icon={project.icon} big /><h1>{project.name}</h1></div>
-          : <><ItemIcon icon={null} name={project.name} big /><h1>{project.name}</h1></>}
+        {project.icon || heroColor ? (
+          <div className={`project-hero ${heroColor ? `colored dc-${heroColor}` : ''} ${project.icon ? 'has-art' : ''}`}>
+            {project.icon ? <DailyArt icon={project.icon} big /> : <ItemIcon icon={null} name={project.name} big />}
+            <h1>{project.name}</h1>
+          </div>
+        ) : (
+          <><ItemIcon icon={null} name={project.name} big /><h1>{project.name}</h1></>
+        )}
         <p className="day-line">{PROJECT_STATUS[project.status]}{project.area && ` · ${project.area}`}</p>
         <TagChips tags={project.tags} />
+        {!project.icon && <button className="link" onClick={() => setEditing(true)}>Añadir foto o icono de portada</button>}
         {project.description
           ? <p className="butler project-desc">{project.description}</p>
           : <button className="link" onClick={() => setEditing(true)}>Añadir una descripción</button>}
-        {project.next_step && <p className="next-step">Siguiente paso: {project.next_step}</p>}
       </header>
 
       {daily.length > 0 && (
@@ -184,7 +191,7 @@ function NewProject({ onClose, onCreated }: { onClose: () => void; onCreated: (i
   const create = async () => {
     if (!name.trim() || busy) return
     setBusy(true)
-    const [p] = await insert('projects', [{ name: name.trim(), status: 'activo', description: null, icon: null, tags: [], next_step: null, area: null }])
+    const [p] = await insert('projects', [{ name: name.trim(), status: 'activo', description: null, icon: null, tags: [], next_step: null, area: null, color: 'none' }])
     onCreated(p.id)
   }
   return (
@@ -203,10 +210,10 @@ export function TagChips({ tags }: { tags?: string[] | null }) {
 }
 
 /** Add tags (Enter or comma), remove them with a tap, or reuse one from other projects. Saved at once. */
-function TagEditor({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
-  const { projects } = useData()
+export function TagEditor({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
+  const { projects, tasks } = useData()
   const [text, setText] = useState('')
-  const others = allTags(projects).filter((t) => !tags.includes(t))
+  const others = allTags(projects, tasks).filter((t) => !tags.includes(t))
   const full = tags.length >= MAX_TAGS
   const add = (raw: string) => {
     const t = cleanTag(raw)
@@ -232,26 +239,46 @@ function TagEditor({ tags, onChange }: { tags: string[]; onChange: (tags: string
           {others.map((t) => <button key={t} type="button" className="tag suggest" onClick={() => add(t)}>#{t}</button>)}
         </span>
       )}
-      <span className="hint">Una etiqueta sirve para varios proyectos. Luego busca #etiqueta en Proyectos, Notas o Tareas para verlo todo junto.</span>
+      <span className="hint">Una etiqueta sirve para varias tareas o proyectos. Luego busca #etiqueta para verlo todo junto.</span>
     </div>
   )
 }
 
-function ProjectSheet({ project, onClose, onDeleted }: { project: Project; onClose: () => void; onDeleted: () => void }) {
+function ProjectSheet({ project: initialProject, onClose, onDeleted }: { project: Project; onClose: () => void; onDeleted: () => void }) {
+  const { projects } = useData()
+  const project = projects.find((p) => p.id === initialProject.id) ?? initialProject
   const set = (patch: Partial<Project>) => update('projects', project.id, patch)
+  const heroColor = project.color && project.color !== 'none' ? project.color : null
   return (
     <Sheet title="Proyecto" onClose={onClose}>
+      {(project.icon || heroColor) && (
+        <div className={`project-hero ${heroColor ? `colored dc-${heroColor}` : ''} ${project.icon ? 'has-art' : ''}`}>
+          {project.icon ? <DailyArt icon={project.icon} big /> : <ItemIcon icon={null} name={project.name} big />}
+          <h2 className="hero-title">{project.name}</h2>
+        </div>
+      )}
       <input className="big-input" defaultValue={project.name} onBlur={(e) => e.target.value.trim() && e.target.value !== project.name && set({ name: e.target.value.trim() })} aria-label="Nombre" />
-      <IconPicker icon={project.icon} onChange={(icon) => set({ icon })} />
+      <div className="field">Color
+        <div className="color-picker">
+          {Object.entries(DAILY_COLORS).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`swatch dc-${key} ${(project.color || 'none') === key ? 'on' : ''}`}
+              onClick={() => set({ color: key })}
+              aria-label={label}
+              title={label}
+            />
+          ))}
+        </div>
+      </div>
+      <IconPicker icon={project.icon} onChange={(icon) => set({ icon })} label="Imagen o icono" />
       <TagEditor tags={project.tags ?? []} onChange={(tags) => set({ tags })} />
       <div className="field">Estado
         <Choice value={project.status} options={PROJECT_STATUS} onChange={(status) => set({ status })} />
       </div>
       <label className="field">Descripción
         <textarea rows={3} placeholder="De qué va, en una o dos frases" defaultValue={project.description ?? ''} onBlur={(e) => e.target.value !== (project.description ?? '') && set({ description: e.target.value.trim() || null })} />
-      </label>
-      <label className="field">Siguiente paso
-        <textarea rows={2} defaultValue={project.next_step ?? ''} onBlur={(e) => e.target.value !== (project.next_step ?? '') && set({ next_step: e.target.value.trim() || null })} />
       </label>
       <label className="field">Área
         <input defaultValue={project.area ?? ''} onBlur={(e) => e.target.value !== (project.area ?? '') && set({ area: e.target.value.trim() || null })} />

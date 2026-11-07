@@ -90,6 +90,18 @@ insert into public.daily_log (user_id, daily_id, day)
 
 -- A reminder (task) can point to one note; a note can have several reminders. Deleting the note keeps the reminders.
 alter table public.tasks add column if not exists note_id uuid references public.notes on delete set null;
+-- Task and project colours (keys of DAILY_COLORS in src/types.ts).
+alter table public.tasks add column if not exists color text not null default 'none';
+alter table public.tasks drop constraint if exists tasks_color;
+alter table public.tasks add constraint tasks_color check (char_length(color) <= 20) not valid;
+
+alter table public.tasks add column if not exists tags text[] not null default '{}';
+alter table public.tasks drop constraint if exists tasks_tags;
+alter table public.tasks add constraint tasks_tags check (cardinality(tags) <= 10) not valid;
+
+alter table public.projects add column if not exists color text not null default 'none';
+alter table public.projects drop constraint if exists projects_color;
+alter table public.projects add constraint projects_color check (char_length(color) <= 20) not valid;
 
 -- Who the user is: their name (greeting), time zone (every «today» and notification time) and which optional
 -- modules they use. Created by the welcome screen the first time they sign in.
@@ -217,3 +229,21 @@ begin
   alter table public.profiles add constraint profiles_sizes
     check (char_length(timezone) <= 100) not valid;
 end $$;
+
+-- Pictures inside notes (see src/noteImages.ts). Private bucket, one folder per user («<user id>/<file>»);
+-- 2 MB per file and only WebP/JPEG (the app shrinks them to ~200 KB in the phone first).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('note-images', 'note-images', false, 2097152, array['image/webp', 'image/jpeg'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "note-images: own select" on storage.objects;
+create policy "note-images: own select" on storage.objects for select to authenticated
+  using (bucket_id = 'note-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+drop policy if exists "note-images: own insert" on storage.objects;
+create policy "note-images: own insert" on storage.objects for insert to authenticated
+  with check (bucket_id = 'note-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+drop policy if exists "note-images: own delete" on storage.objects;
+create policy "note-images: own delete" on storage.objects for delete to authenticated
+  using (bucket_id = 'note-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+notify pgrst, 'reload schema';

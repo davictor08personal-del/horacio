@@ -3,11 +3,12 @@ import { addDays, googleCalendarUrl, hhmm, localDay, mondayOf, relDay, splitToda
 import { ensureNotifications, notificationState } from './push'
 import { noteFromTask, remove, setTaskStatus, update, useData } from './store'
 import { openNote } from './NoteEditor'
+import { TagChips, TagEditor } from './screens/Projects'
 import Sheet, { Choice } from './Sheet'
-import { EFFORT, PRIORITY, STATUS, type Status, type Task } from './types'
+import { DAILY_COLORS, EFFORT, PRIORITY, STATUS, type Status, type Task } from './types'
 
 /** One task: round check to finish it, tap the text to edit it. `n` numbers it (the order on Hoy). */
-export function TaskRow({ task, n }: { task: Task; n?: number }) {
+export function TaskRow({ task: initialTask, n }: { task: Task; n?: number }) {
   const [open, setOpen] = useState(false)
   // Ticking it: the check fills and the row slides away first, then it's saved (and leaves the list) — no jump.
   const [leaving, setLeaving] = useState(false)
@@ -17,10 +18,12 @@ export function TaskRow({ task, n }: { task: Task; n?: number }) {
     navigator.vibrate?.(10)
     setTimeout(() => setTaskStatus(task, 'hecho').catch(() => setLeaving(false)), 520)
   }
-  const { projects, notes } = useData()
+  const { tasks, projects, notes } = useData()
+  const task = tasks.find((t) => t.id === initialTask.id) ?? initialTask
   const today = localDay()
   const project = projects.find((p) => p.id === task.project_id)
   const note = notes.find((n) => n.id === task.note_id)
+  const color = task.color && task.color !== 'none' ? task.color : null
   const hasReminder = !!(task.due_date && task.due_time)
   const late = task.due_date && task.due_date < today
   const sub = [
@@ -33,12 +36,13 @@ export function TaskRow({ task, n }: { task: Task; n?: number }) {
   ].filter(Boolean).join(' · ')
 
   return (
-    <li className={`task ${leaving ? 'leaving' : ''}`}>
+    <li className={`task ${color ? `colored dc-${color}` : ''} ${leaving ? 'leaving' : ''}`}>
       {n && <span className="num" aria-hidden>{n}</span>}
       <button className={`tick prio-${task.priority}`} onClick={finish} aria-label={`Marcar «${task.title}» como hecha`} />
       <button className="task-text" onClick={() => setOpen(true)}>
         <span className="task-title">{task.title}</span>
         {sub && <span className={`task-sub ${late ? 'late' : ''}`}>{sub}</span>}
+        <TagChips tags={task.tags} />
       </button>
       {open && <TaskSheet task={task} onClose={() => setOpen(false)} />}
     </li>
@@ -46,16 +50,19 @@ export function TaskRow({ task, n }: { task: Task; n?: number }) {
 }
 
 /** A finished or discarded task in «Terminadas»: the filled check reopens it. */
-export function ClosedRow({ task }: { task: Task }) {
-  const { projects } = useData()
+export function ClosedRow({ task: initialTask }: { task: Task }) {
+  const { closed, projects } = useData()
+  const task = closed.find((t) => t.id === initialTask.id) ?? initialTask
   const project = projects.find((p) => p.id === task.project_id)
   const when = task.done_at ? relDay(localDay(new Date(task.done_at)), localDay()).toLowerCase() : ''
+  const color = task.color && task.color !== 'none' ? task.color : null
   return (
-    <li className="task closed">
+    <li className={`task closed ${color ? `colored dc-${color}` : ''}`}>
       <button className={`tick ${task.status === 'hecho' ? 'done' : 'dropped'}`} onClick={() => setTaskStatus(task, 'abierto')} aria-label={`Reabrir «${task.title}»`} />
       <div className="task-text">
         <span className="task-title">{task.title}</span>
         <span className="task-sub">{[`${STATUS[task.status]} ${when}`, project?.name].filter(Boolean).join(' · ')}</span>
+        <TagChips tags={task.tags} />
       </div>
     </li>
   )
@@ -77,8 +84,9 @@ const EDITABLE: Record<Exclude<Status, 'hecho' | 'descartado'>, string> = { abie
 const QUICK_HOURS = ['09:00', '13:00', '18:00', '21:00']
 
 /** Every field of a task. Each change is saved at once (no "Save" button to forget). */
-export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }) {
+export function TaskSheet({ task: initialTask, onClose }: { task: Task; onClose: () => void }) {
   const { tasks, projects, notes } = useData()
+  const task = tasks.find((t) => t.id === initialTask.id) ?? initialTask
   const [perm, setPerm] = useState(notificationState)
   const today = localDay()
   const nextMon = addDays(mondayOf(today), 7)
@@ -113,6 +121,20 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
       </div>
       <div className="field">Esfuerzo
         <Choice value={task.effort} options={EFFORT} onChange={(effort) => set({ effort })} />
+      </div>
+      <div className="field">Color
+        <div className="color-picker">
+          {Object.entries(DAILY_COLORS).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`swatch dc-${key} ${(task.color || 'none') === key ? 'on' : ''}`}
+              onClick={() => set({ color: key })}
+              aria-label={label}
+              title={label}
+            />
+          ))}
+        </div>
       </div>
       <div className="reminder-box">
         <div className="reminder-head">
@@ -160,6 +182,7 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
           <p className="hint">En iPhone, añade Cuadre a la pantalla de inicio para recibir notificaciones.</p>
         )}
       </div>
+      <TagEditor tags={task.tags ?? []} onChange={(tags) => set({ tags })} />
       <div className="two-col">
         <label className="field">Área
           <input defaultValue={task.area ?? ''} placeholder="Trabajo, FP…" onBlur={(e) => e.target.value !== (task.area ?? '') && set({ area: e.target.value.trim() || null })} />

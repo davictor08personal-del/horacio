@@ -21,6 +21,8 @@ export interface Task {
   created_at: string
   done_at: string | null
   notified_at?: string | null
+  color?: string
+  tags?: string[]
 }
 
 export type NoteColor = 'none' | 'rojo' | 'naranja' | 'amarillo' | 'verde' | 'azul' | 'morado'
@@ -67,6 +69,7 @@ export interface Project {
   next_step: string | null
   area: string | null
   created_at: string
+  color?: string
 }
 
 export interface Shift {

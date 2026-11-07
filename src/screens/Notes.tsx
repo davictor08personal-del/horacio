@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { byEdited, dailyOfNote, noteMatches, notePreview, noteTime, parseSearch, projectsTagged } from '../logic'
+import { byEdited, dailyOfNote, imagePaths, noteMatches, notePreview, noteTime, parseSearch, projectsTagged, stripImages } from '../logic'
+import { useImageUrl } from '../noteImages'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import { createNote, useData } from '../store'
 import type { Note } from '../types'
@@ -78,12 +79,13 @@ function NoteRow({ note, reminder, daily, project }: { note: Note; reminder: boo
       <button className="note-row" onClick={() => openNote(note.id)}>
         {note.color !== 'none' && <span className={`dot c-${note.color}`} aria-hidden />}
         <span className="note-row-text">
-          <span className="task-title">{note.title.trim() || notePreview(note) || 'Nota nueva'}</span>
+          <span className="task-title">{note.title.trim() || notePreview(note) || (imagePaths(note.body).length ? 'Imagen' : 'Nota nueva')}</span>
           <span className="task-sub">
             {daily && <span className="daily-note-tag">Diaria · {daily}</span>}
             <span className="note-time">{noteTime(note.updated_at)}</span>{project && <span className="note-row-project"> · {project}</span>}
           </span>
         </span>
+        <Thumb body={note.body} className="note-thumb" />
         {reminder && <span className="note-flag" aria-label="Con recordatorio"><Icon d={ICON.bell} /></span>}
       </button>
     </li>
@@ -94,6 +96,7 @@ function NoteRow({ note, reminder, daily, project }: { note: Note; reminder: boo
 function NoteCard({ note, reminder, daily, project }: { note: Note; reminder: boolean; daily?: string; project?: string }) {
   return (
     <button className={`note-card c-${note.color}`} onClick={() => openNote(note.id)}>
+      {!note.items && <Thumb body={note.body} className="note-card-img" />}
       {note.title.trim() && <strong>{note.title}</strong>}
       {note.items ? (
         <ul className="card-checks">
@@ -101,10 +104,17 @@ function NoteCard({ note, reminder, daily, project }: { note: Note; reminder: bo
           {note.items.length > 6 && <li className="muted">+{note.items.length - 6}</li>}
         </ul>
       ) : (
-        note.body.trim() && <span className="card-body">{note.body}</span>
+        stripImages(note.body) && <span className="card-body">{stripImages(note.body)}</span>
       )}
       {daily && <span className="daily-note-tag">Diaria · {daily}</span>}
       <span className="card-foot">{noteTime(note.updated_at)}{project && ` · ${project}`}{reminder && <Icon d={ICON.bell} />}</span>
     </button>
   )
+}
+
+/** The first picture of a note, small, for the lists. */
+function Thumb({ body, className }: { body: string; className: string }) {
+  const first = imagePaths(body)[0]
+  const url = useImageUrl(first)
+  return first && url ? <img className={className} src={url} alt="" loading="lazy" /> : null
 }

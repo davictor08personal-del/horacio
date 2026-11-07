@@ -81,12 +81,14 @@ export default function App() {
   return (
     <>
       <main className="screen">
-        {/* Ajustes from every screen, always in the same corner. */}
-        <div className="screen-top">
-          <button className="icon-btn settings-btn" onClick={() => setSettings(true)} aria-label="Ajustes">
-            <svg viewBox="0 0 24 24" aria-hidden><path d={GEAR} /></svg>
-          </button>
-        </div>
+        {/* Ajustes only in Proyectos, to leave the other screens their space. */}
+        {tab === 'projects' && (
+          <div className="screen-top">
+            <button className="icon-btn settings-btn" onClick={() => setSettings(true)} aria-label="Ajustes">
+              <svg viewBox="0 0 24 24" aria-hidden><path d={GEAR} /></svg>
+            </button>
+          </div>
+        )}
         {demo && <p className="banner">Modo demo: los datos se guardan solo en este navegador.</p>}
         {error && <p className="banner danger-banner">{error}</p>}
         {dueAlert && (

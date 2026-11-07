@@ -126,7 +126,7 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
     setError('')
     try {
       // Projects first, so the new tasks and notes can point at them by name.
-      const created = await insert('projects', r.projects.map((p) => ({ ...p, status: 'activo' as const })))
+      const created = await insert('projects', r.projects.map((p) => ({ ...p, status: 'activo' as const, color: 'none' })))
       if (created.length) setR((prev) => ({ ...prev, projects: [] }))
       const byName = new Map([...projects, ...created].map((p) => [p.name.toLowerCase(), p.id]))
       const projectId = (name: string | null) => (name && byName.get(name.toLowerCase())) || null
@@ -136,7 +136,7 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
       await Promise.all([
         insert('tasks', [...of('tarea'), ...of('recordatorio')].map((t) => ({
           title: t.title.trim(), notes: t.details.trim() || null, priority: t.priority, effort: t.effort, status: t.status,
-          due_date: t.due_date, due_time: t.kind === 'recordatorio' ? t.due_time : null, area: t.area, project_id: projectId(t.project), note_id: null, done_at: null,
+          due_date: t.due_date, due_time: t.kind === 'recordatorio' ? t.due_time : null, area: t.area, project_id: projectId(t.project), note_id: null, done_at: null, color: 'none', tags: [],
         }))),
         insert('notes', of('nota').map((n) => ({
           title: n.title.trim(), body: n.checklist ? '' : n.details.trim(), items: n.checklist ? toChecklist(n.details) : null,
@@ -245,7 +245,6 @@ function Review({ result, onBack, onClose }: { result: Result; onBack: () => voi
         <div className="review-card" key={`p${i}`}>
           <div className="review-head"><span className="review-kind">Proyecto nuevo</span><button className="ghost" onClick={() => drop('projects', i)}>Quitar</button></div>
           <input value={p.name} onChange={(e) => edit('projects', i, { name: e.target.value })} aria-label="Nombre" />
-          <input value={p.next_step ?? ''} placeholder="Siguiente paso" onChange={(e) => edit('projects', i, { next_step: e.target.value || null })} />
         </div>
       ))}
 

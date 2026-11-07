@@ -26,6 +26,24 @@ export const useData = () => useSyncExternalStore(subscribe, () => data)
 
 // ---------- demo backend (localStorage) ----------
 const DEMO_KEY = 'cuadre-demo'
+const EXTRA_COLORS_KEY = 'cuadre-item-colors'
+const EXTRA_TAGS_KEY = 'cuadre-item-tags'
+const getLocalColors = (): Record<string, string> => {
+  try { return JSON.parse(localStorage.getItem(EXTRA_COLORS_KEY) ?? '{}') } catch { return {} }
+}
+const saveLocalColor = (id: string, color: string) => {
+  const colors = getLocalColors()
+  colors[id] = color
+  try { localStorage.setItem(EXTRA_COLORS_KEY, JSON.stringify(colors)) } catch {}
+}
+const getLocalTags = (): Record<string, string[]> => {
+  try { return JSON.parse(localStorage.getItem(EXTRA_TAGS_KEY) ?? '{}') } catch { return {} }
+}
+const saveLocalTags = (id: string, tags: string[]) => {
+  const all = getLocalTags()
+  all[id] = tags
+  try { localStorage.setItem(EXTRA_TAGS_KEY, JSON.stringify(all)) } catch {}
+}
 const demoAll = (): typeof EMPTY => {
   try {
     return { ...EMPTY, ...JSON.parse(localStorage.getItem(DEMO_KEY) ?? localStorage.getItem('horacio-demo') ?? '{}') }
@@ -53,9 +71,20 @@ async function rows<T>(query: Result<T>, empty: T): Promise<T> {
 
 /** How to read each part of Data from Supabase (RLS: only the user's rows). */
 const FETCH: { [K in Part]: () => Promise<Data[K]> } = {
-  tasks: () => rows(supa!.from('tasks').select('*').in('status', OPEN), []),
-  closed: () => rows(supa!.from('tasks').select('*').in('status', CLOSED).gte('done_at', closedCutoff()).order('done_at', { ascending: false }), []),
-  projects: () => rows(supa!.from('projects').select('*').order('created_at'), []),
+  tasks: () => rows(supa!.from('tasks').select('*').in('status', OPEN), []).then((list) => {
+    const c = getLocalColors()
+    const tg = getLocalTags()
+    return list.map((t) => ({ ...t, color: t.color ?? c[t.id] ?? 'none', tags: t.tags ?? tg[t.id] ?? [] }))
+  }),
+  closed: () => rows(supa!.from('tasks').select('*').in('status', CLOSED).gte('done_at', closedCutoff()).order('done_at', { ascending: false }), []).then((list) => {
+    const c = getLocalColors()
+    const tg = getLocalTags()
+    return list.map((t) => ({ ...t, color: t.color ?? c[t.id] ?? 'none', tags: t.tags ?? tg[t.id] ?? [] }))
+  }),
+  projects: () => rows(supa!.from('projects').select('*').order('created_at'), []).then((list) => {
+    const c = getLocalColors()
+    return list.map((p) => ({ ...p, color: p.color ?? c[p.id] ?? 'none' }))
+  }),
   shifts: () => rows(supa!.from('shifts').select('*').gte('day', addDays(localDay(), -7)).order('day'), []),
   fp_tests: () => rows(supa!.from('fp_tests').select('*').order('opens_on').order('unit'), []),
   notes: () => rows(supa!.from('notes').select('*'), []),
@@ -117,8 +146,30 @@ export async function insert<T extends Table>(table: T, rows: Partial<RowOf[T]>[
       ? supa.from(table).upsert(rows as never[], { onConflict: 'user_id,day' })
       : supa.from(table).insert(rows as never[])
     const { data: out, error } = await q.select()
-    if (error) throw new Error(error.message)
-    saved = out as RowOf[T][]
+    const isMissingCol = error && error.message.includes('does not exist') && (error.message.includes('color') || error.message.includes('tags'))
+    if (isMissingCol) {
+      const cleaned = rows.map((r) => {
+        const { color: _c, tags: _tg, ...rest } = r as Record<string, unknown>
+        return rest
+      })
+      const retryQ = table === 'shifts'
+        ? supa.from(table).upsert(cleaned as never[], { onConflict: 'user_id,day' })
+        : supa.from(table).insert(cleaned as never[])
+      const { data: retryOut, error: retryError } = await retryQ.select()
+      if (retryError) throw new Error(retryError.message)
+      saved = retryOut as RowOf[T][]
+      rows.forEach((r, idx) => {
+        const id = (saved[idx] as { id: string })?.id
+        if (id) {
+          if ('color' in r && r.color) saveLocalColor(id, r.color as string)
+          if ('tags' in r && Array.isArray(r.tags)) saveLocalTags(id, r.tags as string[])
+        }
+      })
+    } else if (error) {
+      throw new Error(error.message)
+    } else {
+      saved = out as RowOf[T][]
+    }
   }
   await refresh(PARTS_OF[table])
   return saved
@@ -128,12 +179,29 @@ export async function update<T extends Table>(table: T, id: string, patch: Parti
   const fullPatch = table === 'tasks' && ('due_date' in patch || 'due_time' in patch) && !('notified_at' in patch)
     ? { ...patch, notified_at: null }
     : patch
+  if ('color' in patch && patch.color) {
+    saveLocalColor(id, patch.color as string)
+  }
+  if ('tags' in patch && Array.isArray(patch.tags)) {
+    saveLocalTags(id, patch.tags as string[])
+  }
   if (!supa) {
     const d = demoAll()
     ;(d[table] as unknown as { id: string }[]) = (d[table] as unknown as { id: string }[]).map((r) => (r.id === id ? { ...r, ...fullPatch } : r))
     demoSave(d)
   } else {
-    const { error } = await supa.from(table).update(fullPatch as never).eq('id', id)
+    let { error } = await supa.from(table).update(fullPatch as never).eq('id', id)
+    if (error && error.message.includes('does not exist') && (error.message.includes('color') || error.message.includes('tags'))) {
+      const rest = { ...(fullPatch as Record<string, unknown>) }
+      if (error.message.includes('color')) delete rest.color
+      if (error.message.includes('tags')) delete rest.tags
+      if (Object.keys(rest).length > 0) {
+        const retry = await supa.from(table).update(rest as never).eq('id', id)
+        error = retry.error
+      } else {
+        error = null
+      }
+    }
     if (error) throw new Error(error.message)
   }
   await refresh(PARTS_OF[table])
@@ -203,7 +271,7 @@ export async function noteFromDaily(d: DailyTask) {
 
 /** A new task (a reminder is a task with a date). `note_id` links it to the note it came from. */
 export const createTask = (t: Pick<Task, 'title'> & Partial<Task>) =>
-  insert('tasks', [{ status: 'abierto', priority: 'media', effort: 'medio', notes: null, due_date: null, due_time: null, area: null, project_id: null, note_id: null, done_at: null, ...t }])
+  insert('tasks', [{ status: 'abierto', priority: 'media', effort: 'medio', notes: null, due_date: null, due_time: null, area: null, project_id: null, note_id: null, done_at: null, color: 'none', tags: [], ...t }])
 
 /** Reminder → note: the note starts with the reminder's title, notes and project, and they stay linked. */
 export async function noteFromTask(t: Task) {

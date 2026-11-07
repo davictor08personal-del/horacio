@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { byPriority, parseSearch, projectsTagged, textMatches } from '../logic'
+import { byPriority, parseSearch, projectsTagged, taskMatchesTags, textMatches } from '../logic'
 import { ICON, Icon } from '../NoteEditor'
 import { KEEP_CLOSED_DAYS, useData } from '../store'
 import { ClosedRow, TaskRow, TaskSheet } from '../TaskRow'
@@ -25,10 +25,10 @@ export default function Tasks() {
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<string | null>(null) // the task just created, to fill in the rest
   const editingTask = allOpen.find((t) => t.id === editing)
-  // «#idiomas» = the tasks of every project tagged #idiomas; the rest of the words search title and details.
+  // «#idiomas» = tasks tagged #idiomas or in a project tagged #idiomas; words search title and details.
   const { tags, text } = parseSearch(query)
   const tagged = tags.length ? projectsTagged(projects, tags) : null
-  const matches = (t: Task) => (!tagged || (!!t.project_id && tagged.has(t.project_id))) && textMatches(text, t.title, t.notes)
+  const matches = (t: Task) => taskMatchesTags(t, tags, tagged) && textMatches(text, t.title, t.notes)
   const tasks = allOpen.filter(matches)
   const closed = allClosed.filter(matches)
   const sorted = [...tasks].sort(byPriority)

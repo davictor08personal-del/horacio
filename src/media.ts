@@ -20,15 +20,28 @@ export async function photoToJpeg(file: File, max = 1600) {
 }
 
 /**
- * A project's picture: the centre square at 160 px, as a data: URL (~10 KB) saved straight in the row.
+ * A project's or daily task's picture: the centre square at 320 px, as a data: URL (~12-16 KB) saved straight in the row.
  * Small enough that no file storage is needed, and it loads with the project.
  */
-export async function photoToIcon(file: File, size = 160) {
-  const img = await createImageBitmap(file)
-  const side = Math.min(img.width, img.height)
+export async function photoToIcon(file: File, size = 320) {
+  let img: ImageBitmap | HTMLImageElement
+  try {
+    img = await createImageBitmap(file)
+  } catch {
+    img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image()
+      const url = URL.createObjectURL(file)
+      el.onload = () => { URL.revokeObjectURL(url); resolve(el) }
+      el.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen')) }
+      el.src = url
+    })
+  }
+  const width = 'naturalWidth' in img ? img.naturalWidth : img.width
+  const height = 'naturalHeight' in img ? img.naturalHeight : img.height
+  const side = Math.min(width, height)
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = size
-  canvas.getContext('2d')!.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size)
+  canvas.getContext('2d')!.drawImage(img, (width - side) / 2, (height - side) / 2, side, side, 0, 0, size, size)
   const url = canvas.toDataURL('image/webp', 0.82)
   // Safari before 17 can't write WebP and silently gives PNG; JPEG keeps it small there.
   return url.startsWith('data:image/webp') ? url : canvas.toDataURL('image/jpeg', 0.85)
@@ -81,4 +94,19 @@ async function toWav(blob: Blob, rate = 16_000) {
   ascii(36, 'data'); out.setUint32(40, pcm.length * 2, true)
   pcm.forEach((v, i) => out.setInt16(44 + i * 2, Math.max(-1, Math.min(1, v)) * 0x7fff, true))
   return new Blob([out], { type: 'audio/wav' })
+}
+
+/** A picture for inside a note: whole image (no crop), longest side at `max` px, WebP (JPEG on old Safari). Re-drawing it also drops the EXIF data (GPS…). */
+export async function photoToWebp(file: File, max = 1600): Promise<Blob> {
+  const img = await createImageBitmap(file)
+  const scale = Math.min(1, max / Math.max(img.width, img.height))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(img.width * scale)
+  canvas.height = Math.round(img.height * scale)
+  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+  const toBlob = (type: string, q: number) => new Promise<Blob | null>((res) => canvas.toBlob(res, type, q))
+  const webp = await toBlob('image/webp', 0.8)
+  const blob = webp?.type === 'image/webp' ? webp : await toBlob('image/jpeg', 0.82)
+  if (!blob) throw new Error('No se pudo leer la imagen')
+  return blob
 }
