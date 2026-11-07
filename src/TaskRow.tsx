@@ -1,15 +1,18 @@
 import { useState } from 'react'
-import { addDays, googleCalendarUrl, hhmm, localDay, mondayOf, relDay, splitToday } from './logic'
+import { addDays, colorKey, googleCalendarUrl, hhmm, localDay, mondayOf, relDay, splitToday, tintStyle } from './logic'
 import { ensureNotifications, notificationState } from './push'
 import { noteFromTask, remove, setTaskStatus, update, useData } from './store'
-import { openNote } from './NoteEditor'
+import { ColorPicker } from './ColorPicker'
+import { ConfirmDelete } from './HoldDelete'
+import { ICON, Icon, openNote } from './NoteEditor'
 import { TagChips, TagEditor } from './screens/Projects'
 import Sheet, { Choice } from './Sheet'
-import { DAILY_COLORS, EFFORT, PRIORITY, STATUS, type Status, type Task } from './types'
+import { EFFORT, PRIORITY, STATUS, type Status, type Task } from './types'
 
 /** One task: round check to finish it, tap the text to edit it. `n` numbers it (the order on Hoy). */
-export function TaskRow({ task: initialTask, n }: { task: Task; n?: number }) {
+export function TaskRow({ task: initialTask, n, deletable }: { task: Task; n?: number; deletable?: boolean }) {
   const [open, setOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   // Ticking it: the check fills and the row slides away first, then it's saved (and leaves the list) — no jump.
   const [leaving, setLeaving] = useState(false)
   const finish = () => {
@@ -23,7 +26,7 @@ export function TaskRow({ task: initialTask, n }: { task: Task; n?: number }) {
   const today = localDay()
   const project = projects.find((p) => p.id === task.project_id)
   const note = notes.find((n) => n.id === task.note_id)
-  const color = task.color && task.color !== 'none' ? task.color : null
+  const color = colorKey(task.color)
   const hasReminder = !!(task.due_date && task.due_time)
   const late = task.due_date && task.due_date < today
   const sub = [
@@ -36,7 +39,7 @@ export function TaskRow({ task: initialTask, n }: { task: Task; n?: number }) {
   ].filter(Boolean).join(' · ')
 
   return (
-    <li className={`task ${color ? `colored dc-${color}` : ''} ${leaving ? 'leaving' : ''}`}>
+    <li style={tintStyle(task.color)} className={`task ${color ? `colored dc-${color}` : ''} ${leaving ? 'leaving' : ''}`}>
       {n && <span className="num" aria-hidden>{n}</span>}
       <button className={`tick prio-${task.priority}`} onClick={finish} aria-label={`Marcar «${task.title}» como hecha`} />
       <button className="task-text" onClick={() => setOpen(true)}>
@@ -44,7 +47,9 @@ export function TaskRow({ task: initialTask, n }: { task: Task; n?: number }) {
         {sub && <span className={`task-sub ${late ? 'late' : ''}`}>{sub}</span>}
         <TagChips tags={task.tags} />
       </button>
+      {deletable && <button className="row-del" onClick={() => setDeleting(true)} aria-label={`Borrar «${task.title}»`}><Icon d={ICON.trash} /></button>}
       {open && <TaskSheet task={task} onClose={() => setOpen(false)} />}
+      {deleting && <ConfirmDelete title={task.title} onConfirm={() => remove('tasks', task.id)} onClose={() => setDeleting(false)} />}
     </li>
   )
 }
@@ -55,9 +60,9 @@ export function ClosedRow({ task: initialTask }: { task: Task }) {
   const task = closed.find((t) => t.id === initialTask.id) ?? initialTask
   const project = projects.find((p) => p.id === task.project_id)
   const when = task.done_at ? relDay(localDay(new Date(task.done_at)), localDay()).toLowerCase() : ''
-  const color = task.color && task.color !== 'none' ? task.color : null
+  const color = colorKey(task.color)
   return (
-    <li className={`task closed ${color ? `colored dc-${color}` : ''}`}>
+    <li style={tintStyle(task.color)} className={`task closed ${color ? `colored dc-${color}` : ''}`}>
       <button className={`tick ${task.status === 'hecho' ? 'done' : 'dropped'}`} onClick={() => setTaskStatus(task, 'abierto')} aria-label={`Reabrir «${task.title}»`} />
       <div className="task-text">
         <span className="task-title">{task.title}</span>
@@ -123,18 +128,7 @@ export function TaskSheet({ task: initialTask, onClose }: { task: Task; onClose:
         <Choice value={task.effort} options={EFFORT} onChange={(effort) => set({ effort })} />
       </div>
       <div className="field">Color
-        <div className="color-picker">
-          {Object.entries(DAILY_COLORS).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              className={`swatch dc-${key} ${(task.color || 'none') === key ? 'on' : ''}`}
-              onClick={() => set({ color: key })}
-              aria-label={label}
-              title={label}
-            />
-          ))}
-        </div>
+        <ColorPicker value={task.color} onChange={(color) => set({ color })} />
       </div>
       <div className="reminder-box">
         <div className="reminder-head">
@@ -184,9 +178,6 @@ export function TaskSheet({ task: initialTask, onClose }: { task: Task; onClose:
       </div>
       <TagEditor tags={task.tags ?? []} onChange={(tags) => set({ tags })} />
       <div className="two-col">
-        <label className="field">Área
-          <input defaultValue={task.area ?? ''} placeholder="Trabajo, FP…" onBlur={(e) => e.target.value !== (task.area ?? '') && set({ area: e.target.value.trim() || null })} />
-        </label>
         <label className="field">Proyecto
           <select value={task.project_id ?? ''} onChange={(e) => set({ project_id: e.target.value || null })}>
             <option value="">Ninguno</option>

@@ -310,3 +310,22 @@ export const textMatches = (query: string, ...fields: (string | null | undefined
   const q = fold(query.trim())
   return !q || fold(fields.filter(Boolean).join('\n')).includes(q)
 }
+
+// ---------- colour + opacity ----------
+// A task, project or daily task keeps its colour in one text field: «verde» (normal strength) or «verde:80» (opacity 0-100).
+// 50 is how the colours looked before there was a slider, so it's the default and isn't written.
+export const DEFAULT_TINT = 50
+export function colorParts(c?: string | null): { key: string; alpha: number } {
+  const [key, a] = (c ?? 'none').split(':')
+  const n = a === undefined ? DEFAULT_TINT : Number(a)
+  return { key: key || 'none', alpha: Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : DEFAULT_TINT }
+}
+export const joinColor = (key: string, alpha: number) => (key === 'none' ? 'none' : alpha === DEFAULT_TINT ? key : `${key}:${alpha}`)
+/** The colour name for the `dc-…` class, or null when there's none. */
+export const colorKey = (c?: string | null) => { const { key } = colorParts(c); return key === 'none' ? null : key }
+/** Inline style that sets how strong every translucent use of the colour is (the CSS blends with --lo and --hi). */
+export const tintStyle = (c?: string | null): { [k: string]: number } | undefined => {
+  const { key, alpha } = colorParts(c)
+  // 0-50 fades from clear to the usual look (--lo 0→1); 50-100 goes on to the solid palette colour (--hi 0→1).
+  return key === 'none' || alpha === DEFAULT_TINT ? undefined : { '--lo': Math.min(alpha / DEFAULT_TINT, 1), '--hi': Math.max((alpha - DEFAULT_TINT) / DEFAULT_TINT, 0) }
+}

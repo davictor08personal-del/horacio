@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { celebrate } from './celebrate'
-import { addDays, byPosition, DEFAULT_DAILY, doneToday, localDay, notePreview, shortDate, weekOf, weeklyStreak } from './logic'
+import { ColorPicker } from './ColorPicker'
+import { ConfirmDelete } from './HoldDelete'
+import { addDays, byPosition, colorKey, DEFAULT_DAILY, doneToday, localDay, notePreview, shortDate, tintStyle, weekOf, weeklyStreak } from './logic'
 import { ICON, Icon, openNote } from './NoteEditor'
 import { IconPicker } from './ItemIcon'
 import { insert, noteFromDaily, remove, toggleDaily, update, useData } from './store'
 import Sheet from './Sheet'
-import { DAILY_COLORS, type DailyTask } from './types'
+import type { DailyTask } from './types'
 
-const NEW_DAILY = { done_on: null, project_id: null, description: null, icon: null, note_id: null, color: 'none' } as const
+export const NEW_DAILY = { done_on: null, project_id: null, description: null, icon: null, note_id: null, color: 'none' } as const
 const daysOf = (log: { daily_id: string; day: string }[], id: string) => log.filter((l) => l.daily_id === id).map((l) => l.day)
 
 /**
@@ -50,9 +52,10 @@ export default function DailyTasks({ onSeeAll }: { onSeeAll?: () => void }) {
  * The tiles. With `hideDone` (Hoy) a tile ticked today plays its check and confetti, then fades away; the others
  * stay. On a project's page all of them show.
  */
-export function DailyGrid({ list, hideDone }: { list: DailyTask[]; hideDone?: boolean }) {
+export function DailyGrid({ list, hideDone, deletable }: { list: DailyTask[]; hideDone?: boolean; deletable?: boolean }) {
   const { daily_log } = useData()
   const [open, setOpen] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<DailyTask | null>(null)
   const [leaving, setLeaving] = useState<Set<string>>(new Set()) // just ticked: still on screen while it animates out
   const today = localDay()
   const openDaily = list.find((d) => d.id === open)
@@ -66,13 +69,16 @@ export function DailyGrid({ list, hideDone }: { list: DailyTask[]; hideDone?: bo
     <>
       {shown.length > 0 && (
         <div className="daily-grid">
-          {shown.map((d) => (
-            <DailyTile key={d.id} d={d} today={today} onOpen={() => setOpen(d.id)} onDone={onDone} leaving={leaving.has(d.id)}
-              streak={weeklyStreak(daysOf(daily_log, d.id), today)} />
-          ))}
+          {shown.map((d) => {
+            const tile = <DailyTile key={d.id} d={d} today={today} onOpen={() => setOpen(d.id)} onDone={onDone} leaving={leaving.has(d.id)} streak={weeklyStreak(daysOf(daily_log, d.id), today)} />
+            return deletable
+              ? <div key={d.id} className="daily-wrap">{tile}<button className="row-del" onClick={() => setDeleting(d)} aria-label={`Borrar «${d.title}»`}><Icon d={ICON.trash} /></button></div>
+              : tile
+          })}
         </div>
       )}
       {openDaily && <DailySheet daily={openDaily} onClose={() => setOpen(null)} />}
+      {deleting && <ConfirmDelete title={deleting.title} detail="Se pierde su racha y su calendario; su nota se queda." onConfirm={() => remove('daily_tasks', deleting.id)} onClose={() => setDeleting(null)} />}
     </>
   )
 }
@@ -120,11 +126,12 @@ function DailyTile({ d, today, streak, onOpen, onDone, leaving }: { d: DailyTask
     }, HOLD_MS)
   }
   const cancel = () => { clearTimeout(timer.current); setPressing(false) }
-  const color = d.color && d.color !== 'none' ? d.color : null
+  const color = colorKey(d.color)
 
   return (
     <button
       ref={tile}
+      style={tintStyle(d.color)}
       className={`daily-btn ${color ? `colored dc-${color}` : ''} ${d.icon ? 'has-art' : ''} ${on ? 'done' : ''} ${pressing ? 'pressing' : ''} ${leaving ? 'leaving' : ''}`}
       onPointerDown={start} onPointerUp={cancel} onPointerLeave={cancel} onPointerCancel={cancel}
       onClick={() => (held.current ? (held.current = false) : onOpen())}
@@ -171,9 +178,9 @@ export function DailyList() {
           const days = daysOf(daily_log, d.id)
           const streak = weeklyStreak(days, today)
           const on = doneToday(d, today)
-          const color = d.color && d.color !== 'none' ? d.color : null
+          const color = colorKey(d.color)
           return (
-            <article key={d.id} className={`daily-card ${color ? `dc-${color}` : ''}`}>
+            <article key={d.id} style={tintStyle(d.color)} className={`daily-card ${color ? `dc-${color}` : ''}`}>
               <button className={`daily-card-head ${color ? 'colored' : ''} ${d.icon ? 'has-art' : ''}`} onClick={() => setOpen(d.id)}>
                 <DailyArt icon={d.icon} />
                 <span className="daily-text">
@@ -273,7 +280,7 @@ export function DailySheet({ daily, onClose, startEditing = false }: { daily: Da
   const note = notes.find((n) => n.id === daily.note_id)
   const project = projects.find((p) => p.id === daily.project_id)
   const on = doneToday(daily, today)
-  const color = daily.color && daily.color !== 'none' ? daily.color : null
+  const color = colorKey(daily.color)
   // The note follows its daily task into the new project, so both show up there.
   const setProject = (project_id: string | null) => {
     set({ project_id })
@@ -288,7 +295,7 @@ export function DailySheet({ daily, onClose, startEditing = false }: { daily: Da
 
   return (
     <Sheet title="Tarea diaria" onClose={onClose} actions={pencil}>
-      <div className={`daily-hero ${color ? `colored dc-${color}` : ''} ${daily.icon ? 'has-art' : ''}`}>
+      <div style={tintStyle(daily.color)} className={`daily-hero ${color ? `colored dc-${color}` : ''} ${daily.icon ? 'has-art' : ''}`}>
         <DailyArt icon={daily.icon} big />
         {editing
           ? <input className="big-input hero-input" defaultValue={daily.title} onBlur={(e) => e.target.value.trim() && e.target.value !== daily.title && set({ title: e.target.value.trim() })} aria-label="Nombre" />
@@ -314,7 +321,7 @@ export function DailySheet({ daily, onClose, startEditing = false }: { daily: Da
           )}
           <button className={on ? 'secondary' : 'primary'} onClick={() => toggleDaily(daily, today)}>{on ? 'Hecha hoy · Desmarcar' : 'Marcar como hecha hoy'}</button>
 
-          <div className={`streak-card ${color ? `dc-${color}` : ''}`}>
+          <div style={tintStyle(daily.color)} className={`streak-card ${color ? `dc-${color}` : ''}`}>
             <div className="streak-text">
               <strong>🔥 {streak} {streak === 1 ? 'semana' : 'semanas'}</strong>
               <span className="muted small-text">{streak ? 'seguidas haciéndola al menos un día · toca un día para marcarlo' : 'Hazla un día esta semana (o toca un día pasado) para empezar la racha'}</span>
@@ -338,11 +345,7 @@ export function DailySheet({ daily, onClose, startEditing = false }: { daily: Da
           </label>
 
           <div className="field">Color
-            <div className="color-picker">
-              {Object.entries(DAILY_COLORS).map(([key, label]) => (
-                <button key={key} type="button" className={`swatch dc-${key} ${(daily.color || 'none') === key ? 'on' : ''}`} onClick={() => set({ color: key })} aria-label={label} title={label} />
-              ))}
-            </div>
+            <ColorPicker value={daily.color} onChange={(color) => set({ color })} />
           </div>
 
           <IconPicker icon={daily.icon} onChange={(icon) => set({ icon })} label="Imagen (opcional)" />

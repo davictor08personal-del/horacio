@@ -127,7 +127,19 @@ export default function NoteEditor({ id }: { id: string }) {
     }
   }
 
-  const toggleChecklist = () => imageCount && !draft.items ? alert('Quita las imágenes antes de pasar la nota a casillas.') : edit(draft.items ? { items: null, body: fromChecklist(draft.items) } : { items: toChecklist(draft.body), body: '' })
+  // Turning the boxes off loses the ticks, so ask first (an accidental tap used to wipe them). If you turn them on again
+  // right away with the text untouched, the list comes back exactly as it was.
+  const lastList = useRef<ChecklistItem[] | null>(null)
+  function toggleChecklist() {
+    if (draft.items) {
+      if (draft.items.some((i) => i.done) && !confirm('Al quitar las casillas se pierden las marcas. ¿Quitarlas?')) return
+      lastList.current = draft.items
+      return edit({ items: null, body: fromChecklist(draft.items) })
+    }
+    if (imageCount) return alert('Quita las imágenes antes de pasar la nota a casillas.')
+    const back = lastList.current && fromChecklist(lastList.current) === draft.body ? lastList.current : null
+    edit({ items: back ?? toChecklist(draft.body), body: '' })
+  }
 
   async function share() {
     const text = [draft.title, draft.items ? draft.items.map((i) => `${i.done ? '☑' : '☐'} ${i.text}`).join('\n') : stripImages(draft.body)].filter(Boolean).join('\n\n')
@@ -234,11 +246,14 @@ function Checklist({ items, onChange }: { items: ChecklistItem[]; onChange: (ite
   const put = (i: number, patch: Partial<ChecklistItem>) => onChange(items.map((it, j) => (j === i ? { ...it, ...patch } : it)))
   const insertAfter = (i: number) => (onChange([...items.slice(0, i + 1), { text: '', done: false }, ...items.slice(i + 1)]), setFocus(i + 1))
   const drop = (i: number) => (onChange(items.filter((_, j) => j !== i)), setFocus(Math.max(0, i - 1)))
+  const long = items.length >= 8
   const firstDone = order.findIndex((o) => o.item.done)
   const doneCount = items.length - firstDone
 
   return (
     <ul className="checklist">
+      {/* With a long list, «＋ Elemento» goes first so you don't have to scroll down to add one. */}
+      {long && <li><button className="link add-item" onClick={() => insertAfter(-1)}>＋ Elemento</button></li>}
       {order.map(({ item, i }, k) => (
         <li key={i} className={item.done ? 'done' : ''}>
           {k === firstDone && k > 0 && <span className="checklist-sep">{doneCount} {doneCount === 1 ? 'marcado' : 'marcados'}</span>}
@@ -257,7 +272,7 @@ function Checklist({ items, onChange }: { items: ChecklistItem[]; onChange: (ite
           />
         </li>
       ))}
-      <li><button className="link add-item" onClick={() => insertAfter(items.length - 1)}>＋ Elemento</button></li>
+      {!long && <li><button className="link add-item" onClick={() => insertAfter(items.length - 1)}>＋ Elemento</button></li>}
     </ul>
   )
 }

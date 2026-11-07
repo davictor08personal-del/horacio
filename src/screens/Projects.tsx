@@ -1,13 +1,14 @@
 import { useState } from 'react'
+import { ColorPicker } from '../ColorPicker'
 import { IconPicker, ItemIcon } from '../ItemIcon'
-import { allTags, byEdited, byPosition, cleanTag, dailyOfNote, byPriority, fold, MAX_TAGS, notePreview, noteTime, parseSearch, projectsTagged, textMatches } from '../logic'
+import { allTags, byEdited, byPosition, cleanTag, colorKey, dailyOfNote, byPriority, fold, MAX_TAGS, notePreview, noteTime, parseSearch, projectsTagged, textMatches, tintStyle } from '../logic'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import Page from '../Page'
 import Sheet, { Choice } from '../Sheet'
-import { DailyArt, DailyGrid } from '../DailyTasks'
+import { DailyArt, DailyGrid, NEW_DAILY } from '../DailyTasks'
 import { createNote, createTask, insert, remove, update, useData } from '../store'
 import { TaskRow } from '../TaskRow'
-import { DAILY_COLORS, PROJECT_STATUS, type Project, type ProjectStatus } from '../types'
+import { PROJECT_STATUS, type Project, type ProjectStatus } from '../types'
 
 const GROUPS: [ProjectStatus, string][] = [['activo', 'Activos'], ['pausado', 'Pausados'], ['hecho', 'Terminados']]
 
@@ -67,10 +68,10 @@ export default function Projects() {
                 const count = tasks.filter((t) => t.project_id === p.id).length
                 const noteCount = notes.filter((n) => n.project_id === p.id && !n.archived).length
                 const dailyCount = daily_tasks.filter((d) => d.project_id === p.id).length
-                const color = p.color && p.color !== 'none' ? p.color : null
+                const color = colorKey(p.color)
                 return (
                   <li key={p.id}>
-                    <button className={`project ${color ? `colored dc-${color}` : ''} ${p.icon ? 'has-art' : ''}`} onClick={() => setOpen(p.id)}>
+                    <button style={tintStyle(p.color)} className={`project ${color ? `colored dc-${color}` : ''} ${p.icon ? 'has-art' : ''}`} onClick={() => setOpen(p.id)}>
                       {p.icon ? <DailyArt icon={p.icon} /> : <ItemIcon icon={null} name={p.name} />}
                       <span className="project-text">
                       <span className="task-title">{p.name}</span>
@@ -99,7 +100,9 @@ function ProjectPage({ project: initialProject, onBack }: { project: Project; on
   const project = projects.find((p) => p.id === initialProject.id) ?? initialProject
   const daily = daily_tasks.filter((d) => d.project_id === project.id).sort(byPosition)
   const [text, setText] = useState('')
+  const [kind, setKind] = useState<'puntual' | 'diaria'>('puntual')
   const [editing, setEditing] = useState(false)
+  const [writingDesc, setWritingDesc] = useState(false)
   const own = tasks.filter((t) => t.project_id === project.id).sort(byPriority)
   const reminders = own.filter((t) => t.due_time)
   const todo = own.filter((t) => !t.due_time)
@@ -107,58 +110,61 @@ function ProjectPage({ project: initialProject, onBack }: { project: Project; on
 
   const addTask = () => {
     if (!text.trim()) return
-    createTask({ title: text.trim(), project_id: project.id })
+    // «Diaria» = a daily task (comes back every day); «Puntual» = a one-off task. Both already belong to this project.
+    if (kind === 'diaria') insert('daily_tasks', [{ title: text.trim(), position: daily_tasks.reduce((m, d) => Math.max(m, d.position + 1), 0), ...NEW_DAILY, project_id: project.id }])
+    else createTask({ title: text.trim(), project_id: project.id })
     setText('')
   }
-  const heroColor = project.color && project.color !== 'none' ? project.color : null
+  const heroColor = colorKey(project.color)
 
   return (
     <Page back="Proyectos" onBack={onBack} actions={<button className="link" onClick={() => setEditing(true)}>Editar</button>}>
       <header className="today-head">
         {project.icon || heroColor ? (
-          <div className={`project-hero ${heroColor ? `colored dc-${heroColor}` : ''} ${project.icon ? 'has-art' : ''}`}>
+          <div style={tintStyle(project.color)} className={`project-hero ${heroColor ? `colored dc-${heroColor}` : ''} ${project.icon ? 'has-art' : ''}`}>
             {project.icon ? <DailyArt icon={project.icon} big /> : <ItemIcon icon={null} name={project.name} big />}
             <h1>{project.name}</h1>
           </div>
         ) : (
           <><ItemIcon icon={null} name={project.name} big /><h1>{project.name}</h1></>
         )}
-        <p className="day-line">{PROJECT_STATUS[project.status]}{project.area && ` · ${project.area}`}</p>
+        <p className="day-line">{PROJECT_STATUS[project.status]}</p>
         <TagChips tags={project.tags} />
-        {!project.icon && <button className="link" onClick={() => setEditing(true)}>Añadir foto o icono de portada</button>}
-        {project.description
-          ? <p className="butler project-desc">{project.description}</p>
-          : <button className="link" onClick={() => setEditing(true)}>Añadir una descripción</button>}
+        {!project.icon && <button className="add-line" onClick={() => setEditing(true)}><span aria-hidden>＋</span>Añadir foto o icono de portada</button>}
+        {writingDesc
+          ? <DescriptionBox initial={project.description ?? ''} onSave={(description) => update('projects', project.id, { description }).then(() => setWritingDesc(false))} onCancel={() => setWritingDesc(false)} />
+          : project.description
+            ? <button className="project-desc-btn" onClick={() => setWritingDesc(true)} aria-label="Editar descripción"><p className="butler project-desc">{project.description}</p></button>
+            : <button className="add-line" onClick={() => setWritingDesc(true)}><span aria-hidden>＋</span>Añadir una descripción</button>}
       </header>
 
       {daily.length > 0 && (
         <section className="group">
           <h2 className="group-title">Tareas diarias · {daily.length}</h2>
-          <DailyGrid list={daily} />
+          <DailyGrid list={daily} deletable />
         </section>
       )}
 
       {reminders.length > 0 && (
         <section className="group">
           <h2 className="group-title">Recordatorios · {reminders.length}</h2>
-          <ul className="list card-list">{reminders.map((t) => <TaskRow key={t.id} task={t} />)}</ul>
+          <ul className="list card-list">{reminders.map((t) => <TaskRow key={t.id} task={t} deletable />)}</ul>
         </section>
       )}
 
       <section className="group">
         <h2 className="group-title">Tareas{todo.length > 0 && ` · ${todo.length}`}</h2>
-        {todo.length > 0 && <ul className="list card-list">{todo.map((t) => <TaskRow key={t.id} task={t} />)}</ul>}
-        <form className="add-row" onSubmit={(e) => (e.preventDefault(), addTask())}>
-          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Nueva tarea" aria-label="Nueva tarea" />
-          <button className="secondary" disabled={!text.trim()}>Añadir</button>
+        {todo.length > 0 && <ul className="list card-list">{todo.map((t) => <TaskRow key={t.id} task={t} deletable />)}</ul>}
+        <Choice value={kind} options={{ puntual: 'Puntual', diaria: 'Diaria' }} onChange={setKind} />
+        <form className="add-line input" onSubmit={(e) => (e.preventDefault(), addTask())}>
+          <span aria-hidden>＋</span>
+          <input value={text} onChange={(e) => setText(e.target.value)} placeholder={`Añadir tarea ${kind}`} aria-label={`Añadir tarea ${kind}`} enterKeyHint="done" maxLength={500} />
+          {text.trim() && <button className="add-go">Añadir</button>}
         </form>
       </section>
 
       <section className="group">
-        <div className="group-head">
-          <h2 className="group-title">Notas{ownNotes.length > 0 && ` · ${ownNotes.length}`}</h2>
-          <button className="link" onClick={() => createNote({ project_id: project.id }).then((n) => openNote(n.id))}>Nueva nota</button>
-        </div>
+        <h2 className="group-title">Notas{ownNotes.length > 0 && ` · ${ownNotes.length}`}</h2>
         {ownNotes.length ? (
           <ul className="list card-list">
             {ownNotes.map((n) => (
@@ -177,10 +183,25 @@ function ProjectPage({ project: initialProject, onBack }: { project: Project; on
         ) : (
           <p className="empty">Sin notas en este proyecto.</p>
         )}
+        <button className="add-line" onClick={() => createNote({ project_id: project.id }).then((n) => openNote(n.id))}><span aria-hidden>＋</span>Nueva nota</button>
       </section>
 
       {editing && <ProjectSheet project={project} onClose={() => setEditing(false)} onDeleted={onBack} />}
     </Page>
+  )
+}
+
+/** The description written in place (no settings screen): a box, Guardar / Cancelar. Empty = no description. */
+function DescriptionBox({ initial, onSave, onCancel }: { initial: string; onSave: (description: string | null) => void; onCancel: () => void }) {
+  const [text, setText] = useState(initial)
+  return (
+    <div className="desc-box">
+      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="¿De qué va este proyecto?" rows={3} maxLength={2000} autoFocus aria-label="Descripción" />
+      <div className="desc-actions">
+        <button type="button" className="ghost" onClick={onCancel}>Cancelar</button>
+        <button type="button" className="primary" onClick={() => onSave(text.trim() || null)}>Guardar</button>
+      </div>
+    </div>
   )
 }
 
@@ -248,29 +269,18 @@ function ProjectSheet({ project: initialProject, onClose, onDeleted }: { project
   const { projects } = useData()
   const project = projects.find((p) => p.id === initialProject.id) ?? initialProject
   const set = (patch: Partial<Project>) => update('projects', project.id, patch)
-  const heroColor = project.color && project.color !== 'none' ? project.color : null
+  const heroColor = colorKey(project.color)
   return (
     <Sheet title="Proyecto" onClose={onClose}>
       {(project.icon || heroColor) && (
-        <div className={`project-hero ${heroColor ? `colored dc-${heroColor}` : ''} ${project.icon ? 'has-art' : ''}`}>
+        <div style={tintStyle(project.color)} className={`project-hero ${heroColor ? `colored dc-${heroColor}` : ''} ${project.icon ? 'has-art' : ''}`}>
           {project.icon ? <DailyArt icon={project.icon} big /> : <ItemIcon icon={null} name={project.name} big />}
           <h2 className="hero-title">{project.name}</h2>
         </div>
       )}
       <input className="big-input" defaultValue={project.name} onBlur={(e) => e.target.value.trim() && e.target.value !== project.name && set({ name: e.target.value.trim() })} aria-label="Nombre" />
       <div className="field">Color
-        <div className="color-picker">
-          {Object.entries(DAILY_COLORS).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              className={`swatch dc-${key} ${(project.color || 'none') === key ? 'on' : ''}`}
-              onClick={() => set({ color: key })}
-              aria-label={label}
-              title={label}
-            />
-          ))}
-        </div>
+        <ColorPicker value={project.color} onChange={(color) => set({ color })} />
       </div>
       <IconPicker icon={project.icon} onChange={(icon) => set({ icon })} label="Imagen o icono" />
       <TagEditor tags={project.tags ?? []} onChange={(tags) => set({ tags })} />
@@ -279,9 +289,6 @@ function ProjectSheet({ project: initialProject, onClose, onDeleted }: { project
       </div>
       <label className="field">Descripción
         <textarea rows={3} placeholder="De qué va, en una o dos frases" defaultValue={project.description ?? ''} onBlur={(e) => e.target.value !== (project.description ?? '') && set({ description: e.target.value.trim() || null })} />
-      </label>
-      <label className="field">Área
-        <input defaultValue={project.area ?? ''} onBlur={(e) => e.target.value !== (project.area ?? '') && set({ area: e.target.value.trim() || null })} />
       </label>
       <button className="ghost danger" onClick={() => confirm('¿Borrar este proyecto? Sus tareas y notas se quedan, sin proyecto.') && remove('projects', project.id).then(onClose).then(onDeleted)}>Borrar proyecto</button>
     </Sheet>

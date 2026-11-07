@@ -608,22 +608,22 @@ button.tag { padding: 5px 11px; }
 /* Coloured daily tasks are translucent: a tint of their colour with the page showing through (frosted), text in
    the normal ink so it reads in light and dark. The solid colour stays for the check and the calendar days. */
 .daily-btn.colored, .daily-card-head.colored, .daily-hero.colored, .project-hero.colored {
-  background: color-mix(in srgb, var(--tile) 24%, transparent); color: var(--text);
-  border: 1px solid color-mix(in srgb, var(--tile) 35%, transparent);
+  background: color-mix(in srgb, var(--tile) calc(24% * var(--lo, 1) + 76% * var(--hi, 0)), transparent); color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--tile) calc(35% * var(--lo, 1) + 65% * var(--hi, 0)), transparent);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
 }
-.daily-btn.colored .daily-fill { background: color-mix(in srgb, var(--tile) 30%, transparent); }
+.daily-btn.colored .daily-fill { background: color-mix(in srgb, var(--tile) calc(30% * var(--lo, 1) + 70% * var(--hi, 0)), transparent); }
 .daily-btn.colored .daily-check { background: var(--tile); color: #fff; }
 .daily-btn.colored .streak, .daily-card-head.colored .daily-sub { color: var(--muted); }
-.daily-card-head.colored .today-pill { background: color-mix(in srgb, var(--tile) 22%, transparent); color: var(--text); }
+.daily-card-head.colored .today-pill { background: color-mix(in srgb, var(--tile) calc(22% * var(--lo, 1) + 78% * var(--hi, 0)), transparent); color: var(--text); }
 .daily-card-head.colored .today-pill.on { background: var(--tile); color: #fff; }
 
 /* Coloured tasks and projects */
-.task.colored, .project.colored { background: color-mix(in srgb, var(--tile) 14%, transparent); }
+.task.colored, .project.colored { background: color-mix(in srgb, var(--tile) calc(14% * var(--lo, 1) + 86% * var(--hi, 0)), transparent); }
 .task.colored .tick::before { border-color: color-mix(in srgb, var(--tile) 70%, var(--ring)); }
 .task.colored .tick.prio-alta::before { border-color: var(--tile); }
 .task.colored.leaving .tick::before { background: var(--tile); border-color: var(--tile); }
-.task.closed.colored { background: color-mix(in srgb, var(--tile) 8%, transparent); }
+.task.closed.colored { background: color-mix(in srgb, var(--tile) calc(8% * var(--lo, 1) + 92% * var(--hi, 0)), transparent); }
 .task.closed.colored .tick::before { background: var(--tile); border-color: var(--tile); }
 .project.colored .project-icon.letter, .project-hero.colored .project-icon.letter { background: var(--tile); color: #fff; }
 .project-hero:not(.has-art) { padding-left: 18px; gap: 16px; }
@@ -691,3 +691,37 @@ button.tag { padding: 5px 11px; }
 .note-thumb { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: rgba(128, 128, 128, 0.15); }
 .note-card-img { display: block; width: 100%; height: 110px; border-radius: 10px; object-fit: cover; background: rgba(128, 128, 128, 0.15); }
 .note-scroll > *, .note-blocks > * { flex-shrink: 0; } /* with pictures the page is taller than the screen: scroll, don't squash the title */
+
+/* One way to add things in a project: a rounded line with a «＋» (new task, new note, description, cover). */
+.add-line { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 16px; border-radius: var(--radius); background: var(--surface-2); color: var(--accent); font-weight: 500; font-size: 0.97rem; text-align: left; }
+.add-line > span:first-child { font-size: 1.15rem; line-height: 1; }
+.add-line.input input { flex: 1; min-width: 0; background: none; border: 0; padding: 0; min-height: 46px; color: var(--text); border-radius: 0; }
+.add-line.input:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
+.add-line .add-go { color: var(--accent); background: none; padding: 0 2px; min-height: 36px; font-weight: 600; }
+.page .group > .add-line { margin-top: 8px; }
+.project-desc-btn { display: block; width: 100%; padding: 0; text-align: left; background: none; font-weight: inherit; min-height: 0; }
+.desc-box { display: flex; flex-direction: column; gap: 8px; }
+.desc-box textarea { width: 100%; resize: vertical; min-height: 5.5em; }
+.desc-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.desc-actions .primary { min-height: 40px; padding: 0 18px; }
+
+/* Delete with a long press (src/HoldDelete.tsx) and the trash buttons that open it */
+.confirm-text { line-height: 1.45; color: var(--muted); overflow-wrap: anywhere; }
+.confirm-text strong { color: var(--text); }
+.hold-btn { position: relative; overflow: hidden; width: 100%; min-height: 54px; border-radius: var(--radius); background: var(--danger-soft); color: var(--danger); font-weight: 600; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.hold-fill { position: absolute; inset: 0; background: var(--danger); transform: scaleX(0); transform-origin: left; transition: transform 160ms ease-out; }
+.hold-btn.holding .hold-fill { transform: scaleX(1); transition: transform 1.8s linear; }
+.hold-label { position: relative; transition: color 200ms; }
+.hold-btn.holding .hold-label { color: #fff; }
+.row-del { flex-shrink: 0; width: 44px; min-height: 44px; display: grid; place-items: center; color: var(--muted); border-radius: 12px; }
+.row-del svg { width: 20px; height: 20px; }
+.row-del:active { color: var(--danger); }
+.daily-wrap { position: relative; }
+.daily-wrap .daily-btn { width: 100%; height: 100%; }
+.daily-wrap .row-del { position: absolute; top: 2px; right: 2px; width: 34px; min-height: 34px; z-index: 2; }
+.daily-wrap .row-del svg { width: 17px; height: 17px; }
+
+/* Opacity slider under the colours (src/ColorPicker.tsx). --lo / --hi blend the translucent colour: 0 = clear, 50 = the usual look, 100 = the solid palette colour. */
+.opacity-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 0.9rem; color: var(--muted); }
+.opacity-row input[type=range] { flex: 1; min-width: 0; padding: 0; min-height: 28px; accent-color: var(--accent); background: none; border: 0; }
+.opacity-row output { width: 2.2em; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
