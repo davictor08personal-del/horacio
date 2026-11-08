@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanCapture, mockCapture } from './capture'
-import { addDays, allTags, byPriority, cleanTag, dayPlan, doneToday, googleCalendarUrl, localMinutes, parseSearch, postponePatch, projectsTagged, taskMatchesTags, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
+import { addDays, allTags, byPriority, cleanTag, dayPlan, doneToday, googleCalendarUrl, localMinutes, parseSearch, postponePatch, projectsTagged, taskMatchesTags, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteSize, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
 import type { FpTest, Note, Shift, Task } from './types'
 
 const task = (p: Partial<Task>): Task => ({
@@ -116,6 +116,14 @@ describe('notes', () => {
     expect(noteMatches(note({ items: [{ text: 'Comprar PAN', done: false }] }), 'pan')).toBe(true)
     expect(noteMatches(note({ body: 'nada' }), 'pan')).toBe(false)
     expect(noteMatches(note({}), '  ')).toBe(true)
+  })
+  it('search also finds a note by the name of its project', () => {
+    expect(noteMatches(note({ body: 'nada' }), 'mudanza', 'Mudanza')).toBe(true)
+    expect(noteMatches(note({ body: 'nada' }), 'mudanza')).toBe(false)
+  })
+  it('mosaic sizes stagger, and a note with a picture is always tall', () => {
+    expect([0, 1, 2, 3, 4].map((i) => noteSize(note({}), i))).toEqual(['tall', 'small', 'small', 'tall', 'tall'])
+    expect(noteSize(note({ body: '[[img:u/a.jpg]]' }), 1)).toBe('tall')
   })
   it('preview is the first line with text', () => {
     expect(notePreview(note({ body: '\n  \nhola\nadiós' }))).toBe('hola')

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { allTags, byEdited, dailyOfNote, noteTone, imagePaths, noteMatches, notePreview, noteTime, parseSearch, projectsTagged, stripImages } from '../logic'
+import { allTags, byEdited, dailyOfNote, noteTone, imagePaths, noteMatches, notePreview, noteSize, noteTime, parseSearch, projectsTagged, stripImages } from '../logic'
 import { useImageUrl } from '../noteImages'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import { createNote, useData } from '../store'
@@ -34,14 +34,15 @@ export default function Notes() {
   const { tags, text } = parseSearch(query)
   const allTagFilters = [...tags, ...(filter !== 'all' && filter !== 'pinned' ? [filter] : [])]
   const tagged = allTagFilters.length ? projectsTagged(projects, allTagFilters) : null
+  const projectName = (n: Note) => projects.find((p) => p.id === n.project_id)?.name
   const shown = live
-    .filter((n) => (filter !== 'pinned' || n.pinned) && (!tagged || (!!n.project_id && tagged.has(n.project_id))) && noteMatches(n, text))
+    .filter((n) => (filter !== 'pinned' || n.pinned) && (!tagged || (!!n.project_id && tagged.has(n.project_id))) && noteMatches(n, text, projectName(n)))
     .sort(byEdited)
   const pinned = shown.filter((n) => n.pinned)
   const rest = shown.filter((n) => !n.pinned)
   const compose = () => createNote().then((n) => openNote(n.id))
-  const card = (n: Note, wide = false) => (
-    <NoteCard key={n.id} note={n} wide={wide} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} project={projects.find((p) => p.id === n.project_id)?.name} />
+  const card = (n: Note, i: number, wide = false) => (
+    <NoteCard key={n.id} note={n} size={wide ? 'wide' : noteSize(n, i)} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} project={projects.find((p) => p.id === n.project_id)?.name} />
   )
 
   const section = (title: string, list: Note[]) => list.length > 0 && (
@@ -71,7 +72,7 @@ export default function Notes() {
 
       <label className="search">
         <Icon d={ICON.search} />
-        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar o #etiqueta" aria-label="Buscar notas" />
+        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar, proyecto o #etiqueta" aria-label="Buscar notas" />
         {query && <button className="ghost" onClick={() => setQuery('')} aria-label="Borrar búsqueda"><Icon d={ICON.x} /></button>}
       </label>
 
@@ -84,7 +85,7 @@ export default function Notes() {
       )}
 
       {grid ? (
-        shown.length > 0 && <div className="note-bento">{pinned.map((n) => card(n, true))}{rest.map((n) => card(n))}</div>
+        shown.length > 0 && <div className="note-bento">{pinned.map((n, i) => card(n, i, true))}{rest.map((n, i) => card(n, i))}</div>
       ) : (
         <>
           {section('Fijadas', pinned)}
@@ -123,25 +124,27 @@ function NoteRow({ note, reminder, daily, project }: { note: Note; reminder: boo
 }
 
 /**
- * A colour block in the mosaic: its project on top, the title big, then the text (or the first items of the
- * list) cut after a few lines. `wide` (pinned) takes the whole row.
+ * A colour block in the mosaic: its project on top, the title big, then a glimpse of the text (or the first items
+ * of the list) that fades out where the block ends. Blocks are small or tall (noteSize); `wide` (pinned) takes the row.
  */
-function NoteCard({ note, reminder, daily, project, wide }: { note: Note; reminder: boolean; daily?: string; project?: string; wide?: boolean }) {
+function NoteCard({ note, reminder, daily, project, size }: { note: Note; reminder: boolean; daily?: string; project?: string; size: 'wide' | 'tall' | 'small' }) {
+  const text = stripImages(note.body)
+  const left = note.items?.filter((i) => !i.done) ?? []
   return (
-    <button className={`note-card c-${noteTone(note)} ${wide ? 'wide' : ''}`} onClick={() => openNote(note.id)}>
+    <button className={`note-card c-${noteTone(note)} ${size}`} onClick={() => openNote(note.id)}>
       {(project || note.pinned) && <span className="tile-label">{[note.pinned && 'Fijada', project].filter(Boolean).join(' · ')}</span>}
-      {!note.items && <Thumb body={note.body} className="note-card-img" />}
+      {!note.items && size !== 'small' && <Thumb body={note.body} className="note-card-img" />}
       {note.title.trim() && <strong>{note.title}</strong>}
       {note.items ? (
         <ul className="card-checks">
-          {note.items.slice(0, 6).map((i, k) => <li key={k} className={i.done ? 'done' : ''}>{i.text}</li>)}
-          {note.items.length > 6 && <li className="muted">+{note.items.length - 6}</li>}
+          {left.slice(0, 4).map((i, k) => <li key={k}>{i.text}</li>)}
         </ul>
       ) : (
-        stripImages(note.body) && <span className="card-body">{stripImages(note.body)}</span>
+        text && <span className="card-body">{text.slice(0, 240)}</span>
       )}
       {daily && <span className="daily-note-tag">Diaria · {daily}</span>}
-      <span className="card-foot">{noteTime(note.updated_at)}{reminder && <Icon d={ICON.bell} />}</span>
+      {/* How far the list goes lives in the foot, so the fade never hides it. */}
+      <span className="card-foot">{noteTime(note.updated_at)}{note.items?.length ? ` · ${note.items.length - left.length}/${note.items.length}` : ''}{reminder && <Icon d={ICON.bell} />}</span>
     </button>
   )
 }

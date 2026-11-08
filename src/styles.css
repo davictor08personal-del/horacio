@@ -400,6 +400,8 @@ input, textarea { caret-color: var(--accent); }
 .c-verde { --note: #96d9b8; }
 .c-azul { --note: #9cc1ff; }
 .c-morado { --note: #b3a1fb; }
+.c-rosa { --note: #f4a6d7; } /* only reachable through Auto (noteTone), but it needs its colour too */
+[data-theme='dark'] .c-rosa { --note: #8a3a78; }
 [data-theme='dark'] .c-rojo { --note: #8f3a42; }
 [data-theme='dark'] .c-naranja { --note: #8a5523; }
 [data-theme='dark'] .c-amarillo { --note: #7d6a1f; }
@@ -434,13 +436,22 @@ input, textarea { caret-color: var(--accent); }
 .note-count { text-align: center; color: var(--muted); font-size: 0.8rem; }
 
 /* Notas mosaic: two columns of colour blocks like the project tiles; pinned ones take the whole row. */
-.note-bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 10px; }
-.note-bento .note-card { margin: 0; min-height: 150px; border-radius: 24px; padding: 14px 14px 12px; gap: 6px; }
-.note-bento .note-card.wide { grid-column: 1 / -1; min-height: 120px; }
-.note-bento .note-card strong { font-size: 1.22rem; font-weight: 700; letter-spacing: -0.03em; }
-.note-bento .note-card.wide strong { font-size: 1.45rem; }
-.note-bento .card-body { -webkit-line-clamp: 5; }
-.note-bento .note-card.wide .card-body { -webkit-line-clamp: 3; }
+/* Fixed row units: a small block spans 2 (162px), a tall one 3 (248px). «dense» lets small ones fill the holes. */
+.note-bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; grid-auto-rows: 76px; gap: 10px; }
+.note-bento .note-card { margin: 0; height: 100%; overflow: hidden; border-radius: 24px; padding: 14px 14px 12px; gap: 6px; }
+.note-bento .note-card.small, .note-bento .note-card.wide { grid-row: span 2; }
+.note-bento .note-card.tall { grid-row: span 3; }
+.note-bento .note-card.wide { grid-column: 1 / -1; }
+.note-bento .note-card > * { flex-shrink: 0; }
+.note-bento .note-card strong { font-size: 1.22rem; font-weight: 700; letter-spacing: -0.03em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.note-bento .note-card.wide strong { font-size: 1.45rem; -webkit-line-clamp: 1; }
+/* Only a glimpse of the text: it takes whatever room is left in the block and fades out at the bottom. */
+.note-bento .card-body, .note-bento .card-checks {
+  flex: 1 1 0; min-height: 0; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent); mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
+.note-bento .card-body { display: block; -webkit-line-clamp: unset; }
+.note-bento .note-card-img { height: 96px; }
 .note-bento .card-foot { margin-top: auto; }
 .note-card .tile-label { align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; }
 /* Filter chips above the mosaic: Todas, Fijadas, then one per tag */
@@ -473,7 +484,8 @@ input, textarea { caret-color: var(--accent); }
   position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
   background: var(--bg); padding-top: env(safe-area-inset-top);
 }
-.note-editor:not(.c-none) { background: color-mix(in srgb, var(--note) 55%, var(--bg)); }
+/* The fallback keeps the editor opaque if a tone ever lacks its .c-* class (an unset --note made it see-through). */
+.note-editor:not(.c-none) { background: color-mix(in srgb, var(--note, var(--surface)) 55%, var(--bg)); }
 .note-bar, .note-scroll { width: 100%; max-width: 560px; margin: 0 auto; }
 .note-bar { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px 0 4px; }
 .back { display: flex; align-items: center; gap: 0; color: var(--accent); padding: 0 8px 0 2px; font-weight: 500; font-size: 1.05rem; }

@@ -198,10 +198,11 @@ export const fromChecklist = (items: ChecklistItem[]) => items.map((i) => i.text
 
 export const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 /** Search in title, text and checklist, ignoring accents and case ("cancion" finds "Canción"). */
-export function noteMatches(n: Note, query: string) {
+/** `project` is the name of the note's project, so searching «Cuadre» also finds the notes filed under it. */
+export function noteMatches(n: Note, query: string, project?: string) {
   const q = fold(query.trim())
   if (!q) return true
-  return fold([n.title, stripImages(n.body), ...(n.items ?? []).map((i) => i.text)].join('\n')).includes(q)
+  return fold([n.title, stripImages(n.body), ...(n.items ?? []).map((i) => i.text), project ?? ''].join('\n')).includes(q)
 }
 
 /** The second line of a row in the list: the first line of text that isn't the title. */
@@ -333,6 +334,15 @@ export const textMatches = (query: string, ...fields: (string | null | undefined
 const AUTO_TONES = ['morado', 'azul', 'verde', 'amarillo', 'naranja', 'rosa'] as const
 export const noteTone = (n: Pick<Note, 'id' | 'color'>) =>
   n.color !== 'none' ? n.color : AUTO_TONES[[...n.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % AUTO_TONES.length]
+
+/**
+ * The block's height in the mosaic, from its place in it: tall-small on one row, small-tall on the next, so the two
+ * columns stagger like a masonry wall and meet again every two rows. A note with a picture is always tall.
+ */
+const SIZE_PATTERN = ['tall', 'small', 'small', 'tall'] as const
+export function noteSize(n: Pick<Note, 'body'>, index: number): 'tall' | 'small' {
+  return imagePaths(n.body).length ? 'tall' : SIZE_PATTERN[index % SIZE_PATTERN.length]
+}
 
 // ---------- colour + opacity ----------
 // A task, project or daily task keeps its colour in one text field: «verde» (normal strength) or «verde:80» (opacity 0-100).
