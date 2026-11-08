@@ -282,7 +282,7 @@ input, textarea { caret-color: var(--accent); }
 :root[data-theme='dark'] .project-tile.colored { background: color-mix(in srgb, var(--tile) calc(90% * var(--lo, 1) + 10% * var(--hi, 0)), var(--surface)); color: var(--ink-d, var(--text)); }
 
 /* Tareas: big text tabs, each with a small count badge */
-.view-tabs { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; margin: -4px 0 -6px; }
+.view-tabs { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; margin: -4px 0 -6px; }
 .view-tabs button {
   min-height: 40px; padding: 0 2px; border-radius: 0; display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--display); font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; color: var(--muted);
