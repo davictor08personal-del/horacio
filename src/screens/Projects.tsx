@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ColorPicker } from '../ColorPicker'
 import { IconPicker, ItemIcon } from '../ItemIcon'
-import { allTags, byEdited, byPosition, cleanTag, colorKey, dailyOfNote, byPriority, fold, MAX_TAGS, notePreview, noteTime, parseSearch, projectsTagged, textMatches, tintStyle } from '../logic'
+import { allTags, byEdited, byPosition, cleanTag, colorKey, dailyOfNote, byPriority, fold, MAX_TAGS, notePreview, noteTime, noteTone, parseSearch, projectsTagged, textMatches, tintStyle } from '../logic'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import Page from '../Page'
 import Sheet, { Choice } from '../Sheet'
@@ -205,7 +205,7 @@ function ProjectPage({ project: initialProject, onBack }: { project: Project; on
             {ownNotes.map((n) => (
               <li key={n.id}>
                 <button className="note-row" onClick={() => openNote(n.id)}>
-                  {n.color !== 'none' && <span className={`dot c-${n.color}`} aria-hidden />}
+                  <span className={`dot c-${noteTone(n)}`} aria-hidden />
                   <span className="note-row-text">
                     <span className="task-title">{n.title.trim() || notePreview(n) || 'Nota nueva'}</span>
                     <span className="task-sub">{dailyOfNote(daily_tasks, n.id) && <span className="daily-note-tag">Nota de tarea diaria · {dailyOfNote(daily_tasks, n.id)!.title}</span>}<span className="note-time">{noteTime(n.updated_at)}</span></span>
@@ -307,12 +307,11 @@ function ProjectSheet({ project: initialProject, onClose, onDeleted }: { project
   const heroColor = colorKey(project.color)
   return (
     <Sheet title="Proyecto" onClose={onClose}>
-      {(project.icon || heroColor) && (
-        <div style={tintStyle(project.color)} className={`project-hero ${heroColor ? `colored dc-${heroColor}` : ''} ${project.icon ? 'has-art' : ''}`}>
-          {project.icon ? <DailyArt icon={project.icon} big /> : <ItemIcon icon={null} name={project.name} big />}
-          <h2 className="hero-title">{project.name}</h2>
-        </div>
-      )}
+      {/* Preview: the same colour as its tile and cover (its own, or the automatic pastel). */}
+      <div style={tintStyle(project.color)} className={`project-hero ${heroColor ? `colored dc-${heroColor}` : pastelOf(project.id)} ${project.icon ? 'has-art' : ''}`}>
+        {project.icon ? <DailyArt icon={project.icon} big /> : <ItemIcon icon={null} name={project.name} big />}
+        <h2 className="hero-title">{project.name}</h2>
+      </div>
       <input className="big-input" defaultValue={project.name} onBlur={(e) => e.target.value.trim() && e.target.value !== project.name && set({ name: e.target.value.trim() })} aria-label="Nombre" />
       <div className="field">Color
         <ColorPicker value={project.color} onChange={(color) => set({ color })} />

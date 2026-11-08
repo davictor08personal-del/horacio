@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { allTags, byEdited, dailyOfNote, imagePaths, noteMatches, notePreview, noteTime, parseSearch, projectsTagged, stripImages } from '../logic'
+import { allTags, byEdited, dailyOfNote, noteTone, imagePaths, noteMatches, notePreview, noteTime, parseSearch, projectsTagged, stripImages } from '../logic'
 import { useImageUrl } from '../noteImages'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import { createNote, useData } from '../store'
@@ -10,9 +10,6 @@ import type { Note } from '../types'
 const VIEW_KEY = 'cuadre-notes-view'
 const savedView = () => { try { return (localStorage.getItem(VIEW_KEY) ?? localStorage.getItem('horacio-notes-view')) !== 'list' } catch { return true } }
 
-// A note without its own colour still gets a pastel in the mosaic, picked from its id (always the same one).
-const AUTO = ['morado', 'azul', 'verde', 'amarillo', 'naranja', 'rosa'] as const
-const toneOf = (n: Note) => n.color !== 'none' ? n.color : AUTO[[...n.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % AUTO.length]
 
 /**
  * «Notas»: a mosaic of colour blocks (like the project tiles), pinned ones full width on top; chips filter by
@@ -110,7 +107,7 @@ function NoteRow({ note, reminder, daily, project }: { note: Note; reminder: boo
   return (
     <li>
       <button className="note-row" onClick={() => openNote(note.id)}>
-        {note.color !== 'none' && <span className={`dot c-${note.color}`} aria-hidden />}
+        <span className={`dot c-${noteTone(note)}`} aria-hidden />
         <span className="note-row-text">
           <span className="task-title">{note.title.trim() || notePreview(note) || (imagePaths(note.body).length ? 'Imagen' : 'Nota nueva')}</span>
           <span className="task-sub">
@@ -131,7 +128,7 @@ function NoteRow({ note, reminder, daily, project }: { note: Note; reminder: boo
  */
 function NoteCard({ note, reminder, daily, project, wide }: { note: Note; reminder: boolean; daily?: string; project?: string; wide?: boolean }) {
   return (
-    <button className={`note-card c-${toneOf(note)} ${wide ? 'wide' : ''}`} onClick={() => openNote(note.id)}>
+    <button className={`note-card c-${noteTone(note)} ${wide ? 'wide' : ''}`} onClick={() => openNote(note.id)}>
       {(project || note.pinned) && <span className="tile-label">{[note.pinned && 'Fijada', project].filter(Boolean).join(' · ')}</span>}
       {!note.items && <Thumb body={note.body} className="note-card-img" />}
       {note.title.trim() && <strong>{note.title}</strong>}

@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type TextareaHTMLAttributes } from 'react'
-import { fromChecklist, imagePaths, joinBlocks, splitBody, stripImages, timeZone, toChecklist, type Block } from './logic'
+import { addDays, fromChecklist, imagePaths, joinBlocks, localDay, noteTone, splitBody, stripImages, timeZone, toChecklist, type Block } from './logic'
 import { deleteNoteImages, MAX_NOTE_IMAGES, uploadNoteImage, useImageUrl } from './noteImages'
-import { remove, update, useData } from './store'
+import Sheet from './Sheet'
+import { createTask, remove, update, useData } from './store'
 import { TaskRow } from './TaskRow'
-import type { ChecklistItem, Note } from './types'
+import { NOTE_COLOR, NOTE_COLORS, type ChecklistItem, type Note } from './types'
 
 // SVG path data (24×24, strokes), drawn like the tab icons.
 export const ICON = {
@@ -46,6 +47,8 @@ export default function NoteEditor({ id }: { id: string }) {
   const daily = daily_tasks.find((d) => d.note_id === id)
   const note = notes.find((n) => n.id === id)
   const [draft, setDraft] = useState<Draft>(() => ({ title: note?.title ?? '', body: note?.body ?? '', items: note?.items ?? null }))
+  const [palette, setPalette] = useState(false)
+  const [reminding, setReminding] = useState(false)
   const dirty = useRef(false)
   const removed = useRef<string[]>([]) // pictures taken out of the text: their files go once the note is saved
   const caret = useRef({ i: -1, pos: 0 }) // where the cursor was last, to drop a picture there
@@ -148,14 +151,25 @@ export default function NoteEditor({ id }: { id: string }) {
   }
 
   return (
-    <div className={`note-editor c-${note.color}`} role="dialog" aria-label="Nota">
+    <div className={`note-editor c-${noteTone(note)}`} role="dialog" aria-label="Nota">
       <header className="note-bar">
         <button className="back" onClick={close}><Icon d={ICON.back} />Notas</button>
         <div className="note-bar-actions">
+          <button className={`icon-btn ${palette ? 'on' : ''}`} onClick={() => setPalette(!palette)} aria-label="Color" aria-expanded={palette}><Icon d={ICON.color} /></button>
+          <button className="icon-btn" onClick={() => setReminding(true)} aria-label="Añadir recordatorio"><Icon d={ICON.bell} /></button>
           <button className={`icon-btn ${note.pinned ? 'on' : ''}`} onClick={() => set({ pinned: !note.pinned })} aria-label={note.pinned ? 'No fijar' : 'Fijar'} aria-pressed={note.pinned}><Icon d={ICON.pin} /></button>
           <button className="icon-btn" onClick={share} aria-label="Compartir"><Icon d={ICON.share} /></button>
         </div>
       </header>
+      {palette && (
+        <div className="palette" role="radiogroup" aria-label="Color">
+          {NOTE_COLORS.map((c) => (
+            <button key={c} className={`swatch c-${c === 'none' ? noteTone({ id: note.id, color: 'none' }) : c} ${c === note.color ? 'on' : ''} ${c === 'none' ? 'auto' : ''}`} onClick={() => set({ color: c })} role="radio" aria-checked={c === note.color} aria-label={NOTE_COLOR[c]} title={NOTE_COLOR[c]}>
+              {c === 'none' && 'A'}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="note-scroll">
         <p className="note-date">{fullDate(note.updated_at)}{note.archived && ' · Archivada'}</p>
@@ -212,7 +226,37 @@ export default function NoteEditor({ id }: { id: string }) {
       </nav>
       <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={(e) => addPictures(e.target.files)} />
       {viewing && <Lightbox path={viewing} onClose={() => setViewing(null)} />}
+      {reminding && <ReminderSheet note={{ ...note, ...draft }} onClose={() => setReminding(false)} />}
     </div>
+  )
+}
+
+/** The bell: a reminder (a task with a day and maybe a time) linked to this note and its project. */
+function ReminderSheet({ note, onClose }: { note: Note; onClose: () => void }) {
+  const today = localDay()
+  const [title, setTitle] = useState(note.title.trim() || fromChecklist(note.items ?? []).split('\n')[0] || stripImages(note.body).split('\n')[0].trim())
+  const [day, setDay] = useState(today)
+  const [time, setTime] = useState('')
+  const QUICK: [string, string][] = [['Hoy', today], ['Mañana', addDays(today, 1)], ['En una semana', addDays(today, 7)]]
+  const save = () => createTask({ title: title.trim() || 'Recordatorio', due_date: day || null, due_time: time || null, note_id: note.id, project_id: note.project_id }).then(onClose)
+
+  return (
+    <Sheet title="Recordatorio" onClose={onClose}>
+      <input className="big-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="¿Qué te recuerdo?" aria-label="Título" maxLength={500} />
+      <div className="choice">
+        {QUICK.map(([label, d]) => <button type="button" key={label} className={day === d ? 'on' : ''} onClick={() => setDay(d)}>{label}</button>)}
+      </div>
+      <div className="two-col">
+        <label className="field">Día
+          <input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+        </label>
+        <label className="field">Hora
+          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </label>
+      </div>
+      <p className="hint">Aparecerá en Tareas y en Hoy, enlazado a esta nota. Con hora, te llega un aviso.</p>
+      <button className="primary" onClick={save}>Guardar</button>
+    </Sheet>
   )
 }
 

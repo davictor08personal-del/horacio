@@ -18,6 +18,7 @@
   --accent: #6b4de6; /* violeta */
   --accent-soft: rgb(107 77 230 / 0.11);
   --accent-ink: #4a2fbf; /* accent as text on --accent-soft */
+  --on-accent: #ffffff; /* text on a solid --accent */
   --danger: #c62828;
   --danger-soft: rgb(198 40 40 / 0.1);
   --late: #b5461b;
@@ -61,6 +62,7 @@
   --accent: #a995ff; /* violeta, lifted so it reads on dark */
   --accent-soft: rgb(169 149 255 / 0.16);
   --accent-ink: #d3c9ff;
+  --on-accent: #13121c; /* the dark accent is light: dark text on it */
   --danger: #ff6b6b;
   --danger-soft: rgb(255 107 107 / 0.14);
   --late: #ff9f7a;
@@ -256,6 +258,12 @@ input, textarea { caret-color: var(--accent); }
 .project-shelf .project-tile { min-height: 156px; }
 .project-tile.paused { opacity: 0.7; }
 
+/* The preview in a project's edit sheet takes the same automatic pastel as its tile (.project-hero sets its own background later on). */
+.project-hero.tile-violet { background: var(--hero); color: var(--hero-ink); }
+.project-hero.tile-blue { background: var(--pastel-blue); color: var(--pastel-ink); }
+.project-hero.tile-peach { background: var(--pastel-peach); color: var(--pastel-ink); }
+.project-hero.tile-pink { background: var(--pastel-pink); color: var(--pastel-ink); }
+
 /* A project's page: its tile, bigger, as a cover */
 .project-cover { min-height: 210px; border-radius: 28px; padding: 18px 18px 20px; gap: 8px; margin-bottom: 4px; }
 .project-cover:active { transform: none; }
@@ -281,7 +289,7 @@ input, textarea { caret-color: var(--accent); }
 }
 .view-tabs button.on { color: var(--text); }
 .view-count { font-family: -apple-system, system-ui, sans-serif; font-size: 0.7rem; font-weight: 700; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; background: var(--surface); color: var(--muted); letter-spacing: 0; }
-.view-tabs button.on .view-count { background: var(--accent); color: #fff; }
+.view-tabs button.on .view-count { background: var(--accent); color: var(--on-accent); }
 
 .tile-label { font-size: 0.75rem; font-weight: 650; padding: 4px 10px; border-radius: 999px; background: rgb(255 255 255 / 0.45); }
 :root[data-theme='dark'] .tile-label { background: rgb(255 255 255 / 0.12); }
@@ -325,7 +333,7 @@ input, textarea { caret-color: var(--accent); }
 .capture-slot { position: relative; z-index: 2; display: grid; place-items: center; }
 .capture-btn {
   width: 60px; height: 60px; min-height: 0; padding: 0; border-radius: 50%; margin-top: -26px;
-  background: var(--accent); color: #fff; display: grid; place-items: center;
+  background: var(--accent); color: var(--on-accent); display: grid; place-items: center;
   box-shadow: 0 8px 22px rgb(107 77 230 / 0.4), 0 0 0 5px var(--bg);
   transition: transform 160ms ease;
 }
@@ -488,8 +496,13 @@ input, textarea { caret-color: var(--accent); }
 
 /* Bottom dock of the note editor: floating pill bar matching the main tab bar */
 .note-tools { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
-.note-tools > button.active { background: var(--accent-soft); }
-.note-tools > button.danger { color: var(--danger); }
+/* Note colours, under the note's top bar (the palette button). «A» = Auto, the note's own pastel. */
+.palette { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; max-width: 560px; margin: 0 auto; padding: 6px 20px 10px; }
+.palette .swatch.auto { display: grid; place-items: center; font-size: 0.72rem; font-weight: 700; color: var(--pastel-ink); }
+
+/* It reuses .tabs (the dark pill), so an «on» button gets the same light pill as the active tab. */
+.note-tools > button.active { background: var(--dock-active); color: var(--dock-active-ink); }
+.note-tools > button.danger { color: #ff8a8a; } /* a light red: the dock is dark in both themes */
 
 .linked-note { display: flex; justify-content: space-between; align-items: center; background: var(--surface-3); border-radius: 14px; padding: 0 14px; color: var(--text); font-weight: 500; text-align: left; }
 
@@ -613,7 +626,7 @@ input, textarea { caret-color: var(--accent); }
 .streak-text { display: flex; flex-direction: column; gap: 2px; }
 .week-dots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .week-dot { aspect-ratio: 1; max-width: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 0.75rem; font-weight: 600; color: var(--muted); border: 1px solid var(--line); justify-self: center; width: 100%; }
-.week-dot.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.week-dot.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .week-dot.today { border-color: var(--accent); }
 .week-dot.future { opacity: 0.45; }
 .note-link { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font-weight: 400; }
@@ -663,7 +676,7 @@ button.tag { padding: 5px 11px; }
 .daily-btn.pressing:not(.done) .daily-fill { clip-path: inset(0 0 0 0); transition: clip-path 600ms cubic-bezier(0.45, 0, 0.25, 1); }
 .daily-btn.pressing.done .daily-fill { clip-path: inset(0 0 0 100%); transition: clip-path 600ms cubic-bezier(0.45, 0, 0.25, 1); }
 .daily-text { flex: 1; }
-.daily-check { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; transform: scale(0); opacity: 0; transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms; }
+.daily-check { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); transform: scale(0); opacity: 0; transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms; }
 .daily-check svg { width: 14px; height: 14px; stroke-width: 3; }
 .daily-btn.done .daily-check { transform: scale(1); opacity: 1; }
 .daily-btn.done .daily-title { text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: 0.75; }
@@ -725,7 +738,7 @@ button.tag { padding: 5px 11px; }
 .daily-card-head .daily-title { font-weight: 600; font-size: 1.02rem; }
 .daily-sub { font-size: 0.8rem; color: var(--muted); }
 .today-pill { margin-left: auto; flex-shrink: 0; font-size: 0.74rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
-.today-pill.on { background: var(--accent); color: #fff; }
+.today-pill.on { background: var(--accent); color: var(--on-accent); }
 
 .month-cal { padding: 8px 12px 14px; }
 .month-head { display: flex; align-items: center; justify-content: space-between; }
@@ -736,7 +749,7 @@ button.tag { padding: 5px 11px; }
 .month-dow { text-align: center; font-size: 0.7rem; font-weight: 600; color: var(--faint); padding-bottom: 2px; }
 .month-day { aspect-ratio: 1; min-height: 0; padding: 0; width: 100%; display: grid; place-items: center; border-radius: 7px; font-size: 0.72rem; font-weight: 500; color: var(--muted); background: var(--surface-2); transition: transform 120ms, background-color 150ms; }
 .month-day:not(:disabled):active { transform: scale(0.9); }
-.month-day.on { background: var(--tile, var(--accent)); color: #fff; font-weight: 600; }
+.month-day.on { background: var(--tile, var(--accent)); color: var(--on-accent); font-weight: 600; }
 [class*='dc-'] .month-day.on, [class*='dc-'] .week-dot.on { color: var(--hero-ink); }
 .month-day.today { box-shadow: inset 0 0 0 2px var(--tile, var(--accent)); }
 .month-day.future { opacity: 0.35; background: none; }
@@ -845,7 +858,7 @@ button.tag { padding: 5px 11px; }
   position: absolute; inset: 0; display: flex; align-items: center; gap: 6px; padding-left: 22px;
   background: var(--accent-soft); color: var(--accent-ink); font-weight: 650; font-size: 0.92rem; transition: background 150ms, color 150ms;
 }
-.swipe-done.ready { background: var(--accent); color: #fff; }
+.swipe-done.ready { background: var(--accent); color: var(--on-accent); }
 .swipe-done svg { width: 20px; height: 20px; stroke-width: 2.6; }
 .swipe-later { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
 .swipe-later button {

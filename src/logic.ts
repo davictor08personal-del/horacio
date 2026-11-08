@@ -326,6 +326,14 @@ export const textMatches = (query: string, ...fields: (string | null | undefined
   return !q || fold(fields.filter(Boolean).join('\n')).includes(q)
 }
 
+/**
+ * The colour a note shows: its own, or for «Auto» (none) a pastel picked from its id, always the same one, so its
+ * block in the mosaic and the open note match.
+ */
+const AUTO_TONES = ['morado', 'azul', 'verde', 'amarillo', 'naranja', 'rosa'] as const
+export const noteTone = (n: Pick<Note, 'id' | 'color'>) =>
+  n.color !== 'none' ? n.color : AUTO_TONES[[...n.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % AUTO_TONES.length]
+
 // ---------- colour + opacity ----------
 // A task, project or daily task keeps its colour in one text field: «verde» (normal strength) or «verde:80» (opacity 0-100).
 // 50 is how the colours looked before there was a slider, so it's the default and isn't written.

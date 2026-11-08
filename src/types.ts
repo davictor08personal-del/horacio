@@ -100,7 +100,8 @@ export const EFFORT: Record<Effort, string> = { rapido: 'Rápido', medio: 'Medio
 export const SHIFT: Record<ShiftKind, string> = { opening: 'Opening', dia: 'Día', noche: 'Noche', libre: 'Libre' }
 export const PROJECT_STATUS: Record<ProjectStatus, string> = { activo: 'Activo', pausado: 'Pausado', hecho: 'Hecho' }
 export const NOTE_COLOR: Record<NoteColor, string> = {
-  none: 'Sin color', rojo: 'Rojo', naranja: 'Naranja', amarillo: 'Amarillo', verde: 'Verde', azul: 'Azul', morado: 'Morado',
+  // «none» = Auto: a pastel picked from the note's id (see noteTone in logic.ts).
+  none: 'Auto', morado: 'Lila', azul: 'Azul', verde: 'Menta', amarillo: 'Amarillo', naranja: 'Melocotón', rojo: 'Coral',
 }
 export const NOTE_COLORS = Object.keys(NOTE_COLOR) as NoteColor[]
 
