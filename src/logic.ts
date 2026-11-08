@@ -328,7 +328,7 @@ const TILE: Record<string, [number, number, number]> = {
   azul: [0x3b, 0x76, 0xd9], verde: [0x2f, 0x9a, 0x63], morado: [0x7c, 0x5a, 0xd6], rosa: [0xd4, 0x50, 0x8a],
   rojo: [0xd6, 0x51, 0x51], naranja: [0xdf, 0x7a, 0x2a], vinotinto: [0x9b, 0x2a, 0x4c], gris: [0x6b, 0x76, 0x85],
 }
-const PAGE = { light: { row: [255, 255, 255], tile: [243, 245, 249] }, dark: { row: [28, 28, 30], tile: [18, 18, 18] } } as const
+const PAGE = { light: { row: [255, 255, 255], tile: [233, 229, 251] }, dark: { row: [30, 28, 43], tile: [19, 18, 28] } } as const
 const BASE = { row: 14, tile: 24 } // how much colour the card has at the default opacity (%), see styles.css
 const luminance = ([r, g, b]: number[]) => {
   const f = (v: number) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }

@@ -27,3 +27,16 @@ export function Choice<T extends string>({ value, options, onChange }: { value: 
     </div>
   )
 }
+
+/** Big text tabs with a small count badge each («Puntuales 10 · Diarias 4»), for switching a whole screen's view. */
+export function ViewTabs<T extends string>({ value, options, counts, onChange }: { value: T; options: Record<T, string>; counts?: Partial<Record<T, number>>; onChange: (v: T) => void }) {
+  return (
+    <div className="view-tabs" role="tablist">
+      {(Object.keys(options) as T[]).map((k) => (
+        <button type="button" role="tab" aria-selected={k === value} key={k} className={k === value ? 'on' : ''} onClick={() => onChange(k)}>
+          {options[k]}{counts?.[k] != null && <span className="view-count">{counts[k]}</span>}
+        </button>
+      ))}
+    </div>
+  )
+}

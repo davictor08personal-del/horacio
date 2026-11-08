@@ -3,7 +3,7 @@ import { byPriority, parseSearch, projectsTagged, taskMatchesTags, textMatches }
 import { ICON, Icon } from '../NoteEditor'
 import { KEEP_CLOSED_DAYS, useData } from '../store'
 import { ClosedRow, TaskRow, TaskSheet } from '../TaskRow'
-import Sheet, { Choice } from '../Sheet'
+import Sheet, { ViewTabs } from '../Sheet'
 import { DailyList, NewDaily } from '../DailyTasks'
 import { createTask } from '../store'
 import type { Status, Task } from '../types'
@@ -17,7 +17,7 @@ let nextView: View = 'puntuales'
 export const openDailyView = () => { nextView = 'diarias' }
 
 export default function Tasks() {
-  const { tasks: allOpen, closed: allClosed, projects } = useData()
+  const { tasks: allOpen, closed: allClosed, projects, daily_tasks } = useData()
   const [showClosed, setShowClosed] = useState(false)
   const [view, setView] = useState<View>(() => nextView)
   useEffect(() => { nextView = 'puntuales' }, [])
@@ -39,7 +39,7 @@ export default function Tasks() {
         <h1 className="page-title">Tareas</h1>
         <button className="add-btn" onClick={() => setAdding(true)} aria-label={view === 'diarias' ? 'Nueva tarea diaria' : 'Nueva tarea, sin IA'}><svg viewBox="0 0 24 24" aria-hidden><path d="M12 5v14M5 12h14" /></svg></button>
       </div>
-      <Choice value={view} options={VIEWS} onChange={setView} />
+      <ViewTabs value={view} options={VIEWS} counts={{ puntuales: allOpen.length, diarias: daily_tasks.length }} onChange={setView} />
       {view === 'diarias' ? <DailyList /> : <>
       {(allOpen.length > 0 || allClosed.length > 0) && (
         <label className="search">

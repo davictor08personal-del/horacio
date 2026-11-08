@@ -11,6 +11,7 @@ import { TaskRow } from '../TaskRow'
 import { PROJECT_STATUS, type Project, type ProjectStatus } from '../types'
 
 const GROUPS: [ProjectStatus, string][] = [['activo', 'Activos'], ['pausado', 'Pausados'], ['hecho', 'Terminados']]
+const PASTELS = ['tile-violet', 'tile-peach', 'tile-blue', 'tile-pink']
 
 /** Tab «Proyectos»: every project in one place; open one to see its description, reminders, tasks and notes. */
 export default function Projects() {
@@ -63,20 +64,21 @@ export default function Projects() {
         return list.length > 0 && (
           <section className="group" key={status}>
             <h2 className="group-title">{label} · {list.length}</h2>
-            <ul className="list card-list">
-              {list.map((p) => {
+            {/* A bento of colour tiles: a project's own colour if it has one, else a pastel by its place in the list. */}
+            <ul className="list project-grid">
+              {list.map((p, i) => {
                 const count = tasks.filter((t) => t.project_id === p.id).length
                 const noteCount = notes.filter((n) => n.project_id === p.id && !n.archived).length
                 const dailyCount = daily_tasks.filter((d) => d.project_id === p.id).length
                 const color = colorKey(p.color)
+                const isPicture = p.icon?.startsWith('data:image/')
                 return (
                   <li key={p.id}>
-                    <button style={tintStyle(p.color, 'row')} className={`project ${color ? `colored dc-${color}` : ''} ${p.icon ? 'has-art' : ''}`} onClick={() => setOpen(p.id)}>
-                      {p.icon ? <DailyArt icon={p.icon} /> : <ItemIcon icon={null} name={p.name} />}
-                      <span className="project-text">
-                      <span className="task-title">{p.name}</span>
-                      <span className="task-sub">{[count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
-                      </span>
+                    <button style={tintStyle(p.color)} className={`project-tile ${color ? `colored dc-${color}` : PASTELS[i % PASTELS.length]} ${isPicture ? 'has-photo' : ''}`} onClick={() => setOpen(p.id)}>
+                      {isPicture ? <img className="tile-photo" src={p.icon!} alt="" /> : <ItemIcon icon={p.icon} name={p.name} />}
+                      <span className="tile-name">{p.name}</span>
+                      <span className="tile-text">{[count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
+                      {p.tags?.length ? <span className="tile-tags">{p.tags.slice(0, 2).map((t) => `#${t}`).join(' ')}</span> : null}
                     </button>
                   </li>
                 )
