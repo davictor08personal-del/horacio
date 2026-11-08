@@ -12,6 +12,8 @@ import { PROJECT_STATUS, type Project, type ProjectStatus } from '../types'
 
 const GROUPS: [ProjectStatus, string][] = [['activo', 'Activos'], ['pausado', 'Pausados'], ['hecho', 'Terminados']]
 const PASTELS = ['tile-violet', 'tile-peach', 'tile-blue', 'tile-pink']
+/** A project without its own colour gets a pastel picked from its id, so its tile and its page always match. */
+const pastelOf = (id: string) => PASTELS[[...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % PASTELS.length]
 
 /** Tab «Proyectos»: every project in one place; open one to see its description, reminders, tasks and notes. */
 export default function Projects() {
@@ -64,9 +66,9 @@ export default function Projects() {
         return list.length > 0 && (
           <section className="group" key={status}>
             <h2 className="group-title">{label} · {list.length}</h2>
-            {/* A bento of colour tiles: a project's own colour if it has one, else a pastel by its place in the list. */}
+            {/* A bento of colour tiles: a project's own colour if it has one, else a pastel picked from its id. */}
             <ul className="list project-grid">
-              {list.map((p, i) => {
+              {list.map((p) => {
                 const count = tasks.filter((t) => t.project_id === p.id).length
                 const noteCount = notes.filter((n) => n.project_id === p.id && !n.archived).length
                 const dailyCount = daily_tasks.filter((d) => d.project_id === p.id).length
@@ -74,7 +76,7 @@ export default function Projects() {
                 const isPicture = p.icon?.startsWith('data:image/')
                 return (
                   <li key={p.id}>
-                    <button style={tintStyle(p.color)} className={`project-tile ${color ? `colored dc-${color}` : PASTELS[i % PASTELS.length]} ${isPicture ? 'has-photo' : ''}`} onClick={() => setOpen(p.id)}>
+                    <button style={tintStyle(p.color)} className={`project-tile ${color ? `colored dc-${color}` : pastelOf(p.id)} ${isPicture ? 'has-photo' : ''}`} onClick={() => setOpen(p.id)}>
                       {isPicture ? <img className="tile-photo" src={p.icon!} alt="" /> : <ItemIcon icon={p.icon} name={p.name} />}
                       <span className="tile-name">{p.name}</span>
                       <span className="tile-text">{[count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
@@ -122,15 +124,12 @@ function ProjectPage({ project: initialProject, onBack }: { project: Project; on
   return (
     <Page back="Proyectos" onBack={onBack} actions={<button className="link" onClick={() => setEditing(true)}>Editar</button>}>
       <header className="today-head">
-        {project.icon || heroColor ? (
-          <div style={tintStyle(project.color)} className={`project-hero ${heroColor ? `colored dc-${heroColor}` : ''} ${project.icon ? 'has-art' : ''}`}>
-            {project.icon ? <DailyArt icon={project.icon} big /> : <ItemIcon icon={null} name={project.name} big />}
-            <h1>{project.name}</h1>
-          </div>
-        ) : (
-          <><ItemIcon icon={null} name={project.name} big /><h1>{project.name}</h1></>
-        )}
-        <p className="day-line">{PROJECT_STATUS[project.status]}</p>
+        {/* The cover: the same colour block as the project's tile in the list, just bigger. */}
+        <div style={tintStyle(project.color)} className={`project-tile project-cover ${heroColor ? `colored dc-${heroColor}` : pastelOf(project.id)} ${project.icon?.startsWith('data:image/') ? 'has-photo' : ''}`}>
+          {project.icon?.startsWith('data:image/') ? <img className="tile-photo" src={project.icon} alt="" /> : <ItemIcon icon={project.icon} name={project.name} big />}
+          <h1 className="tile-name">{project.name}</h1>
+          <span className="tile-label">{PROJECT_STATUS[project.status]}</span>
+        </div>
         <TagChips tags={project.tags} />
         {!project.icon && <button className="add-line" onClick={() => setEditing(true)}><span aria-hidden>＋</span>Añadir foto o icono de portada</button>}
         {writingDesc

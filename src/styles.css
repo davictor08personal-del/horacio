@@ -244,6 +244,12 @@ input, textarea { caret-color: var(--accent); }
 .project-tile .project-icon { margin-bottom: auto; background: rgb(255 255 255 / 0.5); color: inherit; }
 :root[data-theme='dark'] .project-tile .project-icon { background: rgb(255 255 255 / 0.12); }
 .project-tile .tile-name { font-family: var(--display); font-size: 1.22rem; font-weight: 650; letter-spacing: -0.03em; line-height: 1.1; margin-top: 14px; overflow-wrap: anywhere; }
+/* A project's page: its tile, bigger, as a cover */
+.project-cover { min-height: 210px; border-radius: 28px; padding: 18px 18px 20px; gap: 8px; margin-bottom: 4px; }
+.project-cover:active { transform: none; }
+.project-cover .tile-name { font-size: 2.1rem; font-weight: 750; letter-spacing: -0.045em; line-height: 1.02; margin-top: 18px; }
+.project-cover .tile-label { align-self: flex-start; }
+.project-cover .project-icon.big { border-radius: 18px; }
 .project-tile .tile-tags { font-size: 0.75rem; font-weight: 600; opacity: 0.7; }
 /* A picture fills the top of the tile and fades into its colour. */
 .project-tile .tile-photo {
@@ -317,13 +323,22 @@ input, textarea { caret-color: var(--accent); }
 
 /* ---------- bottom sheet ---------- */
 .sheet-backdrop { position: fixed; inset: 0; background: var(--backdrop); z-index: 30; display: flex; align-items: flex-end; }
+/* A white sheet rising over the colour, with a big radius and a grab handle (like the reference designs). */
 .sheet {
-  width: 100%; max-width: 560px; margin: 0 auto; max-height: 90dvh;
-  background: var(--surface); border-radius: 24px 24px 0 0;
-  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+  position: relative; width: 100%; max-width: 560px; margin: 0 auto; max-height: 90dvh;
+  background: var(--surface); border-radius: 32px 32px 0 0;
+  padding: 22px 20px calc(16px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 -12px 40px -12px var(--shadow);
+  animation: sheet-up 320ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
 }
+.sheet::before { content: ''; position: absolute; top: 8px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 999px; background: var(--line); }
+.sheet-backdrop { animation: fade 220ms ease-out both; }
+@keyframes sheet-up { from { transform: translateY(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sheet, .sheet-backdrop { animation: none; } }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; }
+.sheet-head h2 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.03em; }
 .sheet-head h2::first-letter { text-transform: uppercase; }
 .sheet-body { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 2px; }
 /* Nothing may be wider than the sheet (iOS date/time inputs have a wide intrinsic size), or the whole form pans sideways. */
@@ -358,18 +373,18 @@ input, textarea { caret-color: var(--accent); }
 /* ---------- Notas ---------- */
 /* Note colours: pastel in light, Keep's dark ones (a touch softer) in dark. Cards, rows' dots and the editor read --note. */
 .c-none { --note: var(--surface); }
-.c-rojo { --note: #f8d9dc; }
-.c-naranja { --note: #fbe2cc; }
-.c-amarillo { --note: #faefc4; }
-.c-verde { --note: #d5eedf; }
-.c-azul { --note: #d7e6f7; }
-.c-morado { --note: #e6dcf5; }
-[data-theme='dark'] .c-rojo { --note: #5c2230; }
-[data-theme='dark'] .c-naranja { --note: #5a3020; }
-[data-theme='dark'] .c-amarillo { --note: #5e4518; }
-[data-theme='dark'] .c-verde { --note: #24443a; }
-[data-theme='dark'] .c-azul { --note: #253d52; }
-[data-theme='dark'] .c-morado { --note: #3d2e52; }
+.c-rojo { --note: #ffc9cf; }
+.c-naranja { --note: #ffd59f; }
+.c-amarillo { --note: #ffe99a; }
+.c-verde { --note: #c2ebd2; }
+.c-azul { --note: #bfd6ff; }
+.c-morado { --note: #d7c9ff; }
+[data-theme='dark'] .c-rojo { --note: #5f2733; }
+[data-theme='dark'] .c-naranja { --note: #63401c; }
+[data-theme='dark'] .c-amarillo { --note: #5e4b17; }
+[data-theme='dark'] .c-verde { --note: #22483a; }
+[data-theme='dark'] .c-azul { --note: #2a4672; }
+[data-theme='dark'] .c-morado { --note: #46377e; }
 
 .notes-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
 .note-bar-actions { display: flex; align-items: center; }
@@ -401,9 +416,12 @@ input, textarea { caret-color: var(--accent); }
 .note-grid { columns: 2; column-gap: 10px; }
 .note-card {
   width: 100%; margin-bottom: 10px; break-inside: avoid; display: flex; flex-direction: column; align-items: stretch; gap: 6px;
-  background: var(--note); border: 1px solid var(--line); border-radius: 16px; padding: 14px; text-align: left; font-weight: 400; min-height: 0;
+  background: var(--note); border: 0; border-radius: 22px; padding: 16px; text-align: left; font-weight: 400; min-height: 0;
+  transition: transform 160ms ease;
 }
-.note-card strong { font-family: var(--display); font-weight: 600; font-size: 1.05rem; }
+.note-card:active { transform: scale(0.97); }
+.note-card strong { font-family: var(--display); font-weight: 650; font-size: 1.12rem; letter-spacing: -0.02em; line-height: 1.15; }
+.note-card:not(.c-none) .card-body, .note-card:not(.c-none) .card-checks, .note-card:not(.c-none) .card-foot { color: inherit; opacity: 0.72; }
 .card-body { font-size: 0.9rem; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 9; -webkit-box-orient: vertical; overflow: hidden; }
 .card-checks { display: flex; flex-direction: column; gap: 3px; font-size: 0.9rem; color: var(--muted); }
 .card-checks li::before { content: '○ '; color: var(--muted); }
@@ -697,7 +715,7 @@ button.tag { padding: 5px 11px; }
 .daily-art.big.emoji { font-size: 2.2rem; padding-left: 20px; }
 .hero-title { font-family: var(--display); font-size: 1.45rem; font-weight: 700; letter-spacing: -0.02em; color: inherit; padding: 0; }
 .hero-input { background: var(--surface); color: inherit; }
-.info-list { display: flex; flex-direction: column; background: var(--surface-2); border-radius: 14px; overflow: hidden; }
+.info-list { display: flex; flex-direction: column; background: var(--surface-2); border-radius: 18px; overflow: hidden; }
 .info-list > div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; }
 .info-list > div + div { border-top: 1px solid var(--line); }
 .info-list dt { color: var(--muted); font-size: 0.9rem; flex-shrink: 0; }
