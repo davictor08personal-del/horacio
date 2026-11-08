@@ -97,11 +97,16 @@ Ideas aparcadas: widgets en el iPhone sin App Store (Scriptable para ver las pri
 
 ## Estilo
 
-**Cuadre** (2026-11-06; antes «Mayordomo»).
-- **Tipografía**: Bricolage Grotesque (variable, moderna y algo juguetona) para títulos y la letra del sistema para el texto (SF Pro en el iPhone, así se siente nativa). Fuera Inter y Fraunces.
-- **Color**: vinotinto como acento (claro `#8b1e3f`, oscuro `#e2718f`, más luminoso para que se lea). Fondos y tarjetas: claro `#f3f5f9` / blanco; oscuro «Grafito» `#121212` / `#1c1c1e`.
-- **Tono neutro**, de tú, sin mayordomo: «Prioridades de hoy», «Hoy no trabajas: tienes el día libre».
-- **Icono provisional**: cuadrado vinotinto `#7a1e3a` con un cuadro blanco redondeado dentro (cuadrar).
+**Lavanda** (2026-11-08; sustituye al vinotinto del 2026-11-06). Inspirado en dos referencias de Dribbble: fondo pastel, bloques de color sólido, titulares enormes y barra en píldora oscura.
+- **Tipografía**: Bricolage Grotesque para títulos (más grande y apretada: `h1` 2.5rem, peso 750) y la letra del sistema para el texto (SF Pro en el iPhone).
+- **Color**: fondo lavanda `#e9e5fb`, tarjetas blancas sin borde, tinta `#16132b` y acento violeta `#6b4de6`. Oscuro: `#13121c` / `#1e1c2b`, acento `#a995ff`. Pasteles para bloques (`--hero` violeta, `--pastel-blue`, `--pastel-peach`, `--pastel-pink`), con versiones profundas en oscuro.
+- **Formas**: radio 22 px por defecto, 24–32 px en mosaicos y hojas, píldoras en chips, días y pestañas.
+- **Barra inferior**: píldora oscura; la pestaña activa lleva una píldora clara que se desliza. El ＋ central es violeta.
+- **Hoy**: tarjeta hero violeta con el número de prioridades en grande, tira de 7 días (hoy en oscuro, punto si vence algo), y mosaicos pastel para Estudios y Puede esperar.
+- **Proyectos**: mosaico de dos columnas; cada proyecto usa su color o un pastel sacado de su id, el mismo en la lista y en la portada de su ficha.
+- **Hojas**: suben desde abajo con radio 32 px y asa.
+- **Tono neutro**, de tú: «Prioridades de hoy», «Hoy no trabajas: tienes el día libre».
+- **Icono provisional**: cuadrado violeta (degradado `#8c72f5` → `#5b3dd8`) con un cuadro blanco redondeado dentro (cuadrar). El color «Vinotinto» sigue disponible para notas, diarias y proyectos.
 - **Automático** (por defecto) sigue al móvil; en Ajustes (⚙) se puede forzar claro u oscuro. Se guarda por dispositivo.
 - Todos los colores son variables en `src/styles.css` (dos bloques: `:root` y `:root[data-theme='dark']`); `index.html` aplica el tema antes de pintar para que no parpadee.
 - **Ajustes**: engranaje ⚙ arriba a la derecha en todas las pantallas; abre una pantalla completa con tarjetas por sección (Apariencia, Avisos, Cuenta, Acerca de).

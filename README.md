@@ -47,7 +47,7 @@ La clave **nunca** va en git ni en el navegador: solo la lee `api/capture.ts`, q
 - `src/media.ts`: reduce las fotos y convierte la voz en WAV antes de enviarlas.
 - `api/capture.ts`: la llamada a la IA (Gemini o DeepSeek) en el servidor.
 - `api/tick.ts`, `api/ping.ts`, `api/_push.ts`, `src/push.ts` y `public/push-sw.js`: los avisos push.
-- `public/icon.png`: el icono provisional (cuadrado vinotinto con un cuadro blanco); `npm run icons` genera todos los tamaños. El dibujo del antiguo mayordomo sigue en `docs/horacio-mascota.webp`.
+- `public/icon.png`: el icono provisional (cuadrado violeta con un cuadro blanco); `npm run icons` genera todos los tamaños. El dibujo del antiguo mayordomo sigue en `docs/horacio-mascota.webp`.
 
 ## Publicar (Vercel + avisos al iPhone)
 

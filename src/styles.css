@@ -1,5 +1,5 @@
 /* Cuadre look: Bricolage Grotesque for titles (modern, a bit playful), the system font for text (SF Pro on iPhone,
-   so it feels native), hairline-bordered cards, vinotinto accent. Two palettes: light, and dark «Grafito». index.html sets data-theme on <html> before the first
+   so it feels native), borderless cards, violet accent on lavender. Two palettes: light, and dark. index.html sets data-theme on <html> before the first
    paint (system, or what the user forced in Ajustes); every colour below is a token, so the two blocks are the theme. */
 :root {
   --fill: #e4e0f5; /* a held / done daily task: a bit darker than the card */
