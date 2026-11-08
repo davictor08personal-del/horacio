@@ -1,6 +1,6 @@
 // A small burst of confetti and stars from an element (a daily task just done). No library: a few spans moved
 // with the Web Animations API, removed after a second. Skipped if the phone asks for reduced motion.
-const COLORS = ['#e2718f', '#8b1e3f', '#f5b301', '#2f9e5b', '#2f6fde', '#7b4fd6', '#ff8a3d']
+const COLORS = ['#a995ff', '#6b4de6','#f5b301', '#2f9e5b', '#2f6fde', '#7b4fd6', '#ff8a3d']
 
 export function celebrate(from: Element | null) {
   if (!from || matchMedia('(prefers-reduced-motion: reduce)').matches) return

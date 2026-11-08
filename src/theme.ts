@@ -15,7 +15,7 @@ let pref: ThemePref = (() => {
 function apply() {
   const dark = pref === 'dark' || (pref === 'system' && system.matches)
   document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#121212' : '#f3f5f9')
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#13121c' : '#e9e5fb')
 }
 // «Automático» follows the phone when it switches (e.g. at sunset).
 system.addEventListener('change', apply)
