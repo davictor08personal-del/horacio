@@ -1,43 +1,62 @@
 import { useState } from 'react'
-import { byEdited, dailyOfNote, imagePaths, noteMatches, notePreview, noteTime, parseSearch, projectsTagged, stripImages } from '../logic'
+import { allTags, byEdited, dailyOfNote, imagePaths, noteMatches, notePreview, noteTime, parseSearch, projectsTagged, stripImages } from '../logic'
 import { useImageUrl } from '../noteImages'
 import { ICON, Icon, openNote } from '../NoteEditor'
 import { createNote, useData } from '../store'
 import type { Note } from '../types'
 
-// The list/grid choice is a per-device preference, so it lives in localStorage (it can fail in private mode).
+// The mosaic/list choice is a per-device preference, so it lives in localStorage (it can fail in private mode).
+// The mosaic is the default; only an explicit «list» keeps the list.
 const VIEW_KEY = 'cuadre-notes-view'
-const savedView = () => { try { return (localStorage.getItem(VIEW_KEY) ?? localStorage.getItem('horacio-notes-view')) === 'grid' } catch { return false } }
+const savedView = () => { try { return (localStorage.getItem(VIEW_KEY) ?? localStorage.getItem('horacio-notes-view')) !== 'list' } catch { return true } }
 
-/** «Notas»: iOS Notes look (big title, search, grouped list) with Keep's pin, colours, grid and archive. */
+// A note without its own colour still gets a pastel in the mosaic, picked from its id (always the same one).
+const AUTO = ['morado', 'azul', 'verde', 'amarillo', 'naranja', 'rosa'] as const
+const toneOf = (n: Note) => n.color !== 'none' ? n.color : AUTO[[...n.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % AUTO.length]
+
+/**
+ * «Notas»: a mosaic of colour blocks (like the project tiles), pinned ones full width on top; chips filter by
+ * pinned or by the tags of their projects. The list view (iOS Notes look) is one tap away. Archive as in Keep.
+ */
 export default function Notes() {
   const { notes, tasks, daily_tasks, projects } = useData()
   const [query, setQuery] = useState('')
   const [grid, setGrid] = useState(savedView)
   const [archive, setArchive] = useState(false)
+  const [filter, setFilter] = useState<string>('all') // 'all', 'pinned' or a tag
 
   const toggleView = () => {
     setGrid(!grid)
     try { localStorage.setItem(VIEW_KEY, grid ? 'list' : 'grid') } catch { /* only a preference */ }
   }
   const linked = new Set(tasks.map((t) => t.note_id))
+  const live = notes.filter((n) => n.archived === archive)
+  // Tags worth a chip: those of the projects that have notes here.
+  const chipTags = allTags(projects.filter((p) => live.some((n) => n.project_id === p.id)))
   // «#idiomas» = the notes of every project tagged #idiomas; the rest of the words search the text.
   const { tags, text } = parseSearch(query)
-  const tagged = tags.length ? projectsTagged(projects, tags) : null
-  const shown = notes.filter((n) => n.archived === archive && (!tagged || (!!n.project_id && tagged.has(n.project_id))) && noteMatches(n, text)).sort(byEdited)
+  const allTagFilters = [...tags, ...(filter !== 'all' && filter !== 'pinned' ? [filter] : [])]
+  const tagged = allTagFilters.length ? projectsTagged(projects, allTagFilters) : null
+  const shown = live
+    .filter((n) => (filter !== 'pinned' || n.pinned) && (!tagged || (!!n.project_id && tagged.has(n.project_id))) && noteMatches(n, text))
+    .sort(byEdited)
   const pinned = shown.filter((n) => n.pinned)
   const rest = shown.filter((n) => !n.pinned)
   const compose = () => createNote().then((n) => openNote(n.id))
+  const card = (n: Note, wide = false) => (
+    <NoteCard key={n.id} note={n} wide={wide} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} project={projects.find((p) => p.id === n.project_id)?.name} />
+  )
 
   const section = (title: string, list: Note[]) => list.length > 0 && (
     <section className="group" key={title}>
       {title && <h2 className="group-title">{title}</h2>}
-      {grid ? (
-        <div className="note-grid">{list.map((n) => <NoteCard key={n.id} note={n} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} project={projects.find((p) => p.id === n.project_id)?.name} />)}</div>
-      ) : (
-        <ul className="list card-list">{list.map((n) => <NoteRow key={n.id} note={n} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} project={projects.find((p) => p.id === n.project_id)?.name} />)}</ul>
-      )}
+      <ul className="list card-list">{list.map((n) => <NoteRow key={n.id} note={n} reminder={linked.has(n.id)} daily={dailyOfNote(daily_tasks, n.id)?.title} project={projects.find((p) => p.id === n.project_id)?.name} />)}</ul>
     </section>
+  )
+  const chip = (key: string, label: string, count?: number) => (
+    <button type="button" key={key} className={filter === key ? 'on' : ''} onClick={() => setFilter(filter === key && key !== 'all' ? 'all' : key)}>
+      {label}{count != null && <span className="chip-count">{count}</span>}
+    </button>
   )
 
   return (
@@ -59,8 +78,22 @@ export default function Notes() {
         {query && <button className="ghost" onClick={() => setQuery('')} aria-label="Borrar búsqueda"><Icon d={ICON.x} /></button>}
       </label>
 
-      {section('Fijadas', pinned)}
-      {section(pinned.length ? 'Otras' : '', rest)}
+      {live.length > 0 && (
+        <div className="choice filter-chips">
+          {chip('all', 'Todas', live.length)}
+          {live.some((n) => n.pinned) && chip('pinned', 'Fijadas', live.filter((n) => n.pinned).length)}
+          {chipTags.map((t) => chip(t, `#${t}`))}
+        </div>
+      )}
+
+      {grid ? (
+        shown.length > 0 && <div className="note-bento">{pinned.map((n) => card(n, true))}{rest.map((n) => card(n))}</div>
+      ) : (
+        <>
+          {section('Fijadas', pinned)}
+          {section(pinned.length ? 'Otras' : '', rest)}
+        </>
+      )}
 
       {!shown.length && (
         <p className="empty">
@@ -92,10 +125,14 @@ function NoteRow({ note, reminder, daily, project }: { note: Note; reminder: boo
   )
 }
 
-/** Keep card: coloured, the text (or the first items of the list) cut after a few lines. */
-function NoteCard({ note, reminder, daily, project }: { note: Note; reminder: boolean; daily?: string; project?: string }) {
+/**
+ * A colour block in the mosaic: its project on top, the title big, then the text (or the first items of the
+ * list) cut after a few lines. `wide` (pinned) takes the whole row.
+ */
+function NoteCard({ note, reminder, daily, project, wide }: { note: Note; reminder: boolean; daily?: string; project?: string; wide?: boolean }) {
   return (
-    <button className={`note-card c-${note.color}`} onClick={() => openNote(note.id)}>
+    <button className={`note-card c-${toneOf(note)} ${wide ? 'wide' : ''}`} onClick={() => openNote(note.id)}>
+      {(project || note.pinned) && <span className="tile-label">{[note.pinned && 'Fijada', project].filter(Boolean).join(' · ')}</span>}
       {!note.items && <Thumb body={note.body} className="note-card-img" />}
       {note.title.trim() && <strong>{note.title}</strong>}
       {note.items ? (
@@ -107,7 +144,7 @@ function NoteCard({ note, reminder, daily, project }: { note: Note; reminder: bo
         stripImages(note.body) && <span className="card-body">{stripImages(note.body)}</span>
       )}
       {daily && <span className="daily-note-tag">Diaria · {daily}</span>}
-      <span className="card-foot">{noteTime(note.updated_at)}{project && ` · ${project}`}{reminder && <Icon d={ICON.bell} />}</span>
+      <span className="card-foot">{noteTime(note.updated_at)}{reminder && <Icon d={ICON.bell} />}</span>
     </button>
   )
 }

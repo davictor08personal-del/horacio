@@ -246,6 +246,16 @@ input, textarea { caret-color: var(--accent); }
 .project-tile .project-icon { margin-bottom: auto; background: rgb(255 255 255 / 0.5); color: inherit; }
 :root[data-theme='dark'] .project-tile .project-icon { background: rgb(255 255 255 / 0.12); }
 .project-tile .tile-name { font-family: var(--display); font-size: 1.22rem; font-weight: 650; letter-spacing: -0.03em; line-height: 1.1; margin-top: 14px; overflow-wrap: anywhere; }
+/* «Por etiqueta»: one shelf per tag, its tiles in a row that scrolls sideways (bleeding to the screen edge). */
+.project-shelf {
+  display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  margin: 0 -20px; padding: 0 20px 4px; scroll-padding: 0 20px;
+}
+.project-shelf::-webkit-scrollbar { display: none; }
+.project-shelf > li { flex: 0 0 152px; display: flex; scroll-snap-align: start; }
+.project-shelf .project-tile { min-height: 156px; }
+.project-tile.paused { opacity: 0.7; }
+
 /* A project's page: its tile, bigger, as a cover */
 .project-cover { min-height: 210px; border-radius: 28px; padding: 18px 18px 20px; gap: 8px; margin-bottom: 4px; }
 .project-cover:active { transform: none; }
@@ -414,6 +424,22 @@ input, textarea { caret-color: var(--accent); }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--note); flex-shrink: 0; box-shadow: 0 0 0 1px var(--ring-faint); }
 .note-flag svg { width: 16px; height: 16px; color: var(--accent); }
 .note-count { text-align: center; color: var(--muted); font-size: 0.8rem; }
+
+/* Notas mosaic: two columns of colour blocks like the project tiles; pinned ones take the whole row. */
+.note-bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 10px; }
+.note-bento .note-card { margin: 0; min-height: 150px; border-radius: 24px; padding: 14px 14px 12px; gap: 6px; }
+.note-bento .note-card.wide { grid-column: 1 / -1; min-height: 120px; }
+.note-bento .note-card strong { font-size: 1.22rem; font-weight: 700; letter-spacing: -0.03em; }
+.note-bento .note-card.wide strong { font-size: 1.45rem; }
+.note-bento .card-body { -webkit-line-clamp: 5; }
+.note-bento .note-card.wide .card-body { -webkit-line-clamp: 3; }
+.note-bento .card-foot { margin-top: auto; }
+.note-card .tile-label { align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; }
+/* Filter chips above the mosaic: Todas, Fijadas, then one per tag */
+.filter-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -6px -20px 0; padding: 0 20px; }
+.filter-chips::-webkit-scrollbar { display: none; }
+.filter-chips button { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; }
+.chip-count { font-size: 0.72rem; font-weight: 700; opacity: 0.6; }
 
 /* Keep grid: two columns of cards of any height */
 .note-grid { columns: 2; column-gap: 10px; }

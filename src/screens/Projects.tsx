@@ -15,13 +15,53 @@ const PASTELS = ['tile-violet', 'tile-peach', 'tile-blue', 'tile-pink']
 /** A project without its own colour gets a pastel picked from its id, so its tile and its page always match. */
 const pastelOf = (id: string) => PASTELS[[...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % PASTELS.length]
 
+type ProjectsView = 'tags' | 'status'
+const VIEWS: Record<ProjectsView, string> = { tags: 'Por etiqueta', status: 'Por estado' }
+// Per-device preference (localStorage can fail in private mode).
+const VIEW_KEY = 'cuadre-projects-view'
+const savedView = (): ProjectsView => { try { return localStorage.getItem(VIEW_KEY) === 'status' ? 'status' : 'tags' } catch { return 'tags' } }
+
+/**
+ * The shelves of «Por etiqueta»: each tag (the most used first) with its active and paused projects, then the ones
+ * without a tag, then the finished ones together at the end.
+ */
+function tagShelves(projects: Project[]): [string, Project[]][] {
+  const live = projects.filter((p) => p.status !== 'hecho')
+  const tags = allTags(live)
+  const byTag = tags
+    .map((t): [string, Project[]] => [`#${t}`, live.filter((p) => p.tags?.includes(t))])
+    .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
+  const shelves: [string, Project[]][] = [...byTag, ['Sin etiqueta', live.filter((p) => !p.tags?.length)], ['Terminados', projects.filter((p) => p.status === 'hecho')]]
+  return shelves.filter(([, list]) => list.length > 0)
+}
+
+/** A project's colour tile: icon (or photo), name, what it holds, two tags. */
+function ProjectTile({ p, onOpen }: { p: Project; onOpen: () => void }) {
+  const { tasks, notes, daily_tasks } = useData()
+  const count = tasks.filter((t) => t.project_id === p.id).length
+  const noteCount = notes.filter((n) => n.project_id === p.id && !n.archived).length
+  const dailyCount = daily_tasks.filter((d) => d.project_id === p.id).length
+  const color = colorKey(p.color)
+  const isPicture = p.icon?.startsWith('data:image/')
+  return (
+    <button style={tintStyle(p.color)} className={`project-tile ${color ? `colored dc-${color}` : pastelOf(p.id)} ${isPicture ? 'has-photo' : ''} ${p.status === 'pausado' ? 'paused' : ''}`} onClick={onOpen}>
+      {isPicture ? <img className="tile-photo" src={p.icon!} alt="" /> : <ItemIcon icon={p.icon} name={p.name} />}
+      <span className="tile-name">{p.name}</span>
+      <span className="tile-text">{[p.status === 'pausado' && 'Pausado', count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
+      {p.tags?.length ? <span className="tile-tags">{p.tags.slice(0, 2).map((t) => `#${t}`).join(' ')}</span> : null}
+    </button>
+  )
+}
+
 /** Tab «Proyectos»: every project in one place; open one to see its description, reminders, tasks and notes. */
 export default function Projects() {
-  const { projects, tasks, notes, daily_tasks } = useData()
+  const { projects } = useData()
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
   const project = projects.find((p) => p.id === open)
+  const [view, setView] = useState<ProjectsView>(savedView)
+  const changeView = (v: ProjectsView) => { setView(v); try { localStorage.setItem(VIEW_KEY, v) } catch { /* only a preference */ } }
   // One box to search and to create: it filters by name (ignoring accents and case); if no project is called
   // exactly that, Enter (or the «Crear» row) creates it and opens it.
   // «#idiomas» finds the projects with that tag; plain words search names and tags.
@@ -61,34 +101,28 @@ export default function Projects() {
       )}
       {!projects.length && !q && <p className="empty">Escribe arriba el nombre de lo que tienes entre manos (la mudanza, un curso, una app…) y pulsa Intro para crearlo.</p>}
       {q && !shown.length && <p className="empty">{tags.length ? 'Ningún proyecto tiene esa etiqueta.' : 'Ningún proyecto se llama así.'}</p>}
-      {GROUPS.map(([status, label]) => {
-        const list = shown.filter((p) => p.status === status)
-        return list.length > 0 && (
-          <section className="group" key={status}>
-            <h2 className="group-title">{label} · {list.length}</h2>
-            {/* A bento of colour tiles: a project's own colour if it has one, else a pastel picked from its id. */}
-            <ul className="list project-grid">
-              {list.map((p) => {
-                const count = tasks.filter((t) => t.project_id === p.id).length
-                const noteCount = notes.filter((n) => n.project_id === p.id && !n.archived).length
-                const dailyCount = daily_tasks.filter((d) => d.project_id === p.id).length
-                const color = colorKey(p.color)
-                const isPicture = p.icon?.startsWith('data:image/')
-                return (
-                  <li key={p.id}>
-                    <button style={tintStyle(p.color)} className={`project-tile ${color ? `colored dc-${color}` : pastelOf(p.id)} ${isPicture ? 'has-photo' : ''}`} onClick={() => setOpen(p.id)}>
-                      {isPicture ? <img className="tile-photo" src={p.icon!} alt="" /> : <ItemIcon icon={p.icon} name={p.name} />}
-                      <span className="tile-name">{p.name}</span>
-                      <span className="tile-text">{[count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
-                      {p.tags?.length ? <span className="tile-tags">{p.tags.slice(0, 2).map((t) => `#${t}`).join(' ')}</span> : null}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
-        )
-      })}
+      {projects.length > 0 && !q && <Choice value={view} options={VIEWS} onChange={changeView} />}
+      {view === 'tags' && !q
+        ? tagShelves(projects).map(([label, list]) => (
+            // One shelf per tag: its projects in a row that scrolls sideways. A project with two tags is on both.
+            <section className="group" key={label}>
+              <div className="group-head">
+                <h2 className="group-title">{label}</h2>
+                <span className="count">{list.length} {list.length === 1 ? 'proyecto' : 'proyectos'}</span>
+              </div>
+              <ul className="list project-shelf">{list.map((p) => <li key={p.id}><ProjectTile p={p} onOpen={() => setOpen(p.id)} /></li>)}</ul>
+            </section>
+          ))
+        : GROUPS.map(([status, label]) => {
+            const list = shown.filter((p) => p.status === status)
+            return list.length > 0 && (
+              <section className="group" key={status}>
+                <h2 className="group-title">{label} · {list.length}</h2>
+                {/* A bento of colour tiles: a project's own colour if it has one, else a pastel picked from its id. */}
+                <ul className="list project-grid">{list.map((p) => <li key={p.id}><ProjectTile p={p} onOpen={() => setOpen(p.id)} /></li>)}</ul>
+              </section>
+            )
+          })}
       {adding && <NewProject onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); setOpen(id) }} />}
       {project && <ProjectPage project={project} onBack={() => setOpen(null)} />}
     </>
