@@ -123,11 +123,26 @@ export function byPriority(a: Task, b: Task) {
 
 export const FOCUS_SIZE = 3
 
-/** Foco = the 3 first open tasks; everything else open (and anything waiting) can wait. */
-export function splitToday(tasks: Task[]) {
+/** Postponed until a later day (so it isn't today's job yet). */
+export const isSnoozed = (t: Task, today: string) => !!t.snoozed_until && t.snoozed_until > today
+
+/**
+ * Foco = the 3 first open tasks that aren't postponed; everything else open (postponed ones included, at the end)
+ * and anything waiting can wait.
+ */
+export function splitToday(tasks: Task[], today = localDay()) {
   const active = tasks.filter((t) => t.status === 'abierto' || t.status === 'en_curso').sort(byPriority)
-  const focus = active.slice(0, FOCUS_SIZE)
-  return { focus, later: active.slice(FOCUS_SIZE), waiting: tasks.filter((t) => t.status === 'esperando') }
+  const awake = active.filter((t) => !isSnoozed(t, today))
+  const focus = awake.slice(0, FOCUS_SIZE)
+  return { focus, later: [...awake.slice(FOCUS_SIZE), ...active.filter((t) => isSnoozed(t, today))], waiting: tasks.filter((t) => t.status === 'esperando') }
+}
+
+/**
+ * Postpone to `until`: out of Prioridades until that day. A deadline earlier than that moves with it (its reminder
+ * too, at the same hour); a later deadline, or none, stays as it was.
+ */
+export function postponePatch(t: Task, until: string): Partial<Task> {
+  return { snoozed_until: until, ...(t.due_date && t.due_date < until ? { due_date: until } : {}) }
 }
 
 /** The next block of FP tests to open: the nearest future opening date and its unread units. */
@@ -249,8 +264,8 @@ export function dueReminders(tasks: Task[], now = new Date(), zone = tz) {
 }
 
 /** The 9:30 notification: how the day looks (only with the shifts module), then the first priorities. */
-export function morningSummary(tasks: Task[], shift: Shift | undefined, name: string | null, withShifts = true) {
-  const { focus, later } = splitToday(tasks)
+export function morningSummary(tasks: Task[], shift: Shift | undefined, name: string | null, withShifts = true, today = localDay()) {
+  const { focus, later } = splitToday(tasks, today)
   const plan = withShifts ? dayPlan(shift) : { line: '' }
   const list = focus.length ? `Prioridades: ${focus.map((t, i) => `${i + 1}. ${t.title}`).join(' · ')}` : 'Nada urgente para hoy.'
   const more = later.length ? ` (y ${later.length} más que pueden esperar)` : ''

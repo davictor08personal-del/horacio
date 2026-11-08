@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanCapture, mockCapture } from './capture'
-import { addDays, allTags, byPriority, cleanTag, dayPlan, doneToday, googleCalendarUrl, localMinutes, parseSearch, projectsTagged, taskMatchesTags, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
+import { addDays, allTags, byPriority, cleanTag, dayPlan, doneToday, googleCalendarUrl, localMinutes, parseSearch, postponePatch, projectsTagged, taskMatchesTags, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
 import type { FpTest, Note, Shift, Task } from './types'
 
 const task = (p: Partial<Task>): Task => ({
@@ -57,6 +57,19 @@ describe('priorities', () => {
     expect(focus).toHaveLength(3)
     expect(later).toHaveLength(1)
     expect(waiting).toHaveLength(1)
+  })
+  it('a postponed task leaves Prioridades until its day, then comes back', () => {
+    const urgent = task({ title: 'urgente', due_date: '2026-11-03', priority: 'alta', snoozed_until: '2026-11-05' })
+    const rest = [task({ title: 'a' }), task({ title: 'b' })]
+    const before = splitToday([urgent, ...rest], '2026-11-03')
+    expect(before.focus.map((t) => t.title)).toEqual(['a', 'b'])
+    expect(before.later.map((t) => t.title)).toEqual(['urgente'])
+    expect(splitToday([urgent, ...rest], '2026-11-05').focus[0].title).toBe('urgente')
+  })
+  it('postponing moves an earlier deadline along, but not a later one', () => {
+    expect(postponePatch(task({ due_date: '2026-11-03' }), '2026-11-04')).toEqual({ snoozed_until: '2026-11-04', due_date: '2026-11-04' })
+    expect(postponePatch(task({ due_date: '2026-11-20' }), '2026-11-04')).toEqual({ snoozed_until: '2026-11-04' })
+    expect(postponePatch(task({}), '2026-11-04')).toEqual({ snoozed_until: '2026-11-04' })
   })
 })
 

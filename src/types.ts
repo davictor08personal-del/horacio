@@ -21,6 +21,8 @@ export interface Task {
   created_at: string
   done_at: string | null
   notified_at?: string | null
+  /** Postponed: out of «Prioridades de hoy» until this day (YYYY-MM-DD). Not a deadline; due_date is. */
+  snoozed_until?: string | null
   color?: string
   tags?: string[]
 }

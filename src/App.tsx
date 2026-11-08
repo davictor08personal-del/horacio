@@ -101,7 +101,7 @@ export default function App() {
       </main>
       {undo && (
         <div className="undo-toast" role="status">
-          <span className="undo-text">{undo.closedAs === 'hecho' ? 'Hecha' : 'Descartada'}: «{undo.title}»</span>
+          <span className="undo-text">{undo.label}: «{undo.title}»</span>
           <button className="undo-btn" onClick={undoTask}>Deshacer</button>
         </div>
       )}

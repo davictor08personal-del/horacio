@@ -2,7 +2,7 @@
 // Without them: "demo mode", saved in this browser's localStorage, to try the app before creating the project.
 import { useSyncExternalStore } from 'react'
 import { createClient, type Session } from '@supabase/supabase-js'
-import { addDays, localDay, setTimeZone } from './logic'
+import { addDays, localDay, postponePatch, setTimeZone } from './logic'
 import type { DailyLog, DailyTask, FpTest, Note, Profile, Project, Shift, Task } from './types'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -280,29 +280,40 @@ export async function noteFromTask(t: Task) {
   return n
 }
 
-export interface UndoTask { id: string; title: string; status: Task['status']; done_at: string | null; closedAs: Task['status'] }
+/** The last change to a task that the toast can undo: what it said («Hecha», «Pospuesta a mañana») and how to put it back. */
+export interface UndoTask { id: string; title: string; label: string; restore: Partial<Task> }
 let lastClosed: UndoTask | null = null
 let undoTimer = 0
 const clearUndo = () => { clearTimeout(undoTimer); if (lastClosed) { lastClosed = null; emit() } }
 export const useUndo = () => useSyncExternalStore(subscribe, () => lastClosed)
+const offerUndo = (u: UndoTask) => {
+  clearTimeout(undoTimer)
+  lastClosed = u
+  emit()
+  undoTimer = window.setTimeout(clearUndo, 4500)
+}
 
 export async function undoTask() {
   if (!lastClosed) return
-  const { id, status, done_at } = lastClosed
+  const { id, restore } = lastClosed
   clearUndo()
-  await update('tasks', id, { status, done_at })
+  await update('tasks', id, restore)
 }
 
 /** Finishing or discarding stamps done_at (the 7 days in «Terminadas» count from it); reopening clears it. */
 export const setTaskStatus = (t: Task, status: Task['status']) => {
   if (CLOSED.includes(status)) {
-    clearTimeout(undoTimer)
-    lastClosed = { id: t.id, title: t.title, status: t.status, done_at: t.done_at, closedAs: status }
-    undoTimer = window.setTimeout(clearUndo, 4500)
+    offerUndo({ id: t.id, title: t.title, label: status === 'hecho' ? 'Hecha' : 'Descartada', restore: { status: t.status, done_at: t.done_at } })
   } else if (lastClosed?.id === t.id) {
     clearUndo()
   }
   return update('tasks', t.id, { status, done_at: CLOSED.includes(status) ? new Date().toISOString() : null })
+}
+
+/** Out of Prioridades until `until` (see postponePatch), with «Deshacer» in the toast. */
+export const postponeTask = (t: Task, until: string, label: string) => {
+  offerUndo({ id: t.id, title: t.title, label, restore: { snoozed_until: t.snoozed_until ?? null, due_date: t.due_date, due_time: t.due_time } })
+  return update('tasks', t.id, postponePatch(t, until))
 }
 
 /**

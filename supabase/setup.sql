@@ -95,6 +95,9 @@ alter table public.tasks add column if not exists color text not null default 'n
 alter table public.tasks drop constraint if exists tasks_color;
 alter table public.tasks add constraint tasks_color check (char_length(color) <= 20) not valid;
 
+-- Posponer: out of «Prioridades de hoy» until this day (a deadline is still due_date).
+alter table public.tasks add column if not exists snoozed_until date;
+
 alter table public.tasks add column if not exists tags text[] not null default '{}';
 alter table public.tasks drop constraint if exists tasks_tags;
 alter table public.tasks add constraint tasks_tags check (cardinality(tags) <= 10) not valid;

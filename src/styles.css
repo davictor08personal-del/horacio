@@ -790,6 +790,32 @@ button.tag { padding: 5px 11px; }
 
 /* Pin to Hoy & Reminder box inside TaskSheet */
 .pin-today { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; font-size: 0.94rem; }
+/* Posponer, in a task's sheet: a label and two pills */
+.postpone-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.postpone-label { font-size: 0.9rem; color: var(--muted); margin-right: 4px; }
+.postpone-row button { min-height: 38px; padding: 0 14px; background: var(--surface-2); font-size: 0.92rem; font-weight: 600; }
+
+/* Swipe on a task row: the row (.task-slide) moves; behind it, «Hecha» on the left or the postpone buttons on the right. */
+.task:has(> .task-slide) { display: block; padding-left: 0; position: relative; overflow: hidden; }
+.task-slide {
+  position: relative; z-index: 1; display: flex; align-items: center; gap: 4px; padding-left: 8px;
+  background: var(--surface); touch-action: pan-y; transition: transform 300ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.task.colored .task-slide { background: color-mix(in srgb, var(--tile) calc(14% * var(--lo, 1) + 86% * var(--hi, 0)), var(--surface)); }
+.swipe-done {
+  position: absolute; inset: 0; display: flex; align-items: center; gap: 6px; padding-left: 22px;
+  background: var(--accent-soft); color: var(--accent-ink); font-weight: 650; font-size: 0.92rem; transition: background 150ms, color 150ms;
+}
+.swipe-done.ready { background: var(--accent); color: #fff; }
+.swipe-done svg { width: 20px; height: 20px; stroke-width: 2.6; }
+.swipe-later { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
+.swipe-later button {
+  flex: 1; min-height: 0; height: 100%; border-radius: 0; padding: 0 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font-size: 0.8rem; font-weight: 650; color: var(--pastel-ink);
+}
+.swipe-later button:first-child { background: var(--pastel-peach); }
+.swipe-later button:last-child { background: var(--hero); color: var(--hero-ink); }
+.swipe-later button span { font-size: 1.05rem; }
 .in-focus-badge { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; font-size: 0.9rem; }
 .reminder-box { display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
 .reminder-box input { background: var(--surface); }

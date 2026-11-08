@@ -47,7 +47,7 @@ Los buscadores de Proyectos, Notas y Tareas entienden **#etiqueta**: `#idiomas` 
 ## Modelo de datos (Supabase, `supabase/setup.sql`)
 
 Todas las tablas llevan `user_id` y RLS «solo el dueño».
-- `tasks`: id, title, notes, status (`abierto`/`en_curso`/`esperando`/`hecho`/`descartado`), priority (`alta`/`media`/`baja`), effort (`rapido`/`medio`/`grande`), due_date, due_time, area, project_id, note_id, created_at, done_at.
+- `tasks`: id, title, notes, status (`abierto`/`en_curso`/`esperando`/`hecho`/`descartado`), priority (`alta`/`media`/`baja`), effort (`rapido`/`medio`/`grande`), due_date, due_time, snoozed_until (pospuesta: fuera de Prioridades hasta ese día), area, project_id, note_id, created_at, done_at.
 - `projects`: id, name, status (`activo`/`pausado`/`hecho`), description, icon (emoji o imagen de 160 px como `data:` URL), tags (text[], limpias: «aprendizaje-de-idiomas»), next_step, area.
 - `shifts`: id, day (único por usuario), kind (`opening`/`dia`/`noche`/`libre`), starts_at, ends_at.
 - `fp_tests`: id, subject, block, unit, opens_on, closes_on, read.

@@ -66,7 +66,7 @@ export async function POST(request: Request): Promise<Response> {
         for (const { user_id, day } of fresh) {
           const p = prof.get(user_id)
           const shift = (shifts ?? []).find((s) => s.user_id === user_id && s.day === day) as Shift | undefined
-          out.push({ user_id, tag: 'summary', ...morningSummary(((open ?? []) as Row[]).filter((t) => t.user_id === user_id), shift, p?.name ?? null, !!p?.shifts) })
+          out.push({ user_id, tag: 'summary', ...morningSummary(((open ?? []) as Row[]).filter((t) => t.user_id === user_id), shift, p?.name ?? null, !!p?.shifts, day as string) })
         }
       }
     }
