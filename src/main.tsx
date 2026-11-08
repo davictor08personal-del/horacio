@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 // Bricolage Grotesque for titles, bundled so it works offline (the text uses the phone's own font: SF Pro on iPhone).
-import '@fontsource-variable/bricolage-grotesque/opsz.css'
+import '@fontsource-variable/outfit'
 import App from './App'
 import './styles.css'
 

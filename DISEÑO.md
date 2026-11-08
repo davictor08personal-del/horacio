@@ -98,7 +98,7 @@ Ideas aparcadas: widgets en el iPhone sin App Store (Scriptable para ver las pri
 ## Estilo
 
 **Lavanda** (2026-11-08; sustituye al vinotinto del 2026-11-06). Inspirado en dos referencias de Dribbble: fondo pastel, bloques de color sólido, titulares enormes y barra en píldora oscura.
-- **Tipografía**: Bricolage Grotesque para títulos (más grande y apretada: `h1` 2.5rem, peso 750) y la letra del sistema para el texto (SF Pro en el iPhone).
+- **Tipografía**: Outfit (variable, redonda y geométrica, 2026-11-08) para títulos y números (`h1` 2.5rem, peso 700) y la letra del sistema para el texto (SF Pro en el iPhone).
 - **Color**: fondo lavanda `#e9e5fb`, tarjetas blancas sin borde, tinta `#16132b` y acento violeta `#6b4de6`. Oscuro: `#13121c` / `#1e1c2b`, acento `#a995ff`. Pasteles para bloques (`--hero` violeta, `--pastel-blue`, `--pastel-peach`, `--pastel-pink`), con versiones profundas en oscuro.
 - **Formas**: radio 22 px por defecto, 24–32 px en mosaicos y hojas, píldoras en chips, días y pestañas.
 - **Barra inferior**: píldora oscura; la pestaña activa lleva una píldora clara que se desliza. El ＋ central es violeta.

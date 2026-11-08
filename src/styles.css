@@ -1,4 +1,4 @@
-/* Cuadre look: Bricolage Grotesque for titles (modern, a bit playful), the system font for text (SF Pro on iPhone,
+/* Cuadre look: Outfit for titles and numbers (round, geometric, friendly), the system font for text (SF Pro on iPhone,
    so it feels native), borderless cards, violet accent on lavender. Two palettes: light, and dark. index.html sets data-theme on <html> before the first
    paint (system, or what the user forced in Ajustes); every colour below is a token, so the two blocks are the theme. */
 :root {
@@ -34,7 +34,7 @@
   --dock-ink: rgb(255 255 255 / 0.62);
   --dock-active: #ffffff;
   --dock-active-ink: #16132b;
-  --display: 'Bricolage Grotesque Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --display: 'Outfit Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --radius: 22px;
   --nav-h: 62px;
   --nav-bottom: max(10px, calc(env(safe-area-inset-bottom) - 6px));
@@ -95,7 +95,7 @@ ul { list-style: none; padding: 0; }
   gap: 22px;
 }
 
-h1 { font-family: var(--display); font-size: 2.5rem; font-weight: 750; letter-spacing: -0.045em; line-height: 1.02; }
+h1 { font-family: var(--display); font-size: 2.5rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1.02; }
 h2 { font-family: var(--display); font-size: 1.2rem; font-weight: 650; letter-spacing: -0.02em; }
 h3 { font-size: 1rem; font-weight: 600; color: var(--muted); padding-left: 4px; }
 .muted { color: var(--muted); }
@@ -195,10 +195,10 @@ input, textarea { caret-color: var(--accent); }
 }
 .hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .hero-copy { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.hero-heading { font-size: 1.75rem; font-weight: 750; letter-spacing: -0.04em; line-height: 1.02; }
+.hero-heading { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.02; }
 .hero-sub { font-size: 0.92rem; line-height: 1.4; opacity: 0.78; }
 .hero-stat { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
-.hero-num { font-family: var(--display); font-size: 4.2rem; font-weight: 700; letter-spacing: -0.06em; line-height: 0.85; font-variant-numeric: tabular-nums; }
+.hero-num { font-family: var(--display); font-size: 4.2rem; font-weight: 700; letter-spacing: -0.05em; line-height: 0.85; font-variant-numeric: tabular-nums; }
 .hero-unit { font-size: 0.78rem; font-weight: 600; opacity: 0.7; margin-top: 4px; }
 .hero-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .hero-chip {
@@ -249,7 +249,7 @@ input, textarea { caret-color: var(--accent); }
 /* A project's page: its tile, bigger, as a cover */
 .project-cover { min-height: 210px; border-radius: 28px; padding: 18px 18px 20px; gap: 8px; margin-bottom: 4px; }
 .project-cover:active { transform: none; }
-.project-cover .tile-name { font-size: 2.1rem; font-weight: 750; letter-spacing: -0.045em; line-height: 1.02; margin-top: 18px; }
+.project-cover .tile-name { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1.02; margin-top: 18px; }
 .project-cover .tile-label { align-self: flex-start; }
 .project-cover .project-icon.big { border-radius: 18px; }
 .project-tile .tile-tags { font-size: 0.75rem; font-weight: 600; opacity: 0.7; }
