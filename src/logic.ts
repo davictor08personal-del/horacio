@@ -339,27 +339,35 @@ export const joinColor = (key: string, alpha: number) => (key === 'none' ? 'none
 /** The colour name for the `dc-…` class, or null when there's none. */
 export const colorKey = (c?: string | null) => { const { key } = colorParts(c); return key === 'none' ? null : key }
 // The palette (same as .dc-* in styles.css) and what's behind a coloured card in each theme, to pick readable text.
-const TILE: Record<string, [number, number, number]> = {
-  azul: [0x3b, 0x76, 0xd9], verde: [0x2f, 0x9a, 0x63], morado: [0x7c, 0x5a, 0xd6], rosa: [0xd4, 0x50, 0x8a],
-  rojo: [0xd6, 0x51, 0x51], naranja: [0xdf, 0x7a, 0x2a], vinotinto: [0x9b, 0x2a, 0x4c], gris: [0x6b, 0x76, 0x85],
+const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number]
+// Pastels in light (same lightness as the lilac of «Prioridades de hoy»), deep tones of the same hues in dark.
+const TILE: Record<'light' | 'dark', Record<string, [number, number, number]>> = {
+  light: {
+    morado: hex('#b3a1fb'), azul: hex('#9cc1ff'), verde: hex('#96d9b8'), amarillo: hex('#f7d675'), naranja: hex('#ffbe82'),
+    rojo: hex('#ff9e9e'), rosa: hex('#f4a6d7'), vinotinto: hex('#d59bd9'), gris: hex('#c5c2d8'),
+  },
+  dark: {
+    morado: hex('#5a47b8'), azul: hex('#2f5596'), verde: hex('#23695a'), amarillo: hex('#7d6a1f'), naranja: hex('#8a5523'),
+    rojo: hex('#8f3a42'), rosa: hex('#8a3a78'), vinotinto: hex('#6e3d82'), gris: hex('#4a4760'),
+  },
 }
-const PAGE = { light: { row: [255, 255, 255], tile: [233, 229, 251] }, dark: { row: [30, 28, 43], tile: [19, 18, 28] } } as const
-const BASE = { row: 14, tile: 24 } // how much colour the card has at the default opacity (%), see styles.css
+const PAGE = { light: { row: [245, 243, 252], tile: [255, 255, 255] }, dark: { row: [30, 28, 43], tile: [19, 18, 28] } } as const
+const BASE = { row: 55, tile: 70 } // how much colour the card has at the default opacity (%), see styles.css
 const luminance = ([r, g, b]: number[]) => {
   const f = (v: number) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
 }
 /** White or dark text, whichever reads better on the card's real colour (the tint blended over the page). */
 function inkFor(key: string, alpha: number, theme: 'light' | 'dark', kind: 'row' | 'tile'): string {
-  const tile = TILE[key]
+  const tile = TILE[theme][key]
   if (!tile) return ''
   const lo = Math.min(alpha / DEFAULT_TINT, 1), hi = Math.max((alpha - DEFAULT_TINT) / DEFAULT_TINT, 0)
   const cover = (BASE[kind] * lo + (100 - BASE[kind]) * hi) / 100
   const page = PAGE[theme][kind]
   const bg = tile.map((t, i) => t * cover + page[i] * (1 - cover))
   const L = luminance(bg)
-  const white = 1.05 / (L + 0.05), dark = (L + 0.05) / (luminance([14, 26, 43]) + 0.05) // contrast against white and against the dark ink
-  return white * 1.5 >= dark ? '#ffffff' : '#0e1a2b' // leans to white: on a saturated colour it looks right even when dark text measures a little higher
+  const white = 1.05 / (L + 0.05), dark = (L + 0.05) / (luminance([22, 19, 43]) + 0.05) // contrast against white and against the dark ink
+  return white >= dark ? '#ffffff' : '#16132b'
 }
 
 /** Inline style for a coloured card: how strong the tint is (--lo/--hi, blended in the CSS) and the text colour that reads on it (--ink-l/--ink-d, one per theme). */

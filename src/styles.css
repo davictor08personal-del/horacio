@@ -2,12 +2,13 @@
    so it feels native), borderless cards, violet accent on lavender. Two palettes: light, and dark. index.html sets data-theme on <html> before the first
    paint (system, or what the user forced in Ajustes); every colour below is a token, so the two blocks are the theme. */
 :root {
-  --fill: #e4e0f5; /* a held / done daily task: a bit darker than the card */
-  --bg: #e9e5fb; /* lavanda */
-  --surface: #ffffff;
-  --surface-2: #f1eefb;
-  --surface-3: #e5e1f6;
-  --line: #ddd8f1;
+  --fill: #e6e2f6; /* a held / done daily task: a bit darker than the card */
+  --bg: #ffffff;
+  --surface: #f5f3fc; /* cards: a whisper of lilac, so they read on the white page */
+  --surface-2: #edeaf8;
+  --surface-3: #e3dff4;
+  --line: #e6e2f3;
+  --sheet: #ffffff; /* sheets and full pages */
   --text: #16132b;
   --on-text: #ffffff; /* text on a --text background (primary buttons, selected pills) */
   --muted: #5e5979;
@@ -25,9 +26,9 @@
   --backdrop: rgb(22 19 43 / 0.38);
   --hero: #b3a1fb; /* Hoy's hero card */
   --hero-ink: #16132b;
-  --pastel-blue: #a9c8ff;
-  --pastel-peach: #ffc27a;
-  --pastel-pink: #f6b2ec;
+  --pastel-blue: #9cc1ff;
+  --pastel-peach: #ffbe82;
+  --pastel-pink: #f4a6d7;
   --pastel-ink: #16132b;
   --dock: #16132b; /* the dark pill tab bar */
   --dock-ink: rgb(255 255 255 / 0.62);
@@ -50,6 +51,7 @@
   --surface-2: #2a2839;
   --surface-3: #363347;
   --line: #2f2c40;
+  --sheet: #1e1c2b;
   --text: #efedf8;
   --on-text: #13121c;
   --muted: #a7a3bd;
@@ -258,8 +260,8 @@ input, textarea { caret-color: var(--accent); }
 }
 .project-tile.has-photo .tile-name { margin-top: auto; }
 .project-tile > :not(.tile-photo) { position: relative; }
-.project-tile.colored { background: color-mix(in srgb, var(--tile) calc(40% * var(--lo, 1) + 60% * var(--hi, 0)), var(--surface)); color: var(--ink-l, var(--text)); }
-:root[data-theme='dark'] .project-tile.colored { background: color-mix(in srgb, var(--tile) calc(40% * var(--lo, 1) + 60% * var(--hi, 0)), var(--surface)); color: var(--ink-d, var(--text)); }
+.project-tile.colored { background: color-mix(in srgb, var(--tile) calc(90% * var(--lo, 1) + 10% * var(--hi, 0)), var(--surface)); color: var(--ink-l, var(--text)); }
+:root[data-theme='dark'] .project-tile.colored { background: color-mix(in srgb, var(--tile) calc(90% * var(--lo, 1) + 10% * var(--hi, 0)), var(--surface)); color: var(--ink-d, var(--text)); }
 
 /* Tareas: big text tabs, each with a small count badge */
 .view-tabs { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; margin: -4px 0 -6px; }
@@ -326,7 +328,7 @@ input, textarea { caret-color: var(--accent); }
 /* A white sheet rising over the colour, with a big radius and a grab handle (like the reference designs). */
 .sheet {
   position: relative; width: 100%; max-width: 560px; margin: 0 auto; max-height: 90dvh;
-  background: var(--surface); border-radius: 32px 32px 0 0;
+  background: var(--sheet); border-radius: 32px 32px 0 0;
   padding: 22px 20px calc(16px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 12px;
   box-shadow: 0 -12px 40px -12px var(--shadow);
@@ -373,18 +375,19 @@ input, textarea { caret-color: var(--accent); }
 /* ---------- Notas ---------- */
 /* Note colours: pastel in light, Keep's dark ones (a touch softer) in dark. Cards, rows' dots and the editor read --note. */
 .c-none { --note: var(--surface); }
-.c-rojo { --note: #ffc9cf; }
-.c-naranja { --note: #ffd59f; }
-.c-amarillo { --note: #ffe99a; }
-.c-verde { --note: #c2ebd2; }
-.c-azul { --note: #bfd6ff; }
-.c-morado { --note: #d7c9ff; }
-[data-theme='dark'] .c-rojo { --note: #5f2733; }
-[data-theme='dark'] .c-naranja { --note: #63401c; }
-[data-theme='dark'] .c-amarillo { --note: #5e4b17; }
-[data-theme='dark'] .c-verde { --note: #22483a; }
-[data-theme='dark'] .c-azul { --note: #2a4672; }
-[data-theme='dark'] .c-morado { --note: #46377e; }
+/* Note colours: the same pastel family as the tiles (see .dc-*), so a note sits well next to the lilac. */
+.c-rojo { --note: #ff9e9e; }
+.c-naranja { --note: #ffbe82; }
+.c-amarillo { --note: #f7d675; }
+.c-verde { --note: #96d9b8; }
+.c-azul { --note: #9cc1ff; }
+.c-morado { --note: #b3a1fb; }
+[data-theme='dark'] .c-rojo { --note: #8f3a42; }
+[data-theme='dark'] .c-naranja { --note: #8a5523; }
+[data-theme='dark'] .c-amarillo { --note: #7d6a1f; }
+[data-theme='dark'] .c-verde { --note: #23695a; }
+[data-theme='dark'] .c-azul { --note: #2f5596; }
+[data-theme='dark'] .c-morado { --note: #5a47b8; }
 
 .notes-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
 .note-bar-actions { display: flex; align-items: center; }
@@ -639,8 +642,14 @@ button.tag { padding: 5px 11px; }
 .daily-btn.done .daily-check { transform: scale(1); opacity: 1; }
 .daily-btn.done .daily-title { text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: 0.75; }
 .daily-btn.colored.done .daily-title { opacity: 0.9; }
-.dc-azul { --tile: #3b76d9; } .dc-verde { --tile: #2f9a63; } .dc-morado { --tile: #7c5ad6; } .dc-rosa { --tile: #d4508a; }
-.dc-rojo { --tile: #d65151; } .dc-naranja { --tile: #df7a2a; } .dc-vinotinto { --tile: #9b2a4c; } .dc-gris { --tile: #6b7685; }
+/* The colours you can give tasks, daily tasks and projects: pastels at the same lightness as the lilac of
+   «Prioridades de hoy», so any of them sits well next to it. Dark has deep versions of the same hues.
+   Keep in sync with TILE in logic.ts. («vinotinto» is now Ciruela; the key stays so saved colours still work.) */
+.dc-morado { --tile: #b3a1fb; } .dc-azul { --tile: #9cc1ff; } .dc-verde { --tile: #96d9b8; } .dc-amarillo { --tile: #f7d675; }
+.dc-naranja { --tile: #ffbe82; } .dc-rojo { --tile: #ff9e9e; } .dc-rosa { --tile: #f4a6d7; } .dc-vinotinto { --tile: #d59bd9; } .dc-gris { --tile: #c5c2d8; }
+:root[data-theme='dark'] .dc-morado { --tile: #5a47b8; } :root[data-theme='dark'] .dc-azul { --tile: #2f5596; } :root[data-theme='dark'] .dc-verde { --tile: #23695a; }
+:root[data-theme='dark'] .dc-amarillo { --tile: #7d6a1f; } :root[data-theme='dark'] .dc-naranja { --tile: #8a5523; } :root[data-theme='dark'] .dc-rojo { --tile: #8f3a42; }
+:root[data-theme='dark'] .dc-rosa { --tile: #8a3a78; } :root[data-theme='dark'] .dc-vinotinto { --tile: #6e3d82; } :root[data-theme='dark'] .dc-gris { --tile: #4a4760; }
 .color-picker { display: flex; flex-wrap: wrap; gap: 10px; }
 .swatch { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; background: var(--tile, var(--note, var(--surface-2))); border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08); }
 .swatch.dc-none { background: var(--surface); border: 2px dashed var(--ring); }
@@ -702,6 +711,7 @@ button.tag { padding: 5px 11px; }
 .month-day { aspect-ratio: 1; min-height: 0; padding: 0; width: 100%; display: grid; place-items: center; border-radius: 7px; font-size: 0.72rem; font-weight: 500; color: var(--muted); background: var(--surface-2); transition: transform 120ms, background-color 150ms; }
 .month-day:not(:disabled):active { transform: scale(0.9); }
 .month-day.on { background: var(--tile, var(--accent)); color: #fff; font-weight: 600; }
+[class*='dc-'] .month-day.on, [class*='dc-'] .week-dot.on { color: var(--hero-ink); }
 .month-day.today { box-shadow: inset 0 0 0 2px var(--tile, var(--accent)); }
 .month-day.future { opacity: 0.35; background: none; }
 .streak-card .month-cal { padding: 4px 0 0; }
@@ -734,24 +744,27 @@ button.tag { padding: 5px 11px; }
 /* Coloured daily tasks are translucent: a tint of their colour with the page showing through (frosted), text in
    the normal ink so it reads in light and dark. The solid colour stays for the check and the calendar days. */
 .daily-btn.colored, .daily-card-head.colored, .daily-hero.colored, .project-hero.colored {
-  background: color-mix(in srgb, var(--tile) calc(24% * var(--lo, 1) + 76% * var(--hi, 0)), transparent); color: var(--text);
-  border: 1px solid color-mix(in srgb, var(--tile) calc(35% * var(--lo, 1) + 65% * var(--hi, 0)), transparent);
+  background: color-mix(in srgb, var(--tile) calc(70% * var(--lo, 1) + 30% * var(--hi, 0)), transparent); color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--tile) calc(80% * var(--lo, 1) + 20% * var(--hi, 0)), transparent);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
 }
-.daily-btn.colored .daily-fill { background: color-mix(in srgb, var(--tile) calc(30% * var(--lo, 1) + 70% * var(--hi, 0)), transparent); }
-.daily-btn.colored .daily-check { background: var(--tile); color: #fff; }
+.daily-btn.colored .daily-fill { background: color-mix(in srgb, var(--tile) 82%, var(--text)); }
+.daily-btn.colored .daily-check { background: var(--on-tile); color: var(--tile); }
 .daily-btn.colored .streak, .daily-card-head.colored .daily-sub { color: var(--muted); }
-.daily-card-head.colored .today-pill { background: color-mix(in srgb, var(--tile) calc(22% * var(--lo, 1) + 78% * var(--hi, 0)), transparent); color: var(--text); }
-.daily-card-head.colored .today-pill.on { background: var(--tile); color: #fff; }
+.daily-card-head.colored .today-pill { background: color-mix(in srgb, var(--tile) calc(100% * var(--lo, 1) + 0% * var(--hi, 0)), transparent); color: var(--text); }
+.daily-card-head.colored .today-pill.on { background: var(--on-tile); color: var(--tile); }
 
 /* Coloured tasks and projects */
-.task.colored, .project.colored { background: color-mix(in srgb, var(--tile) calc(14% * var(--lo, 1) + 86% * var(--hi, 0)), transparent); }
-.task.colored .tick::before { border-color: color-mix(in srgb, var(--tile) 70%, var(--ring)); }
-.task.colored .tick.prio-alta::before { border-color: var(--tile); }
-.task.colored.leaving .tick::before { background: var(--tile); border-color: var(--tile); }
-.task.closed.colored { background: color-mix(in srgb, var(--tile) calc(8% * var(--lo, 1) + 92% * var(--hi, 0)), transparent); }
-.task.closed.colored .tick::before { background: var(--tile); border-color: var(--tile); }
-.project.colored .project-icon.letter, .project-hero.colored .project-icon.letter { background: var(--tile); color: #fff; }
+.task.colored, .project.colored { background: color-mix(in srgb, var(--tile) calc(55% * var(--lo, 1) + 45% * var(--hi, 0)), transparent); }
+.task.colored .tick::before { border-color: color-mix(in srgb, var(--on-tile) 40%, transparent); }
+.task.colored .tick.prio-alta::before { border-color: var(--on-tile); }
+.task.colored.leaving .tick::before { background: var(--on-tile); border-color: var(--on-tile); }
+.task.closed.colored { background: color-mix(in srgb, var(--tile) calc(30% * var(--lo, 1) + 70% * var(--hi, 0)), transparent); }
+.task.closed.colored .tick::before { background: var(--on-tile); border-color: var(--on-tile); }
+.project.colored .project-icon.letter, .project-hero.colored .project-icon.letter { background: var(--on-tile); color: var(--tile); }
+/* Text and solid bits on a coloured card: the ink logic.ts picked for it (dark on pastels, light on the deep dark-mode tones). */
+.colored { --on-tile: var(--ink-l, var(--text)); }
+:root[data-theme="dark"] .colored { --on-tile: var(--ink-d, var(--text)); }
 .project-hero:not(.has-art) { padding-left: 18px; gap: 16px; }
 
 /* Projects get the same treatment: their picture or emoji bleeds in from the left and fades out */
@@ -801,7 +814,7 @@ button.tag { padding: 5px 11px; }
   position: relative; z-index: 1; display: flex; align-items: center; gap: 4px; padding-left: 8px;
   background: var(--surface); touch-action: pan-y; transition: transform 300ms cubic-bezier(0.2, 0.9, 0.25, 1);
 }
-.task.colored .task-slide { background: color-mix(in srgb, var(--tile) calc(14% * var(--lo, 1) + 86% * var(--hi, 0)), var(--surface)); }
+.task.colored .task-slide { background: color-mix(in srgb, var(--tile) calc(55% * var(--lo, 1) + 45% * var(--hi, 0)), var(--surface)); }
 .swipe-done {
   position: absolute; inset: 0; display: flex; align-items: center; gap: 6px; padding-left: 22px;
   background: var(--accent-soft); color: var(--accent-ink); font-weight: 650; font-size: 0.92rem; transition: background 150ms, color 150ms;

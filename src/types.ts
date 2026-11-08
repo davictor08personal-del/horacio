@@ -112,5 +112,6 @@ export interface Profile { user_id: string; name: string | null; timezone: strin
 
 /** Colours a daily task can have on Hoy: a solid tile with white text (CSS .dc-<name>). */
 export const DAILY_COLORS: Record<string, string> = {
-  none: 'Sin color', azul: 'Azul', verde: 'Verde', morado: 'Morado', rosa: 'Rosa', rojo: 'Rojo', naranja: 'Naranja', vinotinto: 'Vinotinto', gris: 'Gris',
+  // «vinotinto» is shown as Ciruela now; the key stays so colours already saved keep working.
+  none: 'Sin color', morado: 'Lila', azul: 'Azul', verde: 'Menta', amarillo: 'Amarillo', naranja: 'Melocotón', rojo: 'Coral', rosa: 'Rosa', vinotinto: 'Ciruela', gris: 'Niebla',
 }
