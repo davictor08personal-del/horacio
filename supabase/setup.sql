@@ -98,6 +98,11 @@ alter table public.tasks add constraint tasks_color check (char_length(color) <=
 -- Posponer: out of «Prioridades de hoy» until this day (a deadline is still due_date).
 alter table public.tasks add column if not exists snoozed_until date;
 
+-- Recurring tasks (rent, investing…): ticking one moves due_date to the next period instead of closing it.
+alter table public.tasks add column if not exists repeat text;
+alter table public.tasks drop constraint if exists tasks_repeat;
+alter table public.tasks add constraint tasks_repeat check (repeat in ('week', '2weeks', 'month', 'year'));
+
 alter table public.tasks add column if not exists tags text[] not null default '{}';
 alter table public.tasks drop constraint if exists tasks_tags;
 alter table public.tasks add constraint tasks_tags check (cardinality(tags) <= 10) not valid;

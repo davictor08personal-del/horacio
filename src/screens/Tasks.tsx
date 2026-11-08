@@ -28,7 +28,8 @@ export default function Tasks() {
   // «#idiomas» = tasks tagged #idiomas or in a project tagged #idiomas; words search title and details.
   const { tags, text } = parseSearch(query)
   const tagged = tags.length ? projectsTagged(projects, tags) : null
-  const matches = (t: Task) => taskMatchesTags(t, tags, tagged) && textMatches(text, t.title, t.notes)
+  // The project's name counts too: «alquiler» finds the tasks of the project «Alquiler».
+  const matches = (t: Task) => taskMatchesTags(t, tags, tagged) && textMatches(text, t.title, t.notes, projects.find((p) => p.id === t.project_id)?.name)
   const tasks = allOpen.filter(matches)
   const closed = allClosed.filter(matches)
   const sorted = [...tasks].sort(byPriority)
@@ -44,7 +45,7 @@ export default function Tasks() {
       {(allOpen.length > 0 || allClosed.length > 0) && (
         <label className="search">
           <Icon d={ICON.search} />
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar o #etiqueta" aria-label="Buscar tareas" />
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar, proyecto o #etiqueta" aria-label="Buscar tareas" />
           {query && <button className="ghost" onClick={() => setQuery('')} aria-label="Borrar búsqueda"><Icon d={ICON.x} /></button>}
         </label>
       )}

@@ -7,7 +7,7 @@ import { ConfirmDelete } from './HoldDelete'
 import { ICON, Icon, openNote } from './NoteEditor'
 import { TagChips, TagEditor } from './screens/Projects'
 import Sheet, { Choice } from './Sheet'
-import { EFFORT, PRIORITY, STATUS, type Status, type Task } from './types'
+import { EFFORT, PRIORITY, REPEAT, STATUS, type Repeat, type Status, type Task } from './types'
 
 /** The two ways to postpone, as [button label, toast label, day]. */
 export const postponeOptions = (today: string): [string, string, string][] => [
@@ -33,7 +33,8 @@ export function TaskRow({ task: initialTask, n, deletable }: { task: Task; n?: n
     if (leaving) return
     setLeaving(true)
     navigator.vibrate?.(10)
-    setTimeout(() => setTaskStatus(task, 'hecho').catch(() => setLeaving(false)), 520)
+    // A recurring one stays in the list with its next date, so it comes back into view once saved.
+    setTimeout(() => setTaskStatus(task, 'hecho').then(() => task.repeat && setLeaving(false), () => setLeaving(false)), 520)
   }
   const { tasks, projects, notes } = useData()
   const task = tasks.find((t) => t.id === initialTask.id) ?? initialTask
@@ -50,6 +51,7 @@ export function TaskRow({ task: initialTask, n, deletable }: { task: Task; n?: n
     snoozed && !sameDay && `💤 Hasta ${relDay(task.snoozed_until!, today).toLowerCase()}`,
     task.due_date && `${hasReminder ? '🔔 ' : sameDay ? '💤 ' : ''}${relDay(task.due_date, today)}`,
     task.due_time && hhmm(task.due_time),
+    task.repeat && `🔁 ${REPEAT[task.repeat]}`,
     task.status === 'en_curso' && 'En curso',
     task.status === 'esperando' && 'Esperando',
     project?.name,
@@ -223,7 +225,7 @@ export function TaskSheet({ task: initialTask, onClose }: { task: Task; onClose:
         <div className="reminder-head">
           <span className="reminder-title"><span aria-hidden>🔔</span> Recordatorio y fecha</span>
           {(task.due_date || timeVal) && (
-            <button type="button" className="link reminder-clear" onClick={() => set({ due_date: null, due_time: null })}>Quitar</button>
+            <button type="button" className="link reminder-clear" onClick={() => set({ due_date: null, due_time: null, repeat: null })}>Quitar</button>
           )}
         </div>
         <div className="choice">
@@ -243,6 +245,10 @@ export function TaskSheet({ task: initialTask, onClose }: { task: Task; onClose:
           <label className="field">Hora del aviso
             <input type="time" value={timeVal} onChange={(e) => setReminderTime(e.target.value || null)} />
           </label>
+        </div>
+        {/* Rent, investing…: ticking it moves it to the next date instead of closing it. Needs a date to count from. */}
+        <div className="field">Repetir
+          <Choice value={task.repeat ?? 'none'} options={REPEAT} onChange={(r) => set(r === 'none' ? { repeat: null } : { repeat: r as Repeat, due_date: task.due_date ?? today })} />
         </div>
         {hasReminder ? (
           <p className="reminder-status on">

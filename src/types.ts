@@ -5,6 +5,8 @@ export type Priority = 'alta' | 'media' | 'baja'
 export type Effort = 'rapido' | 'medio' | 'grande'
 export type ShiftKind = 'opening' | 'dia' | 'noche' | 'libre'
 export type ProjectStatus = 'activo' | 'pausado' | 'hecho'
+/** How often a recurring task comes back (rent, investing…). Ticking it moves it to the next date instead of closing it. */
+export type Repeat = 'week' | '2weeks' | 'month' | 'year'
 
 export interface Task {
   id: string
@@ -25,6 +27,7 @@ export interface Task {
   snoozed_until?: string | null
   color?: string
   tags?: string[]
+  repeat?: Repeat | null
 }
 
 export type NoteColor = 'none' | 'rojo' | 'naranja' | 'amarillo' | 'verde' | 'azul' | 'morado'
@@ -98,6 +101,7 @@ export const STATUS: Record<Status, string> = {
 export const PRIORITY: Record<Priority, string> = { alta: 'Alta', media: 'Media', baja: 'Baja' }
 export const EFFORT: Record<Effort, string> = { rapido: 'Rápido', medio: 'Medio', grande: 'Grande' }
 export const SHIFT: Record<ShiftKind, string> = { opening: 'Opening', dia: 'Día', noche: 'Noche', libre: 'Libre' }
+export const REPEAT: Record<Repeat | 'none', string> = { none: 'No', week: 'Cada semana', '2weeks': 'Cada 2 semanas', month: 'Cada mes', year: 'Cada año' }
 export const PROJECT_STATUS: Record<ProjectStatus, string> = { activo: 'Activo', pausado: 'Pausado', hecho: 'Hecho' }
 export const NOTE_COLOR: Record<NoteColor, string> = {
   // «none» = Auto: a pastel picked from the note's id (see noteTone in logic.ts).

@@ -1,5 +1,5 @@
 // Pure rules of the app (no React, no Supabase), so they can be tested in logic.test.ts.
-import type { ChecklistItem, DailyTask, Effort, FpTest, Note, Priority, Project, Shift, ShiftKind, Task } from './types'
+import type { ChecklistItem, DailyTask, Effort, FpTest, Note, Priority, Project, Repeat, Shift, ShiftKind, Task } from './types'
 
 // ---------- time zone ----------
 // Every «today», «tomorrow» and time below is in the user's time zone (saved in their profile), not the device's
@@ -34,7 +34,28 @@ export const addDays = (day: string, n: number) => {
   d.setUTCDate(d.getUTCDate() + n)
   return d.toISOString().slice(0, 10)
 }
-export const daysBetween = (from: string, to: string) => Math.round((asDate(to).getTime() - asDate(from).getTime()) / 86_400_000)
+/** `n` months later; a day the month doesn't have becomes its last day (31 Jan + 1 = 28/29 Feb). */
+export const addMonths = (day: string, n: number) => {
+  const [y, m, d] = day.split('-').map(Number)
+  const first = new Date(Date.UTC(y, m - 1 + n, 1, 12))
+  const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0, 12)).getUTCDate()
+  first.setUTCDate(Math.min(d, last))
+  return first.toISOString().slice(0, 10)
+}
+
+/**
+ * A recurring task's next date after it's ticked: one period after its date, skipping any periods already behind
+ * `today` (paying March's rent late on 5 April makes the next one 1 May, not 1 April). Undated: from today.
+ */
+export function nextOccurrence(due: string | null, repeat: Repeat, today: string) {
+  const from = due ?? today
+  const step = (k: number) =>
+    repeat === 'week' ? addDays(from, 7 * k) : repeat === '2weeks' ? addDays(from, 14 * k) : addMonths(from, repeat === 'year' ? 12 * k : k)
+  let k = 1
+  while (step(k) <= today) k++
+  return step(k)
+}
+export const daysBetween =(from: string, to: string) => Math.round((asDate(to).getTime() - asDate(from).getTime()) / 86_400_000)
 /** 0 = Monday … 6 = Sunday */
 export const weekday = (day: string) => (asDate(day).getUTCDay() + 6) % 7
 export const mondayOf = (day: string) => addDays(day, -weekday(day))

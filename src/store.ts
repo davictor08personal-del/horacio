@@ -2,7 +2,7 @@
 // Without them: "demo mode", saved in this browser's localStorage, to try the app before creating the project.
 import { useSyncExternalStore } from 'react'
 import { createClient, type Session } from '@supabase/supabase-js'
-import { addDays, localDay, postponePatch, setTimeZone } from './logic'
+import { addDays, localDay, nextOccurrence, postponePatch, relDay, setTimeZone } from './logic'
 import type { DailyLog, DailyTask, FpTest, Note, Profile, Project, Shift, Task } from './types'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -300,8 +300,16 @@ export async function undoTask() {
   await update('tasks', id, restore)
 }
 
-/** Finishing or discarding stamps done_at (the 7 days in «Terminadas» count from it); reopening clears it. */
+/**
+ * Finishing or discarding stamps done_at (the 7 days in «Terminadas» count from it); reopening clears it.
+ * A recurring task isn't closed when it's done: it moves to its next date, open again and with its alarm re-armed.
+ */
 export const setTaskStatus = (t: Task, status: Task['status']) => {
+  if (status === 'hecho' && t.repeat) {
+    const next = nextOccurrence(t.due_date, t.repeat, localDay())
+    offerUndo({ id: t.id, title: t.title, label: `Hecha · vuelve ${relDay(next, localDay()).toLowerCase()}`, restore: { due_date: t.due_date, status: t.status, snoozed_until: t.snoozed_until ?? null, notified_at: t.notified_at ?? null } })
+    return update('tasks', t.id, { due_date: next, status: 'abierto', snoozed_until: null, notified_at: null })
+  }
   if (CLOSED.includes(status)) {
     offerUndo({ id: t.id, title: t.title, label: status === 'hecho' ? 'Hecha' : 'Descartada', restore: { status: t.status, done_at: t.done_at } })
   } else if (lastClosed?.id === t.id) {

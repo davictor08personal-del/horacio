@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanCapture, mockCapture } from './capture'
-import { addDays, allTags, byPriority, cleanTag, dayPlan, doneToday, googleCalendarUrl, localMinutes, parseSearch, postponePatch, projectsTagged, taskMatchesTags, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteSize, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
+import { addDays, addMonths, nextOccurrence, allTags, byPriority, cleanTag, dayPlan, doneToday, googleCalendarUrl, localMinutes, parseSearch, postponePatch, projectsTagged, taskMatchesTags, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteSize, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
 import type { FpTest, Note, Shift, Task } from './types'
 
 const task = (p: Partial<Task>): Task => ({
@@ -272,5 +272,20 @@ describe('tags', () => {
   })
   it('allTags combines tags from multiple sources', () => {
     expect(allTags([{ tags: ['b', 'a'] }], [{ tags: ['c', 'a'] }])).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('recurring tasks', () => {
+  it('a month later keeps the day, or the last day of the month', () => {
+    expect(addMonths('2026-01-31', 1)).toBe('2026-02-28')
+    expect(addMonths('2026-12-01', 1)).toBe('2027-01-01')
+  })
+  it('the next date is one period on, skipping the ones already behind today', () => {
+    expect(nextOccurrence('2026-11-01', 'month', '2026-11-01')).toBe('2026-12-01')
+    expect(nextOccurrence('2026-10-01', 'month', '2026-11-08')).toBe('2026-12-01')
+    expect(nextOccurrence('2026-11-08', 'week', '2026-11-08')).toBe('2026-11-15')
+    expect(nextOccurrence('2026-11-08', '2weeks', '2026-11-08')).toBe('2026-11-22')
+    expect(nextOccurrence('2026-03-15', 'year', '2026-03-10')).toBe('2027-03-15')
+    expect(nextOccurrence(null, 'week', '2026-11-08')).toBe('2026-11-15')
   })
 })
