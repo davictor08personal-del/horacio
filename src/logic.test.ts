@@ -66,6 +66,14 @@ describe('priorities', () => {
     expect(before.later.map((t) => t.title)).toEqual(['urgente'])
     expect(splitToday([urgent, ...rest], '2026-11-05').focus[0].title).toBe('urgente')
   })
+  it('a recurring task stays out of Prioridades until 3 days before its date', () => {
+    const rent = task({ title: 'alquiler', due_date: '2026-12-02', repeat: 'month' })
+    const far = splitToday([rent, task({ title: 'a' })], '2026-11-10')
+    expect(far.focus.map((t) => t.title)).toEqual(['a'])
+    expect(far.later.map((t) => t.title)).toEqual(['alquiler'])
+    expect(splitToday([rent], '2026-11-29').focus).toHaveLength(1)
+    expect(splitToday([rent], '2026-12-05').focus).toHaveLength(1) // overdue still shows
+  })
   it('postponing moves an earlier deadline along, but not a later one', () => {
     expect(postponePatch(task({ due_date: '2026-11-03' }), '2026-11-04')).toEqual({ snoozed_until: '2026-11-04', due_date: '2026-11-04' })
     expect(postponePatch(task({ due_date: '2026-11-20' }), '2026-11-04')).toEqual({ snoozed_until: '2026-11-04' })

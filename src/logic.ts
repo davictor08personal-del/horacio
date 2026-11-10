@@ -147,15 +147,20 @@ export const FOCUS_SIZE = 3
 /** Postponed until a later day (so it isn't today's job yet). */
 export const isSnoozed = (t: Task, today: string) => !!t.snoozed_until && t.snoozed_until > today
 
+/** How many days ahead a recurring task (rent, a bill…) joins Prioridades; before that it's just scheduled. */
+export const RECURRING_LEAD_DAYS = 3
+const notYetDue = (t: Task, today: string) => !!t.repeat && !!t.due_date && t.due_date > addDays(today, RECURRING_LEAD_DAYS)
+const resting = (t: Task, today: string) => isSnoozed(t, today) || notYetDue(t, today)
+
 /**
- * Foco = the 3 first open tasks that aren't postponed; everything else open (postponed ones included, at the end)
- * and anything waiting can wait.
+ * Foco = the 3 first open tasks that aren't resting (postponed, or recurring and still more than 3 days away);
+ * everything else open (resting ones included, at the end) and anything waiting can wait.
  */
 export function splitToday(tasks: Task[], today = localDay()) {
   const active = tasks.filter((t) => t.status === 'abierto' || t.status === 'en_curso').sort(byPriority)
-  const awake = active.filter((t) => !isSnoozed(t, today))
+  const awake = active.filter((t) => !resting(t, today))
   const focus = awake.slice(0, FOCUS_SIZE)
-  return { focus, later: [...awake.slice(FOCUS_SIZE), ...active.filter((t) => isSnoozed(t, today))], waiting: tasks.filter((t) => t.status === 'esperando') }
+  return { focus, later: [...awake.slice(FOCUS_SIZE), ...active.filter((t) => resting(t, today))], waiting: tasks.filter((t) => t.status === 'esperando') }
 }
 
 /**
