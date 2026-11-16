@@ -1,0 +1,1 @@
+{"permissions":{"allow":["command(node --check *)","command(node --test*)","command(git status*)","command(git diff*)","command(git log*)","command(ls*)","command(dir*)","command(cat *)","command(type *)","command(Get-Content*)","command(Get-ChildItem*)","command(Select-String*)","command(findstr*)","command(rg *)","command(grep *)"]}}

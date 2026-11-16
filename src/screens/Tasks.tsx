@@ -56,7 +56,19 @@ export default function Tasks() {
       )}
       {view === 'periodicas' ? (
         <>
-          {!upcoming.length && <p className="empty">{query ? 'Ninguna tarea periódica coincide.' : 'Lo que vuelve cada semana, mes o año: pagar el alquiler, invertir, la cuota del gimnasio… Pulsa ＋ para añadir una.'}</p>}
+          {!upcoming.length && (query ? (
+            <p className="empty">Ninguna tarea periódica coincide.</p>
+          ) : (
+            <div className="empty-stack">
+              <div className="empty-stack-art" aria-hidden>
+                <span className="empty-stack-card c1" />
+                <span className="empty-stack-card c2" />
+                <span className="empty-stack-card c3" />
+              </div>
+              <h2 className="empty-stack-title">Lo que vuelve cada semana, mes o año</h2>
+              <p className="empty-stack-sub">Pagar el alquiler, invertir, la cuota del gimnasio… Pulsa ＋ para añadir una.</p>
+            </div>
+          ))}
           {upcoming.length > 0 && (
             <section className="group">
               <h2 className="group-title">Próximas · {upcoming.length}</h2>
@@ -66,7 +78,19 @@ export default function Tasks() {
           )}
         </>
       ) : <>
-      {!tasks.length && <p className="empty">{query ? 'Ninguna tarea abierta coincide.' : 'No hay tareas abiertas. Pulsa ＋ para apuntar algo.'}</p>}
+      {!tasks.length && (query ? (
+        <p className="empty">Ninguna tarea abierta coincide.</p>
+      ) : (
+        <div className="empty-stack">
+          <div className="empty-stack-art" aria-hidden>
+            <span className="empty-stack-card c1" />
+            <span className="empty-stack-card c2" />
+            <span className="empty-stack-card c3" />
+          </div>
+          <h2 className="empty-stack-title">No hay tareas abiertas</h2>
+          <p className="empty-stack-sub">Pulsa ＋ para apuntar algo.</p>
+        </div>
+      ))}
       {GROUPS.map(([status, label]) => {
         const list = sorted.filter((t) => t.status === status)
         return list.length > 0 && (

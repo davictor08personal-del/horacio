@@ -16,7 +16,7 @@ La app de organización y productividad de Victor (antes «Horacio», el mayordo
 
 ## Pantallas
 
-Barra inferior flotante: **Hoy · Tareas · (＋) · Notas · Proyectos**, con el ＋ redondo en el centro (Proyectos ocupó el sitio de Agenda el 2026-11-06; Agenda se abre desde Hoy, «Turnos y FP»), y un botón **＋** grande para capturar.
+Barra inferior flotante: **Hoy · Tareas · Notas · Proyectos**, con el ＋ negro redondo aparte, a la derecha (desde el 2026-11-16; antes iba en el centro) (Proyectos ocupó el sitio de Agenda el 2026-11-06; Agenda se abre desde Hoy, «Turnos y FP»), y un botón **＋** grande para capturar.
 
 1. **Hoy**
    - **Cabecera**: el saludo de Horacio según la hora («Buenos días / Buenas tardes / Buenas noches, Victor») y debajo la fecha y el día: «Turno de noche 17:00–23:00 · Libre hasta las 16:30» o «Todo el día libre».
@@ -97,16 +97,19 @@ Ideas aparcadas: widgets en el iPhone sin App Store (Scriptable para ver las pri
 
 ## Estilo
 
-**Lavanda** (2026-11-08; sustituye al vinotinto del 2026-11-06). Inspirado en dos referencias de Dribbble: fondo pastel, bloques de color sólido, titulares enormes y barra en píldora oscura.
-- **Tipografía**: Outfit (variable, redonda y geométrica, 2026-11-08) para títulos y números (`h1` 2.5rem, peso 700) y la letra del sistema para el texto (SF Pro en el iPhone).
-- **Color**: fondo lavanda `#e9e5fb`, tarjetas blancas sin borde, tinta `#16132b` y acento violeta `#6b4de6`. Oscuro: `#13121c` / `#1e1c2b`, acento `#a995ff`. Pasteles para bloques (`--hero` violeta, `--pastel-blue`, `--pastel-peach`, `--pastel-pink`), con versiones profundas en oscuro.
-- **Formas**: radio 22 px por defecto, 24–32 px en mosaicos y hojas, píldoras en chips, días y pestañas.
-- **Barra inferior**: píldora oscura; la pestaña activa lleva una píldora clara que se desliza. El ＋ central es violeta.
-- **Hoy**: tarjeta hero violeta con el número de prioridades en grande, tira de 7 días (hoy en oscuro, punto si vence algo), y mosaicos pastel para Estudios y Puede esperar.
-- **Proyectos**: mosaico de dos columnas; cada proyecto usa su color o un pastel sacado de su id, el mismo en la lista y en la portada de su ficha.
-- **Hojas**: suben desde abajo con radio 32 px y asa.
+**Cristal** (2026-11-16; sustituye a la lavanda del 2026-11-08). Inspirado en tres referencias de apps iOS tipo fintech/colecciones: pulcro, elegante y translúcido. Plan y decisiones en `docs/superpowers/plans/2026-11-16-estetica-cristal.md`.
+- **Tipografía**: Inter Variable en toda la app (títulos peso 700 con tracking negativo; `--display` también es Inter). Outfit ya no se usa.
+- **Color**: fondo blanco que baja a gris azulado muy claro (`--bg-gradient`, fijo), tarjetas blancas sin borde con sombra difusa (`--shadow-card`), tinta `#0d0d12`. Acciones primarias en **negro**; el único acento es el **azul** del hero de Hoy (degradado `#2b62ee` → `#1d4ed8`). Oscuro: grafito `#0f0f12` → `#17181d`, tarjetas `#1b1c22`. Pasteles suaves para bloques (`--pastel-blue`, `-peach`, `-pink`, `-lilac`), translúcidos en oscuro.
+- **Cristal**: `--glass`, `--glass-border` y `--blur` solo en elementos fijos (barra, hojas, cabeceras), nunca en filas de listas largas (rendimiento en iPhone).
+- **Formas**: radio 28 px (`--radius`), 32 px en hojas, píldoras en chips, filtros y controles segmentados.
+- **Barra inferior**: píldora de cristal con Hoy · Tareas · Notas · Proyectos (la pestaña activa lleva un fondo claro que se desliza) y, aparte, el **＋ negro redondo** a la derecha.
+- **Cabecera**: botón redondo de cristal con la inicial del nombre arriba a la izquierda en todas las pestañas; abre Ajustes.
+- **Hoy**: hero azul con el número de prioridades en grande y chips oscuros translúcidos, tira de 7 días en píldoras (hoy en negro), «Por orden» como lista en tarjeta blanca y mosaicos pastel para Estudios y Puede esperar.
+- **Proyectos**: tarjetas de colección (pastel del proyecto o uno sacado de su id) con un **collage**: hasta 4 fotos de sus notas como polaroids y, en los huecos, mini-tarjetas de sus tareas, notas y diarias (`projectCover` en `logic.ts`); nombre centrado, «fecha · N tareas · M notas» y etiquetas. Pausado: solo se apaga el collage. Estado vacío con tarjetas apiladas, el mismo patrón que usan Tareas, Notas, Diarias y Agenda.
+- **Tareas**: Puntuales · Diarias · Periódicas como control segmentado; filas en tarjeta blanca con la fecha a la derecha y la prioridad alta como un punto.
+- **Hojas**: suben desde abajo, de cristal, con radio 32 px y asa; el fondo se atenúa y se difumina.
 - **Tono neutro**, de tú: «Prioridades de hoy», «Hoy no trabajas: tienes el día libre».
-- **Icono provisional**: cuadrado violeta (degradado `#8c72f5` → `#5b3dd8`) con un cuadro blanco redondeado dentro (cuadrar). El color «Vinotinto» sigue disponible para notas, diarias y proyectos.
-- **Automático** (por defecto) sigue al móvil; en Ajustes (⚙) se puede forzar claro u oscuro. Se guarda por dispositivo.
+- **Icono provisional**: sigue siendo el cuadrado violeta con un cuadro blanco (pendiente de rehacer para Cristal). El color «Morado» y los demás siguen disponibles para notas, diarias y proyectos.
+- **Automático** (por defecto) sigue al móvil; en Ajustes se puede forzar claro u oscuro. Se guarda por dispositivo.
 - Todos los colores son variables en `src/styles.css` (dos bloques: `:root` y `:root[data-theme='dark']`); `index.html` aplica el tema antes de pintar para que no parpadee.
-- **Ajustes**: engranaje ⚙ arriba a la derecha en todas las pantallas; abre una pantalla completa con tarjetas por sección (Apariencia, Avisos, Cuenta, Acerca de).
+- **Ajustes**: pantalla completa con tarjetas agrupadas estilo iOS (Perfil, Módulos, Apariencia, Avisos, Cuenta, Acerca de) e interruptores en negro.

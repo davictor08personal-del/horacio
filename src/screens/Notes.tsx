@@ -93,11 +93,19 @@ export default function Notes() {
         </>
       )}
 
-      {!shown.length && (
-        <p className="empty">
-          {query ? `Nada coincide con «${query}».` : archive ? 'No hay notas archivadas.' : 'Sin notas. Pulsa ＋ junto al título para escribir la primera.'}
-        </p>
-      )}
+      {!shown.length && (query ? (
+        <p className="empty">Nada coincide con «{query}».</p>
+      ) : (
+        <div className="empty-stack">
+          <div className="empty-stack-art" aria-hidden>
+            <span className="empty-stack-card c1" />
+            <span className="empty-stack-card c2" />
+            <span className="empty-stack-card c3" />
+          </div>
+          <h2 className="empty-stack-title">{archive ? 'No hay notas archivadas' : 'Sin notas'}</h2>
+          {!archive && <p className="empty-stack-sub">Pulsa ＋ junto al título para escribir la primera.</p>}
+        </div>
+      ))}
       {shown.length > 0 && <p className="note-count">{shown.length} {shown.length === 1 ? 'nota' : 'notas'}</p>}
     </>
   )
@@ -111,13 +119,18 @@ function NoteRow({ note, reminder, daily, project }: { note: Note; reminder: boo
         <span className={`dot c-${noteTone(note)}`} aria-hidden />
         <span className="note-row-text">
           <span className="task-title">{note.title.trim() || notePreview(note) || (imagePaths(note.body).length ? 'Imagen' : 'Nota nueva')}</span>
-          <span className="task-sub">
-            {daily && <span className="daily-note-tag">Diaria · {daily}</span>}
-            <span className="note-time">{noteTime(note.updated_at)}</span>{project && <span className="note-row-project"> · {project}</span>}
-          </span>
+          {(daily || project) && (
+            <span className="task-sub">
+              {daily && <span className="daily-note-tag">Diaria · {daily}</span>}
+              {project && <span className="note-row-project">{project}</span>}
+            </span>
+          )}
         </span>
-        <Thumb body={note.body} className="note-thumb" />
-        {reminder && <span className="note-flag" aria-label="Con recordatorio"><Icon d={ICON.bell} /></span>}
+        <span className="note-row-aside">
+          <Thumb body={note.body} className="note-thumb" />
+          {reminder && <span className="note-flag" aria-label="Con recordatorio"><Icon d={ICON.bell} /></span>}
+          <span className="note-row-time">{noteTime(note.updated_at)}</span>
+        </span>
       </button>
     </li>
   )

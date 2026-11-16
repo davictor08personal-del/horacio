@@ -20,7 +20,11 @@ export default function NewPassword({ onDone }: { onDone: () => void }) {
   }
   return (
     <main className="screen login">
-      <img className="login-logo" src="pwa-192x192.png" alt="" />
+      <div className="login-art">
+        <span className="login-card c1" aria-hidden />
+        <span className="login-card c2" aria-hidden />
+        <img className="login-logo" src="pwa-192x192.png" alt="" />
+      </div>
       <h1>Nueva contraseña</h1>
       <form className="form" onSubmit={save}>
         <input type="password" placeholder="Contraseña nueva (mín. 6)" autoComplete="new-password" minLength={6} required value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />

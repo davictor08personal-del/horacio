@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cleanCapture, mockCapture } from './capture'
-import { addDays, addMonths, nextOccurrence, allTags, byPriority, cleanTag, dayPlan, doneToday, googleCalendarUrl, localMinutes, parseSearch, postponePatch, projectsTagged, taskMatchesTags, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteSize, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
-import type { FpTest, Note, Shift, Task } from './types'
+import { addDays, addMonths, nextOccurrence, allTags, byPriority, cleanTag, coverSummary, dayPlan, doneToday, googleCalendarUrl, localMinutes, parseSearch, postponePatch, projectCover, projectsTagged, taskMatchesTags, weeklyStreak, dueReminders, morningSummary, fromChecklist, greeting, localDay, nextFpBlock, noteMatches, notePreview, noteSize, noteTime, relDay, shiftHours, splitToday, toChecklist, weekOf } from './logic'
+import type { DailyTask, FpTest, Note, Shift, Task } from './types'
 
 const task = (p: Partial<Task>): Task => ({
   id: Math.random().toString(), title: 't', notes: null, status: 'abierto', priority: 'media', effort: 'medio',
@@ -295,5 +295,129 @@ describe('recurring tasks', () => {
     expect(nextOccurrence('2026-11-08', '2weeks', '2026-11-08')).toBe('2026-11-22')
     expect(nextOccurrence('2026-03-15', 'year', '2026-03-10')).toBe('2027-03-15')
     expect(nextOccurrence(null, 'week', '2026-11-08')).toBe('2026-11-15')
+  })
+})
+
+describe('projectCover', () => {
+  const proj = { id: 'p1', created_at: '2026-10-15T08:00:00Z' }
+  const daily = (p: Partial<DailyTask>): DailyTask => ({
+    id: 'd1', title: 'Diaria', position: 0, done_on: null, project_id: 'p1',
+    description: null, icon: null, note_id: null, color: 'none', created_at: '2026-11-01T10:00:00Z', ...p,
+  })
+
+  it('empty project returns empty items, 0 counters, created_at day, and empty summary', () => {
+    const cover = projectCover(proj, { tasks: [], notes: [], daily_tasks: [] })
+    expect(cover).toEqual({
+      items: [],
+      tasks: 0,
+      notes: 0,
+      dailies: 0,
+      day: '2026-10-15',
+      photos: [],
+    })
+    expect(coverSummary(cover)).toBe('Vacío por ahora')
+  })
+
+  it('counts ticking a daily task as activity for the cover day', () => {
+    const d = daily({ id: 'd1', created_at: '2026-11-01T10:00:00Z', done_on: '2026-11-15' })
+    expect(projectCover(proj, { tasks: [], notes: [], daily_tasks: [d] }).day).toBe('2026-11-15')
+  })
+
+  it('takes up to max pictures from its live notes, pinned first, skipping archived ones and other projects', () => {
+    const a = note({ id: 'a', project_id: 'p1', body: 'Kioto\n[[img:u/1.webp]]\n[[img:u/2.webp]]', updated_at: '2026-11-02T00:00:00Z' })
+    const b = note({ id: 'b', project_id: 'p1', pinned: true, body: '[[img:u/3.webp]]', updated_at: '2026-11-01T00:00:00Z' })
+    const old = note({ id: 'c', project_id: 'p1', archived: true, body: '[[img:u/x.webp]]' })
+    const other = note({ id: 'd', project_id: 'p2', body: '[[img:u/y.webp]]' })
+    const cover = projectCover(proj, { tasks: [], notes: [a, b, old, other], daily_tasks: [] }, 2)
+    expect(cover.photos).toEqual(['u/3.webp', 'u/1.webp'])
+  })
+
+  it('interleaves by turns task → note → daily → task with 2 tasks + 1 note + 3 dailies and max 4', () => {
+    const t1 = task({ id: 't1', title: 'Tarea urgente', project_id: 'p1', priority: 'alta' })
+    const t2 = task({ id: 't2', title: 'Tarea normal', project_id: 'p1', priority: 'media' })
+    const n1 = note({ id: 'n1', title: 'Apuntes', project_id: 'p1' })
+    const d1 = daily({ id: 'd1', title: 'Diaria 1', position: 1 })
+    const d2 = daily({ id: 'd2', title: 'Diaria 2', position: 2 })
+    const d3 = daily({ id: 'd3', title: 'Diaria 3', position: 3 })
+
+    const cover = projectCover(proj, { tasks: [t2, t1], notes: [n1], daily_tasks: [d3, d1, d2] }, 4)
+    expect(cover.items).toEqual([
+      { kind: 'task', id: 't1', title: 'Tarea urgente' },
+      { kind: 'note', id: 'n1', title: 'Apuntes' },
+      { kind: 'daily', id: 'd1', title: 'Diaria 1' },
+      { kind: 'task', id: 't2', title: 'Tarea normal' },
+    ])
+    expect(cover.tasks).toBe(2)
+    expect(cover.notes).toBe(1)
+    expect(cover.dailies).toBe(3)
+  })
+
+  it('keeps full counters when there are more than 4 elements while capping items to 4', () => {
+    const tasks = [1, 2, 3, 4, 5].map((i) => task({ id: `t${i}`, title: `T${i}`, project_id: 'p1' }))
+    const notes = [1, 2].map((i) => note({ id: `n${i}`, title: `N${i}`, project_id: 'p1' }))
+    const daily_tasks = [1, 2].map((i) => daily({ id: `d${i}`, title: `D${i}`, position: i }))
+
+    const cover = projectCover(proj, { tasks, notes, daily_tasks })
+    expect(cover.items).toHaveLength(4)
+    expect(cover.tasks).toBe(5)
+    expect(cover.notes).toBe(2)
+    expect(cover.dailies).toBe(2)
+  })
+
+  it('excludes done/discarded tasks, archived notes, and elements from other projects', () => {
+    const tasks = [
+      task({ id: 't-open', title: 'Abierta', project_id: 'p1', status: 'abierto' }),
+      task({ id: 't-done', title: 'Hecha', project_id: 'p1', status: 'hecho' }),
+      task({ id: 't-disc', title: 'Descartada', project_id: 'p1', status: 'descartado' }),
+      task({ id: 't-other', title: 'Otro proy', project_id: 'p2', status: 'abierto' }),
+    ]
+    const notes = [
+      note({ id: 'n-ok', title: 'Activa', project_id: 'p1', archived: false }),
+      note({ id: 'n-arch', title: 'Archivada', project_id: 'p1', archived: true }),
+      note({ id: 'n-other', title: 'Otra', project_id: 'p2', archived: false }),
+    ]
+    const daily_tasks = [
+      daily({ id: 'd-ok', title: 'Mía', project_id: 'p1' }),
+      daily({ id: 'd-other', title: 'Ajena', project_id: 'p2' }),
+    ]
+
+    const cover = projectCover(proj, { tasks, notes, daily_tasks })
+    expect(cover.tasks).toBe(1)
+    expect(cover.notes).toBe(1)
+    expect(cover.dailies).toBe(1)
+    expect(cover.items).toEqual([
+      { kind: 'task', id: 't-open', title: 'Abierta' },
+      { kind: 'note', id: 'n-ok', title: 'Activa' },
+      { kind: 'daily', id: 'd-ok', title: 'Mía' },
+    ])
+  })
+
+  it('uses notePreview or "Nota" when a note has no title, and sorts pinned notes first', () => {
+    const nBody = note({ id: 'n1', title: '   ', body: '\nPrimera línea\nSegunda', project_id: 'p1', updated_at: '2026-11-02T10:00:00Z' })
+    const nEmpty = note({ id: 'n2', title: '', body: '', project_id: 'p1', pinned: true, updated_at: '2026-11-01T10:00:00Z' })
+
+    const cover = projectCover(proj, { tasks: [], notes: [nBody, nEmpty], daily_tasks: [] })
+    expect(cover.items).toEqual([
+      { kind: 'note', id: 'n2', title: 'Nota' },
+      { kind: 'note', id: 'n1', title: 'Primera línea' },
+    ])
+  })
+
+  it('formats coverSummary in Spanish with singular/plural and order tasks · notes · dailies', () => {
+    expect(coverSummary({ tasks: 0, notes: 0, dailies: 0 })).toBe('Vacío por ahora')
+    expect(coverSummary({ tasks: 1, notes: 1, dailies: 1 })).toBe('1 tarea · 1 nota · 1 diaria')
+    expect(coverSummary({ tasks: 3, notes: 2, dailies: 4 })).toBe('3 tareas · 2 notas · 4 diarias')
+    expect(coverSummary({ tasks: 0, notes: 2, dailies: 1 })).toBe('2 notas · 1 diaria')
+    expect(coverSummary({ tasks: 1, notes: 0, dailies: 0 })).toBe('1 tarea')
+  })
+
+  it('computes day from the most recent activity across tasks, active notes, and dailies', () => {
+    const t = task({ id: 't1', project_id: 'p1', status: 'hecho', created_at: '2026-11-02T10:00:00Z', done_at: '2026-11-12T15:00:00Z' })
+    const nActive = note({ id: 'n1', project_id: 'p1', updated_at: '2026-11-10T09:00:00Z' })
+    const nArchived = note({ id: 'n2', project_id: 'p1', archived: true, updated_at: '2026-11-20T09:00:00Z' })
+    const d = daily({ id: 'd1', project_id: 'p1', created_at: '2026-11-05T08:00:00Z' })
+
+    expect(projectCover(proj, { tasks: [t], notes: [nActive, nArchived], daily_tasks: [d] }).day).toBe('2026-11-12')
+    expect(projectCover(proj, { tasks: [], notes: [nActive, nArchived], daily_tasks: [d] }).day).toBe('2026-11-10')
   })
 })

@@ -36,13 +36,23 @@ export default function Agenda() {
       </section>}
       {profile?.fp && <section className="group">
         <h2 className="group-title">Tests de estudios</h2>
-        {!subjects.length && <p className="empty">Sin tests. Pulsa ＋ y escribe, por ejemplo, «Test de Nóminas U3, bloque 2, abre el 10 de noviembre y cierra el 20».</p>}
+        {!subjects.length && (
+          <div className="empty-stack">
+            <div className="empty-stack-art" aria-hidden>
+              <span className="empty-stack-card c1" />
+              <span className="empty-stack-card c2" />
+              <span className="empty-stack-card c3" />
+            </div>
+            <h2 className="empty-stack-title">Sin tests</h2>
+            <p className="empty-stack-sub">Pulsa ＋ y escribe, por ejemplo, «Test de Nóminas U3, bloque 2, abre el 10 de noviembre y cierra el 20».</p>
+          </div>
+        )}
         {subjects.map((subject) => (
           <div key={subject} className="subject">
             <h3>{subject}</h3>
             <ul className="list card-list">
               {fp_tests.filter((t) => t.subject === subject).map((t) => (
-                <li key={t.id} className="test-row">
+                <li key={t.id} className={`test-row ${t.read ? 'is-read' : ''}`}>
                   <button className={`tick small ${t.read ? 'done' : ''}`} onClick={() => update('fp_tests', t.id, { read: !t.read })} aria-label={t.read ? 'Marcar sin leer' : 'Marcar leída'} />
                   <button className="task-text" onClick={() => setTest(t)}>
                     <span className="task-title">{t.unit}</span>

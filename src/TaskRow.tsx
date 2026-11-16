@@ -49,13 +49,15 @@ export function TaskRow({ task: initialTask, n, deletable }: { task: Task; n?: n
   const sameDay = snoozed && task.due_date === task.snoozed_until
   const sub = [
     snoozed && !sameDay && `💤 Hasta ${relDay(task.snoozed_until!, today).toLowerCase()}`,
-    task.due_date && `${hasReminder ? '🔔 ' : sameDay ? '💤 ' : ''}${relDay(task.due_date, today)}`,
-    task.due_time && hhmm(task.due_time),
     task.repeat && `🔁 ${REPEAT[task.repeat]}`,
     task.status === 'en_curso' && 'En curso',
     task.status === 'esperando' && 'Esperando',
     project?.name,
     note && 'Con nota',
+  ].filter(Boolean).join(' · ')
+  const due = [
+    task.due_date && `${hasReminder ? '🔔 ' : sameDay ? '💤 ' : ''}${relDay(task.due_date, today)}`,
+    task.due_time && hhmm(task.due_time),
   ].filter(Boolean).join(' · ')
 
   // ---- swipe ----
@@ -124,9 +126,19 @@ export function TaskRow({ task: initialTask, n, deletable }: { task: Task; n?: n
         {n && <span className="num" aria-hidden>{n}</span>}
         <button className={`tick prio-${task.priority}`} onClick={finish} aria-label={`Marcar «${task.title}» como hecha`} />
         <button className="task-text" onClick={() => setOpen(true)}>
-          <span className="task-title">{task.title}</span>
-          {sub && <span className={`task-sub ${late ? 'late' : ''}`}>{sub}</span>}
-          <TagChips tags={task.tags} />
+          <span className="task-row-body">
+            <span className="task-main">
+              <span className="task-title">{task.title}</span>
+              {sub && <span className="task-sub">{sub}</span>}
+              <TagChips tags={task.tags} />
+            </span>
+            {(due || task.priority === 'alta') && (
+              <span className="task-aside">
+                {task.priority === 'alta' && <><span className="prio-dot" title="Prioridad alta" aria-hidden /><span className="sr-only">Prioridad alta</span></>}
+                {due && <span className={`task-due ${late ? 'late' : ''}`}>{due}</span>}
+              </span>
+            )}
+          </span>
         </button>
         {deletable && <button className="row-del" onClick={() => setDeleting(true)} aria-label={`Borrar «${task.title}»`}><Icon d={ICON.trash} /></button>}
       </div>

@@ -30,7 +30,7 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
 
   return (
     <>
-      <header className="today-head">
+      <header className="today-head today-greeting">
         <span className="eyebrow">{fullDate(today)}</span>
         <h1>{greeting()}{profile?.name ? `, ${profile.name}` : ''}.</h1>
       </header>
@@ -48,15 +48,17 @@ export default function Today({ onGo }: { onGo: (t: Tab) => void }) {
             <span className="hero-unit">por hacer</span>
           </div>
         </div>
-        <div className="hero-chips">
-          {daily_tasks.length > 0 && <span className="hero-chip">Diarias {dailyDone}/{daily_tasks.length}</span>}
-          {waiting.length > 0 && <span className="hero-chip">{waiting.length} esperando</span>}
-          {(withShifts || withFp) && (
-            <button className="hero-chip action" onClick={() => setAgenda(true)}>
-              {withShifts && !hasShifts ? 'Añadir turnos' : withShifts && withFp ? 'Turnos y estudios' : withShifts ? 'Turnos' : 'Estudios'} ›
-            </button>
-          )}
-        </div>
+        {(daily_tasks.length > 0 || waiting.length > 0 || withShifts || withFp) && (
+          <div className="hero-chips">
+            {daily_tasks.length > 0 && <span className="hero-chip">Diarias {dailyDone}/{daily_tasks.length}</span>}
+            {waiting.length > 0 && <span className="hero-chip">{waiting.length} esperando</span>}
+            {(withShifts || withFp) && (
+              <button className="hero-chip action" onClick={() => setAgenda(true)}>
+                {withShifts && !hasShifts ? 'Añadir turnos' : withShifts && withFp ? 'Turnos y estudios' : withShifts ? 'Turnos' : 'Estudios'} ›
+              </button>
+            )}
+          </div>
+        )}
       </section>
 
       <WeekStrip today={today} due={new Set(tasks.map((t) => t.due_date).filter((d): d is string => !!d))} />

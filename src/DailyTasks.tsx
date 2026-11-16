@@ -163,11 +163,15 @@ export function DailyList() {
 
   if (!list.length) {
     return (
-      <div className="empty-card">
-        <p className="muted">Cosas que haces cada día (el gimnasio, leer, un idioma…): se marcan en Hoy y aquí ves tu calendario. Créalas con ＋.</p>
-        <div className="row-actions">
-          <button className="secondary" onClick={() => insert('daily_tasks', DEFAULT_DAILY.map((title, position) => ({ title, position, ...NEW_DAILY })))}>Usar ejemplos</button>
+      <div className="empty-stack">
+        <div className="empty-stack-art" aria-hidden>
+          <span className="empty-stack-card c1" />
+          <span className="empty-stack-card c2" />
+          <span className="empty-stack-card c3" />
         </div>
+        <h2 className="empty-stack-title">Sin tareas diarias</h2>
+        <p className="empty-stack-sub">Cosas que haces cada día (el gimnasio, leer, un idioma…): se marcan en Hoy y aquí ves tu calendario. Créalas con ＋.</p>
+        <button className="secondary empty-stack-btn" onClick={() => insert('daily_tasks', DEFAULT_DAILY.map((title, position) => ({ title, position, ...NEW_DAILY })))}>Usar ejemplos</button>
       </div>
     )
   }

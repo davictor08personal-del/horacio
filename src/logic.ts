@@ -422,3 +422,79 @@ export const tintStyle = (c?: string | null, kind: 'row' | 'tile' = 'tile'): { [
   // 0-50 fades from clear to the usual look (--lo 0→1); 50-100 goes on to the solid palette colour (--hi 0→1).
   return { '--lo': Math.min(alpha / DEFAULT_TINT, 1), '--hi': Math.max((alpha - DEFAULT_TINT) / DEFAULT_TINT, 0), ...ink }
 }
+
+// ---------- project cover collage ----------
+export type CoverKind = 'task' | 'note' | 'daily'
+export interface CoverItem { kind: CoverKind; id: string; title: string }
+export interface ProjectCover {
+  /** Up to `max` pieces for the collage, interleaved task → note → daily → task… */
+  items: CoverItem[]
+  /** Pending tasks (status not 'hecho' or 'descartado'). */
+  tasks: number
+  /** Notes of the project that are not archived. */
+  notes: number
+  /** Daily tasks of the project. */
+  dailies: number
+  /** Day (YYYY-MM-DD) of the latest activity in the project, or its created_at day when it holds nothing. */
+  day: string
+  /** Up to `max` pictures from its notes (stored paths, pinned and recently edited notes first): the collage shows
+   *  these first and fills the remaining places with `items`. */
+  photos: string[]
+}
+
+export function projectCover(
+  project: Pick<Project, 'id' | 'created_at'>,
+  data: { tasks: Task[]; notes: Note[]; daily_tasks: DailyTask[] },
+  max = 4,
+): ProjectCover {
+  const projectTasks = data.tasks.filter((t) => t.project_id === project.id)
+  const pendingTasks = projectTasks
+    .filter((t) => t.status !== 'hecho' && t.status !== 'descartado')
+    .sort(byPriority)
+  const activeNotes = data.notes
+    .filter((n) => n.project_id === project.id && !n.archived)
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || byEdited(a, b))
+  const projectDailies = data.daily_tasks
+    .filter((d) => d.project_id === project.id)
+    .sort(byPosition)
+
+  const taskItems: CoverItem[] = pendingTasks.map((t) => ({ kind: 'task', id: t.id, title: t.title }))
+  const noteItems: CoverItem[] = activeNotes.map((n) => ({
+    kind: 'note',
+    id: n.id,
+    title: n.title.trim() || notePreview(n) || 'Nota',
+  }))
+  const dailyItems: CoverItem[] = projectDailies.map((d) => ({ kind: 'daily', id: d.id, title: d.title }))
+
+  const items: CoverItem[] = []
+  const limit = Math.max(0, max)
+  for (let i = 0; items.length < limit && (i < taskItems.length || i < noteItems.length || i < dailyItems.length); i++) {
+    if (i < taskItems.length && items.length < limit) items.push(taskItems[i])
+    if (i < noteItems.length && items.length < limit) items.push(noteItems[i])
+    if (i < dailyItems.length && items.length < limit) items.push(dailyItems[i])
+  }
+
+  const days = [
+    ...projectTasks.flatMap((t) => [t.created_at.slice(0, 10), ...(t.done_at ? [t.done_at.slice(0, 10)] : [])]),
+    ...activeNotes.map((n) => n.updated_at.slice(0, 10)),
+    ...projectDailies.flatMap((d) => [d.created_at.slice(0, 10), ...(d.done_on ? [d.done_on] : [])]),
+  ].filter(Boolean)
+  const day = days.length ? days.sort()[days.length - 1] : project.created_at.slice(0, 10)
+
+  return {
+    items,
+    tasks: pendingTasks.length,
+    notes: activeNotes.length,
+    dailies: projectDailies.length,
+    day,
+    photos: activeNotes.flatMap((n) => imagePaths(n.body)).slice(0, limit),
+  }
+}
+
+export function coverSummary(cover: Pick<ProjectCover, 'tasks' | 'notes' | 'dailies'>): string {
+  const parts: string[] = []
+  if (cover.tasks > 0) parts.push(`${cover.tasks} ${cover.tasks === 1 ? 'tarea' : 'tareas'}`)
+  if (cover.notes > 0) parts.push(`${cover.notes} ${cover.notes === 1 ? 'nota' : 'notas'}`)
+  if (cover.dailies > 0) parts.push(`${cover.dailies} ${cover.dailies === 1 ? 'diaria' : 'diarias'}`)
+  return parts.length ? parts.join(' · ') : 'Vacío por ahora'
+}

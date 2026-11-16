@@ -22,7 +22,11 @@ export default function Welcome() {
   }
   return (
     <main className="screen login">
-      <img className="login-logo" src="pwa-192x192.png" alt="" />
+      <div className="login-art">
+        <span className="login-card c1" aria-hidden />
+        <span className="login-card c2" aria-hidden />
+        <img className="login-logo" src="pwa-192x192.png" alt="" />
+      </div>
       <h1>Te damos la bienvenida</h1>
       <p className="muted">Proyectos, tareas, tareas diarias y notas, en un solo sitio. Apunta con ＋ escribiendo normal y Cuadre lo ordena.</p>
       <form className="form" onSubmit={start}>

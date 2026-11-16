@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { ColorPicker } from '../ColorPicker'
 import { IconPicker, ItemIcon } from '../ItemIcon'
-import { allTags, byEdited, byPosition, cleanTag, colorKey, dailyOfNote, byPriority, fold, MAX_TAGS, notePreview, noteTime, noteTone, parseSearch, projectsTagged, textMatches, tintStyle } from '../logic'
+import { allTags, byEdited, byPosition, cleanTag, colorKey, coverSummary, dailyOfNote, byPriority, fold, MAX_TAGS, notePreview, noteTime, noteTone, parseSearch, projectCover, projectsTagged, shortDate, textMatches, tintStyle, type CoverItem, type ProjectCover } from '../logic'
 import { ICON, Icon, openNote } from '../NoteEditor'
+import { useImageUrl } from '../noteImages'
 import Page from '../Page'
 import Sheet, { Choice } from '../Sheet'
 import { DailyArt, DailyGrid, NEW_DAILY } from '../DailyTasks'
@@ -11,9 +12,13 @@ import { TaskRow } from '../TaskRow'
 import { PROJECT_STATUS, type Project, type ProjectStatus } from '../types'
 
 const GROUPS: [ProjectStatus, string][] = [['activo', 'Activos'], ['pausado', 'Pausados'], ['hecho', 'Terminados']]
-const PASTELS = ['tile-violet', 'tile-peach', 'tile-blue', 'tile-pink']
-/** A project without its own colour gets a pastel picked from its id, so its tile and its page always match. */
+const PASTELS = ['tile-lilac', 'tile-peach', 'tile-blue', 'tile-pink']
+/** A project without its own colour gets a pastel picked from its id, so its card and its page always match. */
 const pastelOf = (id: string) => PASTELS[[...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % PASTELS.length]
+const cardTone = (p: Project) => {
+  const color = colorKey(p.color)
+  return color ? `colored dc-${color}` : pastelOf(p.id)
+}
 
 type ProjectsView = 'tags' | 'status'
 const VIEWS: Record<ProjectsView, string> = { tags: 'Por etiqueta', status: 'Por estado' }
@@ -35,21 +40,80 @@ function tagShelves(projects: Project[]): [string, Project[]][] {
   return shelves.filter(([, list]) => list.length > 0)
 }
 
-/** A project's colour tile: icon (or photo), name, what it holds, two tags. */
-function ProjectTile({ p, onOpen }: { p: Project; onOpen: () => void }) {
-  const { tasks, notes, daily_tasks } = useData()
-  const count = tasks.filter((t) => t.project_id === p.id).length
-  const noteCount = notes.filter((n) => n.project_id === p.id && !n.archived).length
-  const dailyCount = daily_tasks.filter((d) => d.project_id === p.id).length
-  const color = colorKey(p.color)
-  const isPicture = p.icon?.startsWith('data:image/')
+/** Small 24×24 stroke icon matching the rest of the app: circle for task, sheet for note, repeat arrows for daily. */
+function KindIcon({ kind }: { kind: CoverItem['kind'] }) {
+  if (kind === 'note') return <Icon d={ICON.note} />
+  if (kind === 'daily') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden>
+        <path d="M17 2l4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3" />
+      </svg>
+    )
+  }
+  return <svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="8" /></svg>
+}
+
+/** One picture from a note, as a tilted photo card of the collage (empty frame while it loads). */
+function CollagePhoto({ path, i }: { path: string; i: number }) {
+  const url = useImageUrl(path)
   return (
-    <button style={tintStyle(p.color)} className={`project-tile ${color ? `colored dc-${color}` : pastelOf(p.id)} ${isPicture ? 'has-photo' : ''} ${p.status === 'pausado' ? 'paused' : ''}`} onClick={onOpen}>
-      {isPicture ? <img className="tile-photo" src={p.icon!} alt="" /> : <ItemIcon icon={p.icon} name={p.name} />}
-      <span className="tile-name">{p.name}</span>
-      <span className="tile-text">{[p.status === 'pausado' && 'Pausado', count && `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`, noteCount && `${noteCount} ${noteCount === 1 ? 'nota' : 'notas'}`, dailyCount && `${dailyCount} ${dailyCount === 1 ? 'diaria' : 'diarias'}`].filter(Boolean).join(' · ') || 'Vacío por ahora'}</span>
-      {p.tags?.length ? <span className="tile-tags">{p.tags.slice(0, 2).map((t) => `#${t}`).join(' ')}</span> : null}
-    </button>
+    <span className={`collage-card collage-pic i${i} ${url ? '' : 'is-missing'}`}>
+      {url ? <img src={url} alt="" loading="lazy" /> : <svg viewBox="0 0 24 24" aria-hidden><rect x="3" y="5" width="18" height="14" rx="3" /><path d="m3 16 5-5 4 4 3-3 6 6" /></svg>}
+    </span>
+  )
+}
+
+/**
+ * Overlapping deterministic cards (up to 4): the pictures of its notes first, then glass mini-cards with its tasks,
+ * notes and daily tasks; over its own photo/emoji, or 3 ghost cards when empty.
+ */
+function Collage({ cover, icon, big }: { cover: ProjectCover; icon: string | null; big?: boolean }) {
+  const isPicture = icon?.startsWith('data:image/')
+  const photos = cover.photos.slice(0, 4)
+  const items = cover.items.slice(0, 4 - photos.length)
+  const n = photos.length + items.length
+  return (
+    <span className={`collage ${big ? 'big' : ''} ${n ? `collage-n${n}` : 'collage-empty'}`}>
+      {isPicture ? <img className="collage-photo" src={icon!} alt="" /> : icon ? <span className="collage-emoji" aria-hidden>{icon}</span> : null}
+      {n ? (
+        <>
+          {photos.map((path, i) => <CollagePhoto key={`${i}-${path}`} path={path} i={i} />)}
+          {items.map((item, j) => (
+            <span key={`${item.kind}-${item.id}`} className={`collage-card i${photos.length + j}`}>
+              <span className="collage-icon" aria-hidden><KindIcon kind={item.kind} /></span>
+              <span className="collage-title">{item.title}</span>
+            </span>
+          ))}
+        </>
+      ) : (
+        <span className="collage-ghosts" aria-hidden>
+          <span className="collage-ghost g1" />
+          <span className="collage-ghost g2" />
+          <span className="collage-ghost g3" />
+        </span>
+      )}
+    </span>
+  )
+}
+
+/** Collection card: pastel tint, overlapping glass collage with ＋ button, centred name, summary and tag chips. */
+function ProjectCard({ p, onOpen }: { p: Project; onOpen: () => void }) {
+  const { tasks, notes, daily_tasks } = useData()
+  const cover = projectCover(p, { tasks, notes, daily_tasks }, 4)
+  return (
+    <article style={tintStyle(p.color)} className={`pcard ${cardTone(p)} ${p.status === 'pausado' ? 'paused' : ''}`}>
+      <button type="button" className="pcard-body" onClick={onOpen}>
+        <Collage cover={cover} icon={p.icon} />
+        <span className="pcard-name">{p.name}</span>
+        <span className="pcard-meta">{shortDate(cover.day)} · {coverSummary(cover)}</span>
+        <TagChips tags={p.tags} />
+      </button>
+      <button type="button" className="pcard-add" onClick={onOpen} aria-label={`Abrir ${p.name}`}>
+        <span className="pcard-add-dot" aria-hidden>
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+        </span>
+      </button>
+    </article>
   )
 }
 
@@ -99,7 +163,18 @@ export default function Projects() {
           <span>Crear el proyecto «{query.trim()}»</span>
         </button>
       )}
-      {!projects.length && !q && <p className="empty">Escribe arriba el nombre de lo que tienes entre manos (la mudanza, un curso, una app…) y pulsa Intro para crearlo.</p>}
+      {!projects.length && !q && (
+        <div className="empty-stack">
+          <div className="empty-stack-art" aria-hidden>
+            <span className="empty-stack-card c1" />
+            <span className="empty-stack-card c2" />
+            <span className="empty-stack-card c3" />
+          </div>
+          <h2 className="empty-stack-title">Empieza con un proyecto</h2>
+          <p className="empty-stack-sub">Reúne tareas, notas y rutinas en un solo sitio</p>
+          <button className="primary empty-stack-btn" onClick={() => setAdding(true)}>Crea tu primer proyecto</button>
+        </div>
+      )}
       {q && !shown.length && <p className="empty">{tags.length ? 'Ningún proyecto tiene esa etiqueta.' : 'Ningún proyecto se llama así.'}</p>}
       {projects.length > 0 && !q && <Choice value={view} options={VIEWS} onChange={changeView} />}
       {view === 'tags' && !q
@@ -110,7 +185,7 @@ export default function Projects() {
                 <h2 className="group-title">{label}</h2>
                 <span className="count">{list.length} {list.length === 1 ? 'proyecto' : 'proyectos'}</span>
               </div>
-              <ul className="list project-shelf">{list.map((p) => <li key={p.id}><ProjectTile p={p} onOpen={() => setOpen(p.id)} /></li>)}</ul>
+              <ul className="list project-shelf">{list.map((p) => <li key={p.id}><ProjectCard p={p} onOpen={() => setOpen(p.id)} /></li>)}</ul>
             </section>
           ))
         : GROUPS.map(([status, label]) => {
@@ -118,8 +193,8 @@ export default function Projects() {
             return list.length > 0 && (
               <section className="group" key={status}>
                 <h2 className="group-title">{label} · {list.length}</h2>
-                {/* A bento of colour tiles: a project's own colour if it has one, else a pastel picked from its id. */}
-                <ul className="list project-grid">{list.map((p) => <li key={p.id}><ProjectTile p={p} onOpen={() => setOpen(p.id)} /></li>)}</ul>
+                {/* Full-width collection cards stacked in one column. */}
+                <ul className="list project-grid">{list.map((p) => <li key={p.id}><ProjectCard p={p} onOpen={() => setOpen(p.id)} /></li>)}</ul>
               </section>
             )
           })}
@@ -153,18 +228,21 @@ function ProjectPage({ project: initialProject, onBack }: { project: Project; on
     else createTask({ title: text.trim(), project_id: project.id })
     setText('')
   }
-  const heroColor = colorKey(project.color)
+  const cover = projectCover(project, { tasks, notes, daily_tasks }, 4)
 
   return (
     <Page back="Proyectos" onBack={onBack} actions={<button className="link" onClick={() => setEditing(true)}>Editar</button>}>
       <header className="today-head">
-        {/* The cover: the same colour block as the project's tile in the list, just bigger. */}
-        <div style={tintStyle(project.color)} className={`project-tile project-cover ${heroColor ? `colored dc-${heroColor}` : pastelOf(project.id)} ${project.icon?.startsWith('data:image/') ? 'has-photo' : ''}`}>
-          {project.icon?.startsWith('data:image/') ? <img className="tile-photo" src={project.icon} alt="" /> : <ItemIcon icon={project.icon} name={project.name} big />}
-          <h1 className="tile-name">{project.name}</h1>
-          <span className="tile-label">{PROJECT_STATUS[project.status]}</span>
+        {/* The cover: the same collection card aesthetic as in the list, bigger. */}
+        <div style={tintStyle(project.color)} className={`pcard project-cover ${cardTone(project)}`}>
+          <Collage cover={cover} icon={project.icon} big />
+          <h1 className="pcard-name">{project.name}</h1>
+          <p className="pcard-meta">{shortDate(cover.day)} · {coverSummary(cover)}</p>
+          <div className="project-cover-foot">
+            <span className="tile-label">{PROJECT_STATUS[project.status]}</span>
+            <TagChips tags={project.tags} />
+          </div>
         </div>
-        <TagChips tags={project.tags} />
         {!project.icon && <button className="add-line" onClick={() => setEditing(true)}><span aria-hidden>＋</span>Añadir foto o icono de portada</button>}
         {writingDesc
           ? <DescriptionBox initial={project.description ?? ''} onSave={(description) => update('projects', project.id, { description }).then(() => setWritingDesc(false))} onCancel={() => setWritingDesc(false)} />

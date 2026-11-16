@@ -38,7 +38,7 @@ export default function Settings({ back, onClose }: { back: string; onClose: () 
       </Section>
 
       <Section title="Apariencia" hint="«Automático» sigue al móvil: claro de día, oscuro de noche si lo tienes así.">
-        <div className="settings-row"><Choice value={theme} options={THEME} onChange={setTheme} /></div>
+        <div className="settings-row settings-seg-row"><Choice value={theme} options={THEME} onChange={setTheme} /></div>
       </Section>
 
       <Notifications />

@@ -45,7 +45,11 @@ export default function Login() {
 
   return (
     <main className="screen login">
-      <img className="login-logo" src="pwa-192x192.png" alt="" />
+      <div className="login-art">
+        <span className="login-card c1" aria-hidden />
+        <span className="login-card c2" aria-hidden />
+        <img className="login-logo" src="pwa-192x192.png" alt="" />
+      </div>
       <h1>Cuadre</h1>
       <p className="muted">Qué hacer hoy, qué puede esperar y cuándo avisarte.</p>
       <form className="form" onSubmit={run(signIn)}>
